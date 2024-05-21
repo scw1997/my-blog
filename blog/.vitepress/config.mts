@@ -6,6 +6,12 @@ export default defineConfig({
   title: "fanlaBoy随记册",
   base:'/my-blog/',
   lang:'zh-cn',
+  markdown: {
+    image: {
+      // 图片懒加载
+      lazyLoading: true
+    }
+  },
   head:   [['link', { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/my-blog/favicon.ico' }]],
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
@@ -36,6 +42,7 @@ export default defineConfig({
     outline:{
       label:'页面导航',
     },
+    sidebarMenuLabel:"菜单",
     docFooter:{
       prev:'上一页',
       next:'下一页'

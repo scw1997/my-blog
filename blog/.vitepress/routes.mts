@@ -8,21 +8,29 @@ const getRoutes:(type:'side'|'nav')=>any[] =  (type)=> [
         items:[
             {
                 text:'HTML/CSS',
-                collapsed :false,
-                items:[
-                    {
-                        text:'CSS变量',
-                        link:'/html-css/css-var'
-                    },
-                    {
-                        text:'文档流 & 元素类型',
-                        link:'/html-css/doc-flow'
-                    },
-                    {
-                        text:'零碎',
-                        link:'/html-css/fragment'
-                    }
-                ]
+                ...(type==='side'?{
+                    collapsed: false,
+                    items:[
+
+                        {
+                            text:'CSS变量',
+                            link:'/html-css/css-var'
+                        },
+                        {
+                            text:'文档流 & 元素类型',
+                            link:'/html-css/doc-flow'
+                        },
+                        {
+                            text:'CSS渲染原理',
+                            link:'/html-css/render-principle'
+                        },
+                        {
+                            text:'HTML/CSS零碎笔记',
+                            link:'/html-css/fragment'
+                        }
+                    ]
+                }:{ link:'/html-css/css-var'})
+
             },
             {
                 text:'JavaScript',
