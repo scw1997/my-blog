@@ -1,4 +1,4 @@
-# HTML/CSS零碎笔记
+# HTML/CSS零碎
 
 ## label标签
 
