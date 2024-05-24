@@ -39,6 +39,10 @@ export default defineConfig({
 
       }
     },
+    darkModeSwitchLabel:'切换主题',
+    lightModeSwitchTitle:'切换主题',
+    darkModeSwitchTitle:'切换主题',
+    returnToTopLabel:'回到顶部',
     outline:{
       label:'页面导航',
       level:[2,3]
