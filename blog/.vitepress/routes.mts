@@ -1,4 +1,4 @@
-const getRoutes:(type:'side'|'nav')=>any[] =  (type)=> [
+const routes =  [
     {
         text:'简介',
         link:'/'
@@ -8,25 +8,23 @@ const getRoutes:(type:'side'|'nav')=>any[] =  (type)=> [
         items:[
             {
                 text:'HTML/CSS',
-                ...(type==='side'?{
-                    collapsed: false,
-                    items:[
+                collapsed: false,
+                items:[
 
-                        {
-                            text:'CSS变量',
-                            link:'/html-css/css-var'
-                        },
-                        {
-                            text:'文档流 & 元素类型',
-                            link:'/html-css/doc-flow'
-                        },
+                    {
+                        text:'CSS变量',
+                        link:'/html-css/css-var'
+                    },
+                    {
+                        text:'文档流 & 元素类型',
+                        link:'/html-css/doc-flow'
+                    },
 
-                        {
-                            text:'HTML/CSS零碎',
-                            link:'/html-css/fragment'
-                        }
-                    ]
-                }:{ link:'/html-css/css-var'})
+                    {
+                        text:'HTML/CSS零碎',
+                        link:'/html-css/fragment'
+                    }
+                ]
 
             },
             {
@@ -69,24 +67,21 @@ const getRoutes:(type:'side'|'nav')=>any[] =  (type)=> [
         items:[
             {
                 text:'原理',
-
-                ...(type==='side'?{
-                    collapsed: false,
-                    items:[
-                        {
-                            text:'浏览器渲染原理',
-                            link:'/principle/browser-render'
-                        },
-                        {
-                            text:'浏览器缓存机制',
-                            link:'/principle/browser-cache'
-                        },
-                        {
-                            text:'HTTP协议',
-                            link:'/principle/http'
-                        },
-                    ]
-                }:{ link:'/principle/browser-render'})
+                collapsed: false,
+                items:[
+                    {
+                        text:'浏览器渲染机制',
+                        link:'/principle/browser-render'
+                    },
+                    {
+                        text:'浏览器缓存机制',
+                        link:'/principle/browser-cache'
+                    },
+                    {
+                        text:'HTTP协议',
+                        link:'/principle/http'
+                    },
+                ]
             },
             {
                 text:'算法',
@@ -101,4 +96,4 @@ const getRoutes:(type:'side'|'nav')=>any[] =  (type)=> [
     }
 ]
 
-export default getRoutes
+export default routes

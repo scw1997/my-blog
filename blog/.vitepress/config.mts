@@ -1,5 +1,5 @@
 import { defineConfig } from 'vitepress'
-import getRoutes from "./routes.mjs";
+import routes from "./routes.mjs";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
@@ -15,9 +15,26 @@ export default defineConfig({
   head:   [['link', { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/my-blog/favicon.ico' }]],
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
-    nav: getRoutes('nav'),
+    nav:[
+      {
+        text:'React',
+        link:'/cc'
+      },
+      {
+        text:'Vue',
+        link:'/cc'
+      },
+      {
+        text:'JavaScript',
+        link:'/cc'
+      },
+      {
+        text:'原理',
+        link:'/cc'
+      },
+    ],
 
-    sidebar:  getRoutes('side'),
+    sidebar:  routes,
     search: {
       provider: 'local',
       options: {
