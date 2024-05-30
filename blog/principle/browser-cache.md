@@ -5,7 +5,7 @@
 浏览器缓存主要分为`强缓存`（也称本地缓存）和`协商缓存`（也称弱缓存）。
 
 
-![浏览器缓存.png](../public/browser-cache.png)
+![浏览器缓存.png](../public/browser_cache.png)
 
 用户发起了一个http请求后：
 
@@ -101,4 +101,4 @@ HTTP1.1中ETag的出现主要是为了解决几个Last-Modified比较难解决�
 
 一些用户的主动行为是否会使浏览器缓存失效：
 
-![用户行为影响](../public/action-cache.png)
+![用户行为影响](../public/action_cache.png)
