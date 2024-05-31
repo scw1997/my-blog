@@ -40,7 +40,7 @@
 
   **（1）TCP三次握手**
   
-  ![三次握手](/shake-hands.png)
+  ![三次握手](/shake_hands.png)
 
   其中：
   - SYN：表示请求建立连接
@@ -93,7 +93,7 @@
 
 请求完成后，正常情况浏览器会收到服务端返回的html，css，js以及图片等静态资源。
 
-![渲染过程](/html-render.png)
+![渲染过程](/html_render.png)
 
 ### HTML解析
 
@@ -112,7 +112,7 @@
    </body>
 </html>
 ```
-![html解析](/html-parse.png)
+![html解析](/html_parse.png)
 
 解析HTML过程中，当遇到`script`标签时：
 
@@ -134,7 +134,7 @@
 
 解析HTML过程中，当遇到CSS Link标签时，会由浏览器负责下载对应的CSS文件，此时并不会阻塞HTML的解析，下载完成后进行CSS解析，并构建`CSSOM Tree`(CSS Object Model，CSS对象模型），也称`Style Rules`。
 
-![css解析](/style-rules.png)
+![css解析](/style_rules.png)
 
 ### 构建Render Tree
 
@@ -214,7 +214,7 @@ script脚本后续交互对dom和样式的操作会涉及到二次布局与绘�
 
 而在此过程中，如果没有其他资源需要加载，浏览器将与服务器之间的TCP连接断开，即“四次挥手”：
 
-![四次挥手](/wave-hands.png)
+![四次挥手](/wave_hands.png)
 
 其中：
 - FIN：表示请求断开连接
