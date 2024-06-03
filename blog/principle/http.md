@@ -33,6 +33,41 @@ WEB应用的通信传输的一般流程：
 - `明文传输`：直接将明文信息暴露给了外界，存在一定安全隐患。
 - `基于TCP协议`:HTTP 1.1之后默认开启持久连接（**Connection:Keep-Alive**），即多次HTTP请求只需使用一个TCP连接，减少了建立和关闭连接的消耗和延迟。
 
+### 持久连接/长连接
+
+![持久连接.png](/keep_alive.png)
+
+优点：
+
+- 减少CPU及内存的使用，因为不需要经常建立和关闭连接
+- 支持管道化的请求及响应模式
+- 减少网络堵塞，因为减少了TCP请求
+- 减少了后续请求的响应时间，因为不需要等待建立TCP、握手、挥手、关闭TCP的过程
+- 发生错误时，也可在不关闭连接的情况下进行错误提示
+
+缺点：
+
+- **长时间保持长连接，会比较消耗服务器资源**
+  
+  解决方法：
+
+  （1）客户端请求头声明：`Connection: close`，即关闭长连接模式。
+
+  （2）服务端配置：如Nginx，设置`keepalive_timeout`设置长连接超时时间，`keepalive_requests`设置长连接请求次数上限。
+  
+
+- **队头阻塞问题**
+
+  当 http 开启长连接时，后续多个请求可共用一个 TCP 连接，但`同一时刻只能处理一个请求`，那么当前请求耗时过长的情况下，其它的请求只能处于阻塞状态，也就是著名的队头阻塞问题。
+
+  解决方法：
+
+  （1）一个域名允许分配多个长连接，现在浏览器标准中一个域名并发连接可以有6~8个。
+
+  （2）可使用多个域名。
+
+  （3）HTTP2.0支持`多路复用`，可以在一个TCP连接中发送多个请求。
+
 ## HTTP报文
 
 ### 请求报文
@@ -47,6 +82,29 @@ WEB应用的通信传输的一般流程：
 ![请求报文](/request_text.png)
 
 
+常见请求头部:
+
+|字段| 说明                                                            | 示例                                                |
+|--|---------------------------------------------------------------|---------------------------------------------------|
+|Accept| 指定客户端能够接收的内容类型                                                | Accept: text/plain, text/html                     |
+|Accept-Charset| 浏览器可以接受的字符编码集。                                                | Accept-Charset: iso-8859-5                        |
+|Accept-Encoding| 指定浏览器可以支持的web服务器返回内容压缩编码类型。                                   | Accept-Encoding: compress, gzip                   |
+|Accept-Language| 浏览器可接受的语言                                                     | Accept-Language: en,zh                            |
+|Authorization| HTTP授权的授权认证信息，比如登录token                                       | Authorization: Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ== |
+|Cache-Control| 指定请求和响应遵循的缓存机制，详见：[Cache-Control]。                            | Cache-Control: no-cache                           |
+|Connection| 表示是否需要持久连接。（HTTP 1.1默认进行持久连接）                                 | Connection: Keep-Alive                            |
+|Cookie| HTTP请求发送时，会把保存在该请求域名下的所有cookie值一起发送给web服务器。                   | Cookie: $Version=1; Skin=new;                     |
+|Content-Length| 请求的内容长度                                                       | Content-Length: 348                               |
+|Content-Type| 请求的与实体对应的MIME信息，见[Content-Type常见值](#content-type常见值)。         | Content-Type: application/x-www-form-urlencoded   |
+|Date| 请求发送的日期和时间                                                    | Date: Tue, 15 Nov 2010 08:12:31 GMT               |
+|Host| 指定请求的服务器的域名和端口号                                               | Host: <span>www.baidu.com</span>                  |
+|If-Modified-Since| 如果请求的部分在指定时间之后被修改则请求成功，未被修改则返回304代码。详见：[协商缓存]。                | If-Modified-Since: Sat, 29 Oct 2010 19:43:31 GMT  |
+|If-None-Match| 如果内容未改变返回304代码，参数为服务器先前发送的Etag，与服务器回应的Etag比较判断是否改变。详见：[协商缓存]。 | If-None-Match: “737060cd8c284d8af7ad3082f209582d” |
+|Referer| 先前网页的地址，当前请求网页紧随其后,即来路                                        | Referer: <span>www.baidu.com</span>    |
+|User-Agent| User-Agent的内容包含发出请求的用户信息                                      | User-Agent: Mozilla/5.0 (Linux; X11)              |
+
+
+
 ### 响应报文
 
 响应报文由以下四部分组成：
@@ -56,13 +114,55 @@ WEB应用的通信传输的一般流程：
 - **空行**：用来区分响应头与响应体，因为响应头都是键值对的格式，当解析遇到空行时，服务端就知道下一个不再是响应头部分，就该当作响应体来解析了。
 - **响应体**：服务端返回的资源信息。
 
-![请求报文](/response_text.png)
+![响应报文](/response_text.png)
 
-### 首部字段
 
-（1）通用字段
+常见响应头部:
 
- - Cache-Control：控制缓存的行为，详解见：[这里](/principle/browser-cache#cache-control)
+|字段| 说明                                                | 示例                                           |
+|--|---------------------------------------------------|----------------------------------------------|
+|Allow| 对某网络资源的有效的`请求方法`，不允许则返回405                        | Allow: GET, HEAD                             |
+|Cache-Control| 告诉所有的缓存机制是否可以缓存及哪种类型，详见：[Cache-Control]           | Cache-Control: no-cache                      |
+|Content-Encoding| web服务器支持的返回内容压缩编码类型。                              | Content-Encoding: gzip                       |
+|Content-Language| 响应体的语言                                            | Content-Language: en,zh                      |
+|Content-Length| 响应体的长度                                            | Content-Length: 348                          |
+|Content-Type| 返回内容的MIME类型，见[Content-Type常见值](#content-type常见值)。 | Content-Type: text/html; charset=utf-8       |
+|Date| 原始服务器消息发出的时间                                      | Date: Tue, 15 Nov 2010 08:12:31 GMT          |
+|ETag| 请求变量的实体标签的当前值，详见：[协商缓存]。                          | 	ETag: “737060cd8c284d8af7ad3082f209582d”    |
+|Expires| 响应过期的日期和时间，详见：[Expires]。                          | Expires: Thu, 01 Dec 2010 16:00:00 GMT       |
+|Last-Modified| 请求资源的最后修改时间                                       | Last-Modified: Tue, 15 Nov 2010 12:45:26 GMT |
+|Location| 用来重定向接收方到非请求URL的位置来完成请求或标识新的资源                    | Location:   http://www.baidu.com/test.html   |
+|refresh| 应用于重定向或一个新的资源被创造，在5秒之后重定向（由网景提出，被大部分浏览器支持）        | Refresh: 5; url=http://www.zcmhi.com/archives/94.html                |
+|Set-Cookie| 设置Http Cookie                                     | 	Set-Cookie: UserID=JohnDoe; Max-Age=3600; Version=1                |
+
+常见响应状态码：
+
+| 状态码                     | 说明                                                        |
+|-------------------------|-----------------------------------------------------------|
+| 200 OK                  | 请求成功                                                      |
+| 204 Not Content         | 请求成功，但没有返回任何数据。响应报文内不包含实体的主体部分。                           |
+| 301 Moved Permanently   | 永久性重定向，表示资源已被分配了新的 URL。例如网站从http迁移到https，则原http url应返回301 |
+| 302 Found               | 临时性重定向，表示资源临时被分配了新的 URL                                   |
+| 304 Not Modified        | 当[协商缓存]命中时会返回这个状态码，表示请求资源未修改，可以使用缓存的资源。                   |
+| 400 Bad Request         | 请求报文存在语法错误                                                |
+| 401 Unauthorized        | 没有权限访问,需要有通过 HTTP 认证的认证信息。例如需要登录才可访问                      |
+| 403 Forbidden           | 表示对请求资源的访问被服务器拒绝，例如访问权限不够                                 |
+| 404 Not Found           | 在服务器上没有找到请求的资源                                            |
+| 405 Method Not Allowed  | 客户端请求中的方法被禁止，比如服务器仅支持GET方式，请求时却使用了POST，属于客户端错误。           |
+| 500 Internal Server Error | 服务器内部错误                                                   |
+| 501 Not Implemented     | 仅当服务器不支持现有的某个请求方法并且无法或不愿将其转为其他方法时才会使用，属于服务器错误。            |
+| 502 Bad Gateway         | 网关错误                                                      |
+| 503 Service Unavailable | 服务临时不可用，表明服务器暂时处于超负载或正在停机维护，无法处理请求。                       |
+| 504 Gateaway Timeout                    | 网关超时，是代理服务器等待应用服务器响应时的超时。                                 |
+
+### Content-Type常见值
+- **text/plain**：纯文本格式，不包含任何HTML或其他格式的标记。
+- **text/html**：HTML文档格式，用于表示包含HTML标签的文本。
+- **application/json**：JSON数据格式，一种轻量级的数据交换格式。
+- **application/xml**：XML数据格式，用于编码文档的标记语言。
+- **application/x-www-form-urlencoded**：表单数据最常见的编码类型，不支持二进制文件数据。表单数据被编码为key/value格式发送到服务器。
+- **multipart/form-data**：当表单需要上传文件时，通常会使用此类型。它允许在HTTP请求中发送二进制数据。
+
 
 ## 请求方法
 
@@ -81,8 +181,57 @@ WEB应用的通信传输的一般流程：
 | 是否会被缓存     | 是         | 否       |
 | 被浏览器保存历史记录 | 是         | 否       |
 | 传递参数长度限制   | 是         | 否       |
-| 参数传递方式     | 直接放在URL后面 | 请求体     |
+| 参数传递方式     | 直接放在URL后面 | 放在请求体中  |
 
+## HTTP代理
+
+代理服务器就是客户端和服务端之间的“中间商”，即HTTP请求通过代理服务器转发给服务器，再将服务器的响应返回给客户端的行为。
+
+![代理](/proxy.png)
+
+HTTP代理的主要作用：
+
+- **突破访问限制**
+
+  许多网站会对请求访问的IP地址进行检测，对于部分地区的IP地址会直接拒绝访问。通过使用HTTP代理服务器，可以突破这种IP封锁。
+
+- **提高安全性**
+
+  可以通过这种方式隐藏用户（正向代理）或服务器（反向代理）的IP，免受攻击。还可以对数据过滤，对非法IP限流（类似防火墙）。
+
+- **缓存代理**
+
+  将内容缓存到代理服务器，使得客户端可以直接从代理服务器获得而不用到源服务器那里，如响应头设置`Cache-Control:public`。可加速网路访问，缓解真实服务器压力。关于缓存详见[Cache-Control]
+
+### 正向代理
+
+![正向代理.png](/forward_proxy.png)
+
+工作在`客户端`的代理为正向代理。使用正向代理的时候，需要在客户端配置需要使用的代理服务器。客户端向代理服务器发出请求，并指定目标访问服务器，然后，代理服务器向源服务器转交需求，并将获得的内容返回给客户端。
+
+- **特点**：服务端不知道客户端真实IP，`客户端知道服务端真实ip`
+- **常见场景**：抓包工具，VPN科学上网等工具
+
+### 反向代理
+
+
+![反向代理.png](/reverse_proxy.png)
+
+工作在`服务端`的代理为反向代理。是客户端向反向代理发出请求，反向代理服务器收到需求后判断请求走向何处，然后再将结果反馈给客户端。
+
+- **特点**：服务端知道客户端真实IP，`客户端不知道服务端真实ip，只知道代理服务器ip`
+- **常见场景**：Nginx解决跨域
+
+:::warning 前端本地开发服务器proxy属于正向还是反向代理？
+
+从前端开发者角度来看，设置proxy是源于开发者知道服务端真实ip，看似应该是正向代理。但是正确角度应该是站在浏览器和页面的角度，它是不知道服务端真实ip的。所以它应该是反向代理吗？
+
+尽管前端工具的 proxy 配置可以代理请求到多个服务器，从而在某些场景下具备类似反向代理的功能，但其本质和主要用途依然是解决开发过程中的跨域问题。真正的反向代理(如 Nginx)在功能和应用场景上更加广泛和复杂，主要用于生产环境中的负载均衡、安全性和性能优化。
+因此，前端工具中的 proxy 配置在某些特定情况下可以被视为一种简单的反向代理，但它们在设计目的、应用场景和功能上与传统的反向代理有显著区别。
+:::
 
 [三次握手]:/principle/browser-render#网络请求
 [四次挥手]:/principle/browser-render#断开连接
+[Cache-Control]:/principle/browser-cache#cache-control
+[Expires]:/principle/browser-cache#cache-control
+[协商缓存]:/principle/browser-cache.html#协商缓存

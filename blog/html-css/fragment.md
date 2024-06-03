@@ -115,7 +115,7 @@ html {
 
 效果示例：
 
-![Markdown Logo](/stretch-layout.png)
+![Markdown Logo](/stretch_layout.png)
 
 代码：
 ::: code-group
@@ -289,7 +289,7 @@ html {
 - 单行文本
 ```css
 .ellipsis{
-  /*需要确保盒子有固定/最大宽度才可生效*/
+  /*需要确保当前盒子有固定/最大宽度才可生效*/
   text-overflow: ellipsis;
   overflow: hidden;
   white-space: nowrap;
@@ -298,7 +298,7 @@ html {
 - 多行文本
 ```css
 .ellipsis2{
-    /*需要确保盒子有固定/最大宽度才可生效*/
+    /*需要确保当前盒子有固定/最大宽度才可生效*/
     display: -webkit-box;
     -webkit-box-orient: vertical;
     /*这里2表示超出2行省略*/
