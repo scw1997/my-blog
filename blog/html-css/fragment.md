@@ -71,9 +71,12 @@
 ## width相关属性
 
 - `fill-available`：与div元素宽度的默认行为一致，即宽度占满父元素的宽度（100%）
+
 - `min-content`:内部元素最小宽度值最大的那个元素的宽度。例如img元素的最小宽度值就是图片呈现的宽度，对于文本元素，如果全部是中文，则最小宽度值就是一个中文的宽度值；如果包含英文，因为默认英文单词不换行，所以，最小宽度可能就是里面最长的英文单词的宽度。
+
 - `max-content`：元素内容的宽度，能多大就多大，忽略父元素宽度的限制（即可溢出）。
-- `fit-content`：元素内容的宽度，但永远不会超过父元素宽度（自适应）。与`inline-block`,`absolute`,`float`元素默认行为一致。
+
+- `fit-content`：元素内容的宽度，但永远不会超过父元素宽度（自适应）。与**inline-block，absolute，float**元素默认行为一致。
 
 ## 移动端H5屏幕尺寸适配优选方案
 
@@ -203,66 +206,155 @@ html {
 
 ## flex相关
 
-- 针对flex item元素，如果给其某个子元素设置单行超出省略的样式无效或者需要根据父元素高度来自适应高度时，则可尝试给flex item元素样式添加`width:0（横向flex布局）`或者`height:0（纵向flex布局）`
+flex默认值为flex:0 1 auto（**只许缩小，不许放大,默认为内容大小**）
 
+flex:none等价于flex:0 0 auto（**既不缩小也不放大，固定为内容大小**）
+
+flex:auto等价于flex:1 1 auto（**能小就小，能大就大，弹性自适应**）
+
+
+- 当width，flex-basis同时存在时，`flex-basis优先级更高`。
+
+- 针对flex item元素，如果给其某个子元素设置单行超出省略的样式无效或者需要根据父元素高度来自适应高度时，则可尝试给flex item元素样式添加`width:0（横向flex布局）`或者`height:0（纵向flex布局）`。
+
+- flex item即使被指定可收缩，但其会存在一个`隐性最小宽度`，换句话说它不会无限收缩。可通过设置**min-width**属性来覆盖控制这个最小宽度。同理，我们也可以通过设置**max-width**来控制flex item的放大上限。
+
+## vertical-align相关
+
+
+
+![x-height](/x_height.png)
+
+x-height 指的就是小写字母 x 的高度
+
+`vertical-align: middle`的middle 指的是**基线往上 1/2 x-height** 高度
+
+
+- vertical-align 属性只能作用在 display 计算值为 `inline、inline-block，inline-table 或 table-cell` 的元素上，**浮动**和**绝对定位**会让元素块状化，因此这两种情况也不会使vertical-align属性生效。
+
+- 当vertical-align属性值为px数值时，该数值是相对于当前元素的基线baseline的位置，即正数则上移，负数则下移。从这一点来看，vertical-align:baseline等同于vertical-align:0。
+
+- 当vertical-align属性值为百分比值时，其相对的是当前元素line-height的百分比。
+
+## line-height相关
+
+- 对于**非替换元素（即不包括input,img,select,textarea元素）的纯内联元素**，其可视高度完全由 line-height 决定
+
+- 对于`块级元素`，line-height 对其本身是`没有任何作用`的，我们平时改变 line-height，块级元素的高度跟着变化实际上是通过改变块级元素里面内联级别元素占据的高度实现的。
+
+- 无论内联元素line-height 如何设置，最终父级元素的高度都是由`数值较大`的那个 line-height 决定的
+
+示例：
+
+```css
+/*示例1*/
+.box { 
+ line-height: 96px; 
+} 
+.box span { 
+ line-height: 20px; 
+} 
+
+/*示例2*/
+.box { 
+ line-height: 20px; 
+} 
+.box span { 
+ line-height: 96px; 
+} 
+
+```
+假如文字就 1 行，上述两种情况.box 元素的高度都是96px
+
+## 浮动相关
+
+### 浮动元素特性
+
+- 具有`包裹性`，当其未主动设置宽度时，其宽度右内部元素决定。且其宽度最大不会超过其包含块的宽度。即等价于`width:fit-content`
+
+- 块状化（其display属性的计算值都会自动变成"block"或“table”）并格式化上下文（即创建[BFC]）。
+
+- 会脱离文档标准流。
+
+- 无margin合并问题（源自BFC特性）。
+
+### 清除浮动
+
+- 让父元素也浮动（没有从根本解决问题，反而生成了新的浮动问题）。
+
+- 给父元素设置高度（此法比较死板，让父元素高度固定死了，无法自适应高度）。
+
+- 给父元素设置overflow:hidden（此法原理在于让父元素成为一个BFC，唯一缺点容易导致溢出内容被隐藏掉。）
+
+- `伪元素与clear属性配合（推荐）`：
+
+```css
+/*对浮动元素的父元素设置*/
+.clear::after{
+  clear: both;
+  content:'';
+  /*clear属性只对块元素有效，而伪元素::afer默认是行级*/
+  display: block;
+}
+```
 ## scss/less相关
 
-- 样式继承
-  ::: code-group
-    ```scss
-    //1：mixin方式
-    @mixin style{
-      color:red;    
-    }
-    .class{
-      @include style;
-    }
-  
-    //2：mixin方式（带参数）
-    @mixin style($color){
-      color:$color;    
-    }
-    .class{
-      @include style(#ccc);
-    }
-  
-     //3：extend方式
-    .style{
-        color:red  
-    }
-    .class{
-     @extend .style
-    }
-  
-    // 4：占位符extend方式（推荐此方式，如果不被引用，它是不会被编译到 css 文件中）
-    %style{
-      color:red
-    }
-    .class{
-    @extend %style
-    }
+### 样式继承
+::: code-group
+```scss
+//1：mixin方式
+@mixin style{
+  color:red;    
+}
+.class{
+  @include style;
+}
 
-    ```
+//2：mixin方式（带参数）
+@mixin style($color){
+  color:$color;    
+}
+.class{
+  @include style(#ccc);
+}
 
-    ```less
-    //1: 直接调用
-    .style{
-      color:red    
-    }
-    .class{
-      .style
-    }
-  
-     //2: 直接调用（带参数）
-    .style(@params){
-      color:@params
-    }
-    .class {
-      .style(#000)
-    }
+ //3：extend方式
+.style{
+    color:red  
+}
+.class{
+ @extend .style
+}
 
-    ```
-  :::
+// 4：占位符extend方式（推荐此方式，如果不被引用，它是不会被编译到 css 文件中）
+%style{
+  color:red
+}
+.class{
+@extend %style
+}
+
+```
+
+```less
+//1: 直接调用
+.style{
+  color:red    
+}
+.class{
+  .style
+}
+
+ //2: 直接调用（带参数）
+.style(@params){
+  color:@params
+}
+.class {
+  .style(#000)
+}
+
+```
+:::
 
 ## textarea元素高度自适应
   ```js
@@ -338,6 +430,44 @@ html {
 ### background-clip
 设置背景图片或背景颜色的显示范围
 
+## z-index相关
+
+`当元素z-index 不是 auto 的时候（默认是auto），会创建层叠上下文`。
+
+- 拥有层叠上下文的元素永远会比没有层叠上下文的元素的层叠水平高（即覆盖在其上面）。
+- 拥有层叠上下文的同级元素之间，z-index值越大，层叠水平越高。z-index值相同，则渲染顺序越往后，层叠水平越高
+- 不含层叠上下文的同级元素之间(即未设置z-index)，则继续比较各自同级后代元素，直到遇到拥有层叠上下文的后代元素，然后按上述规则判断层叠水平。
+
+示例1：
+
+```html
+<div style="position:relative; z-index:auto;"> 
+ <!-- 人像图片 --> 
+ <img src="1.jpg" style="position:absolute; z-index:2;"> 
+</div> 
+
+<div style="position:relative; z-index:auto;"> 
+ <!-- 景色图片 --> 
+ <img src="2.jpg" style="position:relative; z-index:1;"> 
+</div> 
+```
+结论：**人像图片会覆盖在景色图片上方**（双方div都无层叠上下文，则比较子元素，人像img的z-index较大）。
+
+示例2：
+
+```html
+<div style="position:relative; z-index:0;">
+  <!-- 人像图片 -->
+  <img src="1.jpg" style="position:absolute; z-index:2;">
+</div>
+
+<div style="position:relative; z-index:0;">
+  <!-- 景色图片 -->
+  <img src="2.jpg" style="position:relative; z-index:1;">
+</div> 
+```
+结论：**景色图片会覆盖在人像图片上方**（双方div都有层叠上下文，且z-index相同，则渲染顺序后者层叠水平高）。
+
 ## 元素隐藏最佳设置
 
 ```css
@@ -348,6 +478,30 @@ html {
     position: fixed !important;
 }
 ```
+
+## 伪元素相关
+### 特点
+
+- 优点：不占用 DOM 节点，减少 DOM 节点数。 让 CSS 帮助解决了一部分 JavaScript 问题，简化了开发。 避免增加毫无意义的页面元素。
+
+- 缺点：不利于调试。
+
+### ::before和::after
+
+在被选中元素里面、元素现有内容之前（后）插入内容。
+
+**特点**
+
+- 默认`display: inline`,不脱离文档流，占据实际元素空间。
+- 必须设置content属性，否则一切都是无用功；
+- 会继承原本元素的CSS属性（如原元素的颜色等）
+
+### 其他伪元素
+
+- ::first-line（匹配元素第一行，仅块元素）
+- ::first-letter（表示块元素第一个字母，仅块元素）
+- ::selection（匹配鼠标长按拖动选中的内容）
+
 ## class类名命名建议
 
 - 使用短命名,如`.some-intro`
@@ -358,13 +512,23 @@ html {
 - 减少嵌套（选择器是从右往左匹配的，嵌套多会影响性能虽然很小。而且优先级混乱，与HTML结构耦合度高）
 - 使用小写英文，不用驼峰命名
 
+
+
 ## 其他
 
-- 元素的width和height如果设置为百分比，默认是基于父元素的`content-box`尺寸计算的（无论是否为border-box）
-- `outline`属性不影响盒子的宽度和高度
-- 一般来说,`line-height`的合适取值范围在1.2~1.5之间
-- 过渡动画`transition`中对类似宽度和高度的`auto`属性是无效的
-- `overscroll-behavior:contain`:常用于解决移动端的滚动穿透问题；
-- `scroll-behavior:smooth`:使得具有滚动的元素在滚动行为触发时视觉效果更加平滑（例如滚动到锚点链接对应的元素位置时）。可以给任何有滚动的元素无脑添加上该属性。也不需考虑兼容性
-- 宽/高度相关属性值产生冲突时的优先级: `min-(width/height) > max-(width/height) > width/height`
+- 元素的width和height如果设置为百分比，默认是基于父元素的`content-box`尺寸计算的（无论是否为border-box）。
 
+- `outline`属性不影响盒子的宽度和高度。
+
+- 一般来说,`line-height`的合适取值范围在1.2~1.5之间。
+
+- 过渡动画`transition`中对类似宽度和高度的`auto`属性是无效的。
+
+- `overscroll-behavior:contain`:常用于解决移动端的滚动穿透问题。
+
+- `scroll-behavior:smooth`:使得具有滚动的元素在滚动行为触发时视觉效果更加平滑（例如滚动到锚点链接对应的元素位置时）。可以给任何有滚动的元素无脑添加上该属性。也不需考虑兼容性。
+
+- 宽/高度相关属性值产生冲突时的优先级: `min-(width/height) > max-(width/height) > width/height`。
+
+
+[BFC]:/html-css/bfc

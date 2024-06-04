@@ -16,6 +16,10 @@ const routes =  [
                         link:'/html-css/css-var'
                     },
                     {
+                        text:'BFC块级格式化上下文',
+                        link:'/html-css/bfc'
+                    },
+                    {
                         text:'文档流 & 元素类型',
                         link:'/html-css/doc-flow'
                     },
