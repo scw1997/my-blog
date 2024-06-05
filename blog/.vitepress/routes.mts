@@ -23,7 +23,14 @@ const routes =  [
                         text:'文档流 & 元素类型',
                         link:'/html-css/doc-flow'
                     },
-
+                    {
+                        text:'CSS选择器优先级',
+                        link:'/html-css/selector-priority'
+                    },
+                    {
+                        text:'伪类 & 伪元素',
+                        link:'/html-css/fake'
+                    },
                     {
                         text:'HTML/CSS零碎',
                         link:'/html-css/fragment'
@@ -93,7 +100,7 @@ const routes =  [
             },
             {
                 text:'零碎',
-                link:'/fragment'
+                link:'/principle/fragment'
             },
 
         ]

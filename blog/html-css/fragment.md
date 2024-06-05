@@ -478,29 +478,127 @@ x-height 指的就是小写字母 x 的高度
     position: fixed !important;
 }
 ```
+## position相关
 
-## 伪元素相关
-### 特点
+### static
 
-- 优点：不占用 DOM 节点，减少 DOM 节点数。 让 CSS 帮助解决了一部分 JavaScript 问题，简化了开发。 避免增加毫无意义的页面元素。
+position属性的默认值。此时 top、right、bottom、left 属性无效。
 
-- 缺点：不利于调试。
+### relative
 
-### ::before和::after
+基于元素原本的位置进行定位移动。
 
-在被选中元素里面、元素现有内容之前（后）插入内容。
+- 定位包含块为父元素的的content-box
+- 定位后原位置依然占用布局空间，所以不脱离标准文档流
+- 定位后的元素位置不影响周围其他元素的布局
+- top和bottom属性同时存在时，只有top生效；left和right属性同时存在时，只有left生效
 
-**特点**
+### absolute
 
-- 默认`display: inline`,不脱离文档流，占据实际元素空间。
-- 必须设置content属性，否则一切都是无用功；
-- 会继承原本元素的CSS属性（如原元素的颜色等）
+通过指定元素相对于最近的非 static 定位祖先元素的偏移，来确定元素位置。
 
-### 其他伪元素
+- 定位包含块为最近的position不为static的祖先元素的padding-box，若没有符合条件的祖先元素，则为根元素html标签。
+- 定位后，原位置不占用布局空间，所以脱离标准文档流
+- 定位的元素可以设置外边距（margin），且不会与其他边距合并。
+- 定位元素的宽度由自身内容决定，且不会超过其包含块的宽度
+- 定位与float同时使用时，float无效
 
-- ::first-line（匹配元素第一行，仅块元素）
-- ::first-letter（表示块元素第一个字母，仅块元素）
-- ::selection（匹配鼠标长按拖动选中的内容）
+> absolute是独立的CSS属性值，必须改掉“ 只要有absolute定位，其必有祖先元素relative定位，top,left必有属性值或者必须有z-index ”的错误观点！！
+
+### fixed
+
+基于页面根元素html标签的位置进行定位。
+
+- 定位的包含块为根元素html标签。
+- 定位后，原位置不占用布局空间，所以脱离标准文档流
+
+:::warning fixed失效现象
+
+由于设置了transform属性的元素的特有渲染特性，会导致设置了fixed定位的子元素其fixed定位失效，而变成了基于transform元素的绝对定位现象。
+
+此时的现象可视为transform元素拥有了position:relative属性，而原fixed定位的元素设置了position:absolute属性
+
+:::
+
+## CSS三角形应用
+
+![border_0.png](/border_0.png)
+
+```css
+div {
+    /*核心是宽高都为0*/
+    width: 0;
+    height: 0;
+    border: 40px solid;
+    border-color: orange blue red green;
+}
+```
+等腰三角形：
+
+![triangle_1.png](/triangle_1.png)
+
+```css
+div {
+    width: 0;
+    height: 0;
+    /*三角形箭头冲向哪里，该方向的border-width为0,其他方向不为0*/
+    border-width: 0 100px 100px 100px;
+    border-style: solid;
+    /* 不需要的方向的颜色为transparent*/
+    border-color: transparent transparent red transparent ;
+}
+```
+直角三角形：
+
+![triangle_2.png](/triangle_2.png)
+
+```css
+div {
+    width: 0;
+    height: 0;
+    /*三角形箭头冲向哪里，该方向的border-width为0,其他方向不为0*/
+  	/*实现直角三角形，不需要的那一部分的该方向的border-width为0*/
+    border-width: 0 0 100px 100px;
+    border-style: solid;
+    /* 不需要的方向的颜色为transparent*/
+    border-color: transparent transparent red transparent ;
+}
+```
+
+对比进度条：
+
+![triangle_3.png](/triangle_3.png)
+
+```css
+ *,::before,::after{
+        box-sizing: border-box;
+    }
+    .container{
+        width: 500px;
+        height: 50px;
+        background-color: red;
+    }
+    .left{
+        width: calc(50% - 25px);
+        height: 100%;
+        background-color: yellow;
+        position: relative;
+    }
+    /*直角三角形模拟斜线效果*/
+    .left::after{
+        position: absolute;
+        top:0;
+        content:'';
+        right: -25px;
+        width: 0;
+        height: 0;
+        /*修改对应方向的border-width大小可改变三角形的斜度*/
+        border-width: 0 25px 50px 25px;
+        border-style: solid;
+        border-color: transparent transparent yellow transparent;
+    }
+```
+
 
 ## class类名命名建议
 
