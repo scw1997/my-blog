@@ -92,6 +92,10 @@ const routes =  [
                         text:'HTTP协议',
                         link:'/principle/http'
                     },
+                    {
+                        text:'Cookie & Session & Token',
+                        link:'/principle/cookie_session'
+                    },
                 ]
             },
             {

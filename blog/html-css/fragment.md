@@ -503,7 +503,15 @@ position属性的默认值。此时 top、right、bottom、left 属性无效。
 - 定位元素的宽度由自身内容决定，且不会超过其包含块的宽度
 - 定位与float同时使用时，float无效
 
-> absolute是独立的CSS属性值，必须改掉“ 只要有absolute定位，其必有祖先元素relative定位，top,left必有属性值或者必须有z-index ”的错误观点！！
+:::tip 技巧
+
+如果absolute定位的元素，没有设置top/left/bottom/right属性并且其祖先元素不含relative定位，则其默认仍在原位置，但依然脱离标准流（不占据空间）。
+
+此时你可通过margin或padding等属性进行位置定位。
+
+所以，absolute是`独立的CSS属性值`，必须改掉“ 只要有absolute定位，其必有祖先元素relative定位，top,left必有属性值或者必须有z-index ”的错误观点
+:::
+> 
 
 ### fixed
 
