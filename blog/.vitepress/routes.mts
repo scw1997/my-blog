@@ -94,7 +94,11 @@ const routes =  [
                     },
                     {
                         text:'Cookie & Session & Token',
-                        link:'/principle/cookie_session'
+                        link:'/principle/cookie-session'
+                    },
+                    {
+                        text:' 浏览器跨域',
+                        link:'/principle/cross-origin'
                     },
                 ]
             },

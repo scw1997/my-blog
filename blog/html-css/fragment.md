@@ -86,7 +86,7 @@
 module.exports = {
     plugins: {
         'postcss-plugin-px2rem': {
-            rootValue: 100, // px数值/rem数值
+            rootValue: 100, // px数值/rem数值，即1px转成0.01rem
             exclude: /(node_modules)/,
             minPixelValue: 1, // 1px以上的生效
             selectorBlackList: ['html'],
@@ -96,12 +96,14 @@ module.exports = {
 };
 
 ```
-使用rem方案配合px2rem插件，动态更新font-size：
+使用rem方案配合上述px2rem插件，动态更新font-size：
 ```css
 html {
     /*750为设计稿基准*/
     font-size: calc(100vw / 7.5) !important;
-    /*这里本应该写100vw/750px即750设计稿是a px，css代码依然写a px，最终转换成a rem。但由于px2rem插件中配置的rootValue为100，即最终转换成0.0a rem（也是为了兼容iphone），所以响应的也要改成100vw/ 7.5*/
+    /*这里本应该写 100vw/750px 即750设计稿条件下某元素尺寸是a px，则css代码依然写a px，最终转换成a rem。
+    
+    但由于px2rem插件中配置的rootValue为100，即最终转换成0.0a rem（也是为了兼容iphone），所以相应的也要改成100vw/ 7.5 */
     background-color: #fff;
     height: 100%;
 }
