@@ -1,5 +1,5 @@
 import { defineConfig } from 'vitepress'
-import routes from "./routes.mjs";
+import routes from "./routes.js";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({

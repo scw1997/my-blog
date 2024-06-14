@@ -100,6 +100,10 @@ const routes =  [
                         text:' 浏览器跨域',
                         link:'/principle/cross-origin'
                     },
+                    {
+                        text:'前端安全攻防',
+                        link:'/principle/safety'
+                    },
                 ]
             },
             {
