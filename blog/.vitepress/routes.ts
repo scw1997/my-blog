@@ -32,6 +32,10 @@ const routes =  [
                         link:'/html-css/fake'
                     },
                     {
+                        text:'移动端适配',
+                        link:'/html-css/fit'
+                    },
+                    {
                         text:'HTML/CSS零碎',
                         link:'/html-css/fragment'
                     }
