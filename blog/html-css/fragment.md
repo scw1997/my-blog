@@ -78,43 +78,6 @@
 
 - `fit-content`：元素内容的宽度，但永远不会超过父元素宽度（自适应）。与**inline-block，absolute，float**元素默认行为一致。
 
-## 移动端H5屏幕尺寸适配优选方案
-
-使用postcss-plugin-px2rem插件：
-```js
-// postcss.config.js
-module.exports = {
-    plugins: {
-        'postcss-plugin-px2rem': {
-            rootValue: 100, // px数值/rem数值，即1px转成0.01rem
-            exclude: /(node_modules)/,
-            minPixelValue: 1, // 1px以上的生效
-            selectorBlackList: ['html'],
-            propBlackList: ['max-width', 'max-height', 'min-width', 'min-height'] //忽略转换的css属性
-        }
-    }
-};
-
-```
-使用rem方案配合上述px2rem插件，动态更新font-size：
-```css
-html {
-    /*750为设计稿基准*/
-    font-size: calc(100vw / 7.5) !important;
-    /*这里本应该写 100vw/750px 即750设计稿条件下某元素尺寸是a px，则css代码依然写a px，最终转换成a rem。
-    
-    但由于px2rem插件中配置的rootValue为100，即最终转换成0.0a rem（也是为了兼容iphone），所以相应的也要改成100vw/ 7.5 */
-    background-color: #fff;
-    height: 100%;
-}
-
-@media screen and (min-width: 751px) {
-    /*设置上限值，兼容pc端显示效果*/
-    html {
-        font-size: 80px !important;
-    }
-}
-```
 
 ## 两/三栏横向拉伸布局
 
