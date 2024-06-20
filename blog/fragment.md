@@ -17,5 +17,9 @@
 `localStorage`：对于同源页面（无论是否是同一标签栏）是共享公用的，并且只要你不去主动删除，它会永久保存在浏览器中。
 
 
+## 搭建专属npm镜像服务器
+
+参考链接：[https://cloud.tencent.com/developer/article/1722254](https://cloud.tencent.com/developer/article/1722254)
+
 
 [Cookie]:/principle/cookie_session#cookie

@@ -57,28 +57,28 @@ const routes =  [
         ]
     },
     {
-        text:'进阶',
+        text:'生态',
         items:[
             {
                 text:'Node.js',
-                items:[]
-            },
-            {
-                text:'Webpack',
-                items:[]
+                link:'/node'
             },
             {
                 text:'TypeScript',
-                items:[]
+                link:'/ts'
+            },
+            {
+                text:'工程化',
+                link: '/engineering'
             },
             {
                 text:'小程序',
-                items:[]
+                link:'/mini'
             }
         ]
     },
     {
-        text:'其他',
+        text:'进阶',
         items:[
             {
                 text:'原理',
@@ -112,11 +112,15 @@ const routes =  [
             },
             {
                 text:'算法',
-                items:[]
+                link:'/algorithm'
+            },
+            {
+                text:'设计模式',
+                link:'/design-mode'
             },
             {
                 text:'零碎',
-                link:'/principle/fragment'
+                link:'/fragment'
             },
 
         ]
