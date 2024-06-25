@@ -29,7 +29,7 @@ export default defineConfig({
         link:'/cc'
       },
       {
-        text:'原理',
+        text:'TypeScript',
         link:'/cc'
       },
     ],

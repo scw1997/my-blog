@@ -65,14 +65,14 @@ const routes =  [
             },
             {
                 text:'TypeScript',
-                link:'/ts'
+                link:'/typescript'
             },
             {
-                text:'工程化',
-                link: '/engineering'
+                text:'前端工程化',
+                link:'/engine'
             },
             {
-                text:'小程序',
+                text:'微信小程序',
                 link:'/mini'
             }
         ]
