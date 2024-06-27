@@ -8,7 +8,7 @@ const routes =  [
         items:[
             {
                 text:'HTML/CSS',
-                collapsed: false,
+                collapsed: true,
                 items:[
 
                     {
@@ -44,7 +44,16 @@ const routes =  [
             },
             {
                 text:'JavaScript',
-                items:[]
+                items:[
+                    {
+                        text:'JS异步编程详解',
+                        link:'/js/async'
+                    },
+                    {
+                        text:'JS零碎',
+                        link:'/js/fragment'
+                    }
+                ]
             },
             {
                 text:'React',
@@ -82,7 +91,7 @@ const routes =  [
         items:[
             {
                 text:'原理',
-                collapsed: false,
+                collapsed: true,
                 items:[
                     {
                         text:'浏览器渲染机制',
