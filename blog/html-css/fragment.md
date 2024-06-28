@@ -2,8 +2,10 @@
 
 ## label标签
 
-- label标签的`for`属性与指定表单元素的`id`绑定来实现关联表单
-```html
+:::code-group
+```html [第1种形式]
+<!--label标签的`for`属性与指定表单元素的`id`绑定来实现关联表单-->
+
 <label for="name">姓名</label>
 <input type="text" id="name">
 
@@ -17,9 +19,9 @@
 <input type="radio" id="girl" name="sex" value="女">
 <label for="girl">女</label>
 ```
-- 将表单控件放到label标签内，这种情况下，label标签只能包含一个表单元素，如果包含多个只对第一个有效。
 
-```html
+```html [第2种形式]
+<!--将表单控件放到label标签内，这种情况下，label标签只能包含一个表单元素，如果包含多个只对第一个有效。-->
 <label >点击获取input焦点
     <input type="text">
 </label>
@@ -28,6 +30,7 @@
     <textarea></textarea>
 </label>
 ```
+:::
 ## meta标签
 
 ```html
@@ -68,7 +71,7 @@
 反之，若没有定义，则默认是怪异模式。在怪异模式下，不同的浏览器解析HTML文档的显示效果如CSS可能存在较大差异，所以定义统一使用标准模式正是为了避免怪异模式下各种兼容性问题，去强制统一各浏览器的解析模式。
 
 
-## width相关属性
+## width属性
 
 - `fill-available`：与div元素宽度的默认行为一致，即宽度占满父元素的宽度（100%）
 
@@ -169,7 +172,7 @@
 
 > 引用链接：https://www.zhangxinxu.com/study/201903/css-idea/behavior-stretch.php?aside=0
 
-## flex相关
+## flex
 
 flex默认值为flex:0 1 auto（**只许缩小，不许放大,默认为内容大小**）
 
@@ -184,7 +187,7 @@ flex:auto等价于flex:1 1 auto（**能小就小，能大就大，弹性自适�
 
 - flex item即使被指定可收缩，但其会存在一个`隐性最小宽度`，换句话说它不会无限收缩。可通过设置**min-width**属性来覆盖控制这个最小宽度。同理，我们也可以通过设置**max-width**来控制flex item的放大上限。
 
-## vertical-align相关
+## vertical-align
 
 
 
@@ -201,7 +204,7 @@ x-height 指的就是小写字母 x 的高度
 
 - 当vertical-align属性值为百分比值时，其相对的是当前元素line-height的百分比。
 
-## line-height相关
+## line-height
 
 - 对于**非替换元素（即不包括input,img,select,textarea元素）的纯内联元素**，其可视高度完全由 line-height 决定
 
@@ -231,7 +234,7 @@ x-height 指的就是小写字母 x 的高度
 ```
 假如文字就 1 行，上述两种情况.box 元素的高度都是96px
 
-## 浮动相关
+## 浮动
 
 ### 浮动元素特性
 
@@ -262,7 +265,7 @@ x-height 指的就是小写字母 x 的高度
   display: block;
 }
 ```
-## scss/less相关
+## scss/less
 
 ### 样式继承
 ::: code-group
@@ -376,7 +379,7 @@ x-height 指的就是小写字母 x 的高度
 
   文本内容若包含换行符（\n或\r），则在换行符位置换行。此外，文本默认超出盒子宽度也不换行，也可用此属性
 
-## background相关
+## background
 
 ### background-size
 
@@ -395,7 +398,7 @@ x-height 指的就是小写字母 x 的高度
 ### background-clip
 设置背景图片或背景颜色的显示范围
 
-## z-index相关
+## z-index
 
 `当元素z-index 不是 auto 的时候（默认是auto），会创建层叠上下文`。
 
@@ -443,7 +446,7 @@ x-height 指的就是小写字母 x 的高度
     position: fixed !important;
 }
 ```
-## position相关
+## position
 
 ### static
 

@@ -46,8 +46,8 @@ const routes =  [
                 text:'JavaScript',
                 items:[
                     {
-                        text:'JS异步编程详解',
-                        link:'/js/async'
+                        text:'迭代器 & 生成器',
+                        link:'/js/generator'
                     },
                     {
                         text:'JS零碎',
