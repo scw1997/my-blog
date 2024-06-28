@@ -1,120 +1,14 @@
-# JS异步编程
 
-`同步`：顺序执行，会阻塞后续代码的执行。
+# Iterator & Generator
 
-`异步`：当程序运行到异步的代码时，会将该异步的代码作为任务放进任务队列，而不是推入主线程的调用栈。等主线程执行完之后，再去任务队列里执行对应的任务即可。 因此，异步操作的优点就是：`不会阻塞后续代码的执行`。
-
-js异步编程的四种方法：
-
-## 回调函数
-
-回调函数实现示例：
-
-```js
-const  doSomethingAsync=(callback)=> {  
-    // 假设这是一个异步操作，例如网络请求或定时器  
-    setTimeout(()=> {  
-        // 模拟异步操作完成后的结果  
-        const result = '操作已完成';
-        // 调用回调函数，并将结果作为参数传递  
-        callback(result);   // [!code highlight]
-    }, 1000); // 假设异步操作需要1秒来完成  
-}  
-  
-// 使用示例  
-doSomethingAsync((result)=> {  
-    console.log(result); // 输出：'操作已完成'  
-    // 在这里可以执行任何需要在异步操作完成后进行的操作  
-});
-```
-
-回调函数的最主要缺点是`回调地狱`：
-
-```js
-function fetchDataFromServer(url, callback) {  
-    // 假设这是一个异步请求函数  
-    setTimeout(function() {  
-        // 模拟从服务器获取数据  
-        const data = `Data from ${url}`;  
-        callback(null, data); // 假设第一个参数是错误对象，第二个参数是数据  
-    }, 1000);  
-}  
-  
-// 回调地狱示例  
-fetchDataFromServer('api/first', function(err, data1) {  
-    if (err) {  
-        console.error('Error fetching first data:', err);  
-        return;  
-    }  
-      
-    fetchDataFromServer('api/second', function(err, data2) {  
-        if (err) {  
-            console.error('Error fetching second data:', err);  
-            return;  
-        }  
-          
-        fetchDataFromServer('api/third', function(err, data3) {  
-            if (err) {  
-                console.error('Error fetching third data:', err);  
-                return;  
-            }  
-            // ...调用更多接口，需要使用更多的嵌套回调
-
-        });  
-    });  
-});
-```
-**当使用嵌套回调函数来处理异步操作时，代码变得难以阅读和维护**。
-
-随着ES6的引入，Promise，Generator，async/await等新的特性被用来解决这个问题。
-
-
-## Promise
-
-使用Promise来重写上述回调地狱示例代码：
-
-```js
-
-function fetchDataFromServer(url) {  
-    return new Promise((resolve, reject) => {  
-        // 假设这是一个异步请求函数  
-        setTimeout(function() {  
-            // 模拟从服务器获取数据  
-            const data = `Data from ${url}`;  
-            resolve(data); // 使用Promise的resolve方法返回数据  
-        }, 1000);  
-    });  
-}  
-  
-// 使用Promise链来避免回调地狱  
-fetchDataFromServer('api/first')  
-    .then(data1 => fetchDataFromServer('api/second'))  
-    .then(data2 => fetchDataFromServer('api/third'))  
-    .then((data3) => {  
-        // 使用所有获取到的数据  
-        console.log(data1, data2, data3);  
-    })  
-    .catch(err => {  
-        // 捕获任何错误  
-        console.error('Error fetching data:', err);  
-    });
-```
-在这个使用Promises的示例中，代码更加清晰，并且错误处理也更加集中。每个.then()方法都返回一个新的Promise，这样我们就可以链式地调用它们，而不需要嵌套回调函数。
-
-
-## Generator
-
-Generator是ES6提出的一种异步编程的方案。
-
-学习Generator前,需要了解iterator是什么：
-
-### Iterator
+## Iterator 
 
 迭代器Iterator是ES6提出的一种接口机制。
 
 它的目的主要在于为所有部署了Iterator接口的数据结构提供统一的访问机制，即按一定次序执行遍历操作。并且ES6也提出了针对Iterator遍历操作的专属遍历命令的标准，即`for of循环`
 
 
+### 内置Iterator接口
 :::tip 定义
 一个数据结构只要具有`Symbol.iterator`属性，就可以认为是`可迭代的`(iterable)
 :::
@@ -180,10 +74,12 @@ console.log('res5',res5)// {value: undefined', done: true }
 
 ```
 
-:::code-group 
+### 自定义实现Iterator接口
 
-```js [示例1]
-// 自定义实现一种含有Iterator接口的数据结构
+
+示例1：自定义实现一种含有Iterator接口的数据结构：
+
+```js 
 
 class RangeIterator{
 	constructor(start, stop){
@@ -219,9 +115,8 @@ for (var value of range) {
 
 ```
 
-
-```js [示例2]
-// 为object类型数据结构添加iterator接口
+示例2：为object类型数据结构添加iterator接口
+```js
 const obj = {
     a:1,
     b:2,
@@ -249,19 +144,18 @@ for(const item of obj){
     console.log('item',item)  //依次打印{key:'a',value:1} , {key:'b',value:2}
 }
 ```
-:::
 
 从上面可以看出,要实现一个Iterator接口还是稍微有些复杂麻烦的.
 
-而Generator函数则可以简单形式实现Iterator   
+而使用下面介绍的Generator函数实现Iterator接口会更加简洁   
 
-### Generator函数
+## Generator
 
 一般来讲，函数一旦执行就会运行到结束，期间不会有其他代码能打断它。
 
 Generator函数（也称生成器）提供一种脱离这种模式的`看似同步的异步流程控制方式`。
 
-#### 基本使用
+### 基本使用
 
 示例：
 ```js
@@ -357,7 +251,7 @@ console.log(iterator.next());
 ```
 :::
 
-#### 带参数的next方法调用
+### 带参数的next方法调用
 
 示例：
 ```js 
@@ -398,7 +292,7 @@ yield表达式整体本身(如yield 2整体)也代表一个值，它的值永远
 :::
 
 
-#### yield*表达式
+### yield*表达式
 
 yield*表达式，用来在一个 Generator 函数里面执行另一个 Generator 函数。
 
@@ -529,7 +423,5 @@ Generator函数可以暂停执行，这使得它在并发控制中具有一定�
 
 异步操作的同步化，避免了回调地狱问题。同时Generator也作为`async/await`语法的polyfill(底层实现)
 
-## Async/Await
 
-Async/Await是ES6提出的**异步终极解决方案**。
-
+## 结语

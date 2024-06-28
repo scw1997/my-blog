@@ -46,7 +46,7 @@ const routes =  [
                 text:'JavaScript',
                 items:[
                     {
-                        text:'迭代器 & 生成器',
+                        text:'Iterator & Generator',
                         link:'/js/generator'
                     },
                     {
