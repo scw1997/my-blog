@@ -407,6 +407,17 @@ for(const item of obj){
 }
 ```
 
+```js
+const func = async()=>{
+    console.log('func')
+  return 'a'
+}
+const a= [1,2,3].map(async()=>{
+    await func()
+    console.log('1')
+})
+```
+
 **（2）实现并发控制**
 
 Generator函数可以暂停执行，这使得它在并发控制中具有一定的应用价值。通过合理地安排Generator函数的执行顺序和暂停时机，我们可以实现对并发任务的有效管理和调度。
@@ -423,5 +434,13 @@ Generator函数可以暂停执行，这使得它在并发控制中具有一定�
 
 异步操作的同步化，避免了回调地狱问题。同时Generator也作为`async/await`语法的polyfill(底层实现)
 
+:::info 关于async/await是Generator的语法糖
+所谓Generator语法糖，表明的就是aysnc/await实现的就是generator实现的功能。但是async/await比generator要好用。因为generator执行yield设下的断点采用的方式就是不断的调用iterator方法，这是个`手动调用`的过程。针对generator的这个缺点，后面提出了co这个库函数来`自动执行next`，相比于之前的方案，这种方式确实有了进步，但是仍然麻烦。而async配合await得到的就是断点执行后的结果。因此async/await比generator使用更普遍。
+:::
+
 
 ## 结语
+
+Iterator方便我们更容易理解遍历的原理和可迭代的概念。
+
+Generator能帮助我们更深层次理解异步工作流的各种机制和了解js异步编程的历史演变过程。
