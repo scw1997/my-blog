@@ -178,7 +178,7 @@ defaultProduct.use(); // 使用默认Product
 - 当需要创建不同种类的对象时
 - 需要延迟创建对象时
 
-例如jquery的$，Vue/React的createElement方法
+例如JQuery的`$`，`Vue.component()`方法，`React.createElement()`方法。
 
 ### 单例模式
 

@@ -52,6 +52,10 @@ const routes =  [
                     {
                         text:'JS零碎',
                         link:'/js/fragment'
+                    },
+                    {
+                        text:'JS手写实现',
+                        link:'/js/hand'
                     }
                 ]
             },

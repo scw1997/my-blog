@@ -35,8 +35,16 @@ console.log(asyncRes);
 - 对写入顺序有要求使用Map
 - 多层数据嵌套用Object，链式读取方便
 :::
+
+## 内存泄漏
+
+
 ## 其他
 
 - `Object.create()`：创建一个原型对象指向**传入参数**的空对象
 
   `{}`：创建一个原型指向**Object.prototype**的空对象
+
+- `window.onload`：等待所有资源渲染并加载完成，包括图片。
+
+  `window.domContentLoaded`：等待dom渲染完成即可，此时图片尚未加载出来。
