@@ -50,13 +50,22 @@ const routes =  [
                         link:'/js/generator'
                     },
                     {
-                        text:'JS零碎',
-                        link:'/js/fragment'
+                        text:'原型链',
+                        link:'/js/prototype'
+                    },
+                    {
+                        text:'JS事件循环机制',
+                        link:'/js/event-loop'
                     },
                     {
                         text:'JS手写实现',
                         link:'/js/hand'
-                    }
+                    },
+                    {
+                        text:'JS零碎',
+                        link:'/js/fragment'
+                    },
+
                 ]
             },
             {
