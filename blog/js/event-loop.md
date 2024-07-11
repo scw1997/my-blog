@@ -87,38 +87,118 @@ console.log('同步代码3');
 
 ```js
 new Promise((resolve, reject) => {
-  console.log("p1-0")
+  console.log("p1")
   resolve()
 }).then(() => {
+  console.log("p1-then")
   setTimeout(() => {
-    console.log('macrotask-1')
+    console.log("s1")
     new Promise((resolve, reject) => {
-      console.log("p2-0")
+      console.log("p2")
       resolve()
     }).then(() => {
+      console.log("p2-then")
       setTimeout(() => {
-        console.log('macrotask-2')
+        console.log("s2")
       }, 0)
-      console.log("p2-1")
     }).then(() => {
-      console.log("p2-2")
+      console.log("p2-then-then")
     })
   }, 0)
-  console.log("p1-1")
 
 }).then(() => {
-  console.log("p1-2")
+  console.log("p1-then-then")
 })
 
-//依次输出：p1-0、p1-1、p1-2、macrotask-1、p2-0、p2-1、p2-2、macrotask-2
+//依次输出：p1,p1-then,p1-then-then,s1,p2,p2-then,p2-then-then,s2
 
 ```
 
-解析：
-- Promise1输出p1-0,Promise1.then进入微任务队列
-- sT1进入宏任务队列，输出p1-1，Promise1.then.then进入微任务队列
-  第三步：执行栈为空，执行微任务队列，输出p1-2；执行宏任务队列，输出macrotask-1，p2-0，Promise2.then进入微任务队列
-  第四步：sT2进入宏任务队列，输出p2-1，Promise2.then.then进入微任务队列
-  第五步：执行栈为空，执行微任务队列，输出p2-2；执行宏任务队列，输出macrotask-2
-  
+:::tip 核心点
+遇到多个then的promise,则在第一个then回调执行完后，将第二个then扔进微任务队列。以此类推。
+::: 
+
+
+示例3：
+
+```js
+async function async1() {
+  console.log("async1-1");
+  await async2();
+  console.log("async1-2");
+  setTimeout(() => {
+    console.log('s1')
+  }, 0)
+}
+async function async2() {
+    console.log("async2");
+  setTimeout(() => {
+      console.log("s2");
+  }, 0)
+}
+
+setTimeout(() => {
+  console.log('s3')
+}, 0)
+async1();
+
+//依次输出：async1-1,async2,async1-2,s3,s2,s1
+```
+:::tip 核心点
+遇到async/await的代码时：
+
+```js
+async function async1(){
+    console.log('1')
+    await async2()
+    console.log('2')
+}
+async function async2(){
+    console.log('async2')
+    // ...
+}
+async1()
+
+```
+分析执行顺序时,上述代码相当于:
+```js
+new Promise(()=>{
+    console.log('1')
+    // 下面是awati的代码内容
+    console.log('async2')
+    // ...
+    // 上面面是await的代码内容
+}).then(()=>{
+    console.log('2')
+})
+
+
+```
+
+:::
+
+
+示例4:
+
+```js
+function runAsync(x) {
+  return new Promise((resolve, _) => {
+    setTimeout(() => {
+      console.log(x)
+      resolve(x)
+    }, 0)
+  })
+
+}
+Promise.all([runAsync(1), runAsync(2), runAsync(3)]).then((res) => {
+  console.log('res',)
+})
+
+//依次输出:1,2,3,res
+```
+:::tip 核心点
+Promise.all会在所有promise resolve后再执行整体的then回调。
+:::
+
+
 > 引用文章：https://juejin.cn/post/7164224261752619016

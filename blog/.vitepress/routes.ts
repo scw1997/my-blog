@@ -54,6 +54,10 @@ const routes =  [
                         link:'/js/prototype'
                     },
                     {
+                        text:'JS类型检测',
+                        link:'/js/type-check'
+                    },
+                    {
                         text:'JS事件循环机制',
                         link:'/js/event-loop'
                     },

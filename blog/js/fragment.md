@@ -527,6 +527,10 @@ function getArea(shape, options) {
 getArea(shapeType.triangle, { width: 100, height: 100 });
 getArea(shapeType.circle, { width: 200, height: 200 });
 ```
+
+## 类型检测
+
+
 ## 其他
 
 - `Object.create()`：创建一个原型对象指向**传入参数**的空对象
