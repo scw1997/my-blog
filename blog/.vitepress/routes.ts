@@ -58,6 +58,10 @@ const routes =  [
                         link:'/js/type-check'
                     },
                     {
+                        text:'JS This绑定机制',
+                        link:'/js/this-bind'
+                    },
+                    {
                         text:'JS事件循环机制',
                         link:'/js/event-loop'
                     },
@@ -137,7 +141,7 @@ const routes =  [
                 ]
             },
             {
-                text:'算法',
+                text:'数据结构和算法',
                 link:'/algorithm'
             },
             {

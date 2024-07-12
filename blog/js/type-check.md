@@ -147,28 +147,41 @@ Object.prototype.toString.call (undefined) //"[object Undefined]"
 可以发现，Object.prototype.toString.call非常适合检测具体的数据类型，也没有像instanceof那样的关于基本类型检测无效的问题。那么这个方法到底是怎么来的呢?
 
 :::tip 原理 
-所有对象(包括基本类型)的toString()方法原本就是从`Object.prototype`继承而来的，但是Number，String， Function，Array等这些构造函数各自的原型在继承时`改写`了该方法.导致这些类型直接调用toString的行为逻辑不一样
+所有对象(包括基本类型)的toString()方法原本就是从`Object.prototype`继承而来的，Object.prototype.toString()是可以`对this对象返回对应的具体数据类型的`。
 
-`Object.prototype.toString()是可以对this对象返回对应的具体数据类型的`，直接调用Object.prototype.toString()时它内部的this指向的是Object.prototype,所以永远返回的是"[object Object]". 我们通过call修改其this指向为我们需要检测类型的值即可。
-:::
-如下示例:
+但是Number，String， Function，Array等这些构造函数各自的原型在继承时`改写`了该方法.导致这些类型直接调用toString的行为逻辑不一样。
 ```js
-({name: 123}) .toString() //"[object Object]"
+({name: 123}).toString() //"[object Object]"
+
+// 以下都是被改写了,改写后的功能不再是类型检查,而是转成字符串.
 "字符串".toString()//"字符串"
 (123).toString() //123
 [1,2,3] .toString() // ‘1,2,3’
 (()=>{}).toString()//"()=>{}"
 
-```
 
-验证:
-```js
-"字符串".toString()//字符串
+//删除构造函数String原型上改写的toString方法
 delete String.procotype.toString
-// 删除构造函数String原型上改写的toString方法后，就会沿若原型链调用Object.prototype.toString().
+// 删除后,就会内部自动沿若原型链调用Object.prototype.toString()，此时this指向依然为"字符串",所以实现了类型检测功能。
 "字符串".toString()// "[object String]"
+```
+
+而如果我们直接主动调用Object.prototype.toString()时它的this指向的是`Object.prototype`,所以永远返回的是"[object Object]":
+
+```js
+Object.prototype.toString("string") //[object Object]
+Object.prototype.toString(2) //[object Object]
+```
+
+我们通过`call修改其this指向`为我们需要检测类型的值即可实现真正的类型检测功能。
+
+```js
+Object.prototype.toString.call("string") //[object String]
+Object.prototype.toString.call(2) //[object Number]
 
 ```
+:::
+
 
 
 ### constructor
@@ -260,7 +273,7 @@ p2.constructor === Array //true,
 
 关于==比较在隐式转换时的一些具体规则细节这里不再具体介绍，可自行查询。
 
-=== 比较时只有两种特殊情况需要注意:
+`===` 比较时只有两种特殊情况需要注意:
 
 - `NaN !== NaN`
 - `+0 === -0`
