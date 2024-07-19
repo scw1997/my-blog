@@ -44,6 +44,7 @@ const routes =  [
             },
             {
                 text:'JavaScript',
+                collapsed: true,
                 items:[
                     {
                         text:'Iterator & Generator',
@@ -78,10 +79,17 @@ const routes =  [
             },
             {
                 text:'React',
-                items:[]
+                collapsed: true,
+                items:[
+                    {
+                        text:'深入React Hooks',
+                        link:'/react/react-hooks'
+                    }
+                ]
             },
             {
                 text:'Vue',
+                collapsed: true,
                 items:[]
             }
         ]
