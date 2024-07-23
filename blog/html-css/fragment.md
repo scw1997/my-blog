@@ -496,6 +496,28 @@ position属性的默认值。此时 top、right、bottom、left 属性无效。
 
 :::
 
+### sticky
+
+默认情况下，当前元素的所处位置能够完全看到它时，效果相当于position:relative。
+
+当页面滚动超过当前元素渲染区域时并且当前元素距离其父元素的距离达到已设置位置要求时(比如top：100px)，这时的效果相当于position:fixed（脱离文档流）。
+
+
+**生效前提**：
+
+- 元素的父元素或者父元素的父元素的overflow属性值不能为hidden/auto。
+- 未设置top,right,bottom,left中的任意一个值，否则永远相当于position:relative。
+- 父元素的高度不能低于当前元素的高度
+
+:::warning 注意
+
+- sticky不会触发BFC
+- 当父元素的height：100%时，页面滑动到一定高度之后sticky属性会失效。
+- z-index对sticky元素无效
+- IE低版本不支持sticky属性
+
+:::
+
 ## CSS三角形应用
 
 ![border_0.png](/border_0.png)
