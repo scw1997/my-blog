@@ -254,6 +254,6 @@ script脚本后续交互对dom和样式的操作会涉及到二次布局与绘�
 
 :::
 
-[浏览器缓存]:/principle/browser-cache
-[HTTP协议]:/principle/http
-[重绘 & 重排]:/principle/reflow-repaint
+[浏览器缓存]:/advance/browser-cache
+[HTTP协议]:/advance/http
+[重绘 & 重排]:/advance/reflow-repaint

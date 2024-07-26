@@ -178,7 +178,7 @@ console.log(getElementMetadata(myElement)); // 输出: { type: 'button', role: '
 - 只有定义了`type=module`的script标签才会被当做ES6模块，即才可以出现import或export关键字。
 - 指定了src属性的script标签如果在标签内部，即`<script></script>`之间再包含其他js代码，则该js代码会被`忽略`。
 - 通过js动态创建的script脚本会默认添加`async`属性。
-- defer和async属性介绍详见：[浏览器渲染机制 > HTML解析](/principle/browser-render.html#html解析)
+- defer和async属性介绍详见：[浏览器渲染机制 > HTML解析](/advance/browser-render.html#html解析)
 
 ## 垃圾回收机制
 

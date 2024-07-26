@@ -76,7 +76,7 @@ function Index() {
 
 如果你在一个事件处理函数中多次调用更新函数，每次调用都会触发一个更新，但 React 会尽可能将这些更新`合并到一次重新渲染`中以提高性能。
 
-此外，setState是异步更新，通常你需要在useEffect回调中才能拿到最新的state值。
+此外，setState是异步更新(将多次setState存储在queue队列中，等待调度完成一起更新)，通常你需要在useEffect回调中才能拿到最新的state值。
 
 然而，如果你在更新函数中基于先前的 state 来计算新的 state（例如，通过闭包捕获的 state），你可能需要使用函数的形式来确保你得到的是最新的 state 值。
 
@@ -115,7 +115,25 @@ function Counter() {
 
 > 副作用（Side Effects）指的是那些在函数组件执行过程中，没有发生在数据向视图转换过程中的逻辑。这些操作通常会影响组件的外部状态或环境，例如数据获取（如Ajax请求）、手动修改DOM、设置订阅（如WebSocket连接）、监听浏览器事件（如窗口大小变化）、设置或清除定时器等。
 
-React 通过useEffect来管理副作用：
+React 通过useEffect来管理副作用，其执行原理大致如下：
+
+:::info
+- 调度副作用：
+
+  当你在组件内部调用useEffect时，你实际上是`将一个副作用函数及其依赖项数组排队等待执行`。这个函数并不会立即执行，而是会被React收集起来，等待合适的时机执行。
+
+- 依赖项检测：
+
+  如果useEffect的第二个参数（依赖项数组）被提供，React会在每次渲染时比较当前的依赖项数组和上一次的依赖项数组。如果依赖项有变化，或者没有提供依赖项数组（意味着依赖项为所有props和state），则副作用函数会重新执行。
+
+- 执行副作用：
+
+  在Commit阶段之后，React会处理所有排队的副作用（异步执行）。如果组件是首次渲染，所有的副作用都会执行。如果组件是重新渲染，则根据依赖项数组的变化情况来决定是否执行副作用函数。
+
+- 清理机制
+
+  如果副作用函数返回了一个函数，那么这个函数将被视为清理函数。在执行当前的副作用之前，以及组件卸载前，React会先调用上一次渲染中的清理函数。
+:::
 ```jsx
 const [num, setNumber] = useState(0);
 
@@ -165,7 +183,7 @@ useLayoutEffect 是`同步阻塞调用`，大致流程如下：
 :::info
 1. 触发渲染函数执行（改变状态，或者父组件重新渲染）
 2. React调用组件的渲染函数
-3. 执行useLayoutEffect，并且React等待它执行完成（即Renderer commit阶段的Layout子阶段同步执行）
+3. DOM 变更后（Renderer render阶段结束），执行useLayoutEffect，并且React等待它执行完成（即Renderer commit阶段的Layout子阶段同步执行）
 4. 屏幕中重绘完成
 :::
 
@@ -508,7 +526,7 @@ useRef可用于访问DOM元素，保存一些不用于实时渲染的状态。
 
 ## useMemo
 
-useMemo用于缓存计算结果，设置指定依赖，避免不必要的渲染。
+useMemo用于根据指定依赖缓存计算结果，，避免不必要的渲染。
 
 除了缓存一些逻辑计算的结果，还可以用于缓存组件和函数：
 
@@ -605,7 +623,7 @@ useCallback是对useMemo的特化，它可以返回一个缓存版本的函数�
 
 何时使用useCallback：
 
-- **子组件的性能优化**：当你将函数作为 prop 传递给已经通过React.memo进行优化的子组件时，使用useCallback可以确保子组件不会因为父组件中的函数重建而进行不必要的重新渲染。
+- **子组件的性能优化**：当你将函数作为 prop 传递给已经通过`React.memo`进行优化的子组件时，使用useCallback可以确保子组件不会因为父组件中的函数重建而进行不必要的重新渲染。
 - **Hook 依赖**：如果你正在传递的函数会被用作其他 Hook（例如useEffect）的依赖时，使用useCallback可确保函数的稳定性，从而避免不必要的副作用的执行。
 - **复杂计算与频繁的重新渲染**：在应用涉及很多细粒度的交互，如绘图应用或其它需要大量操作和反馈的场景，使用useCallback可以避免因频繁的渲染而导致的性能问题。
 
@@ -653,4 +671,309 @@ const handleAddTodo = useCallback((text) => {
 
 ```
 
+## useImperativeHandle
 
+在class组件中，通过ref可以访问DOM 节点或组件实例，通过组件实例可以拿到子组件内部的状态和方法。
+
+在函数组件中，默认是没有组件实例的,ref是不可用的。需要通过`forwardRef`来定义组件的DOM引用
+
+通过`useImperativeHandle`并配合`forwardRef`可以自定义我们想要暴露给父组件的实例方法或属性。
+
+
+
+子组件定义要暴露的状态和方法：
+```js
+
+import {useImperativeHandle,forwardRef} from 'react'
+
+const ForwardedCustomInput = forwardRef((props, ref)=> {
+  const inputRef = useRef();
+  const [state,setState] = useState({})
+  const updateChildState = (state)=>{
+      setState(state)
+  }
+  useImperativeHandle(ref, () => ({
+    // 修改子组件保存的useRef状态值
+    clear: () => {
+      inputRef.current.value = '';
+    },
+    // 修改子组件的state
+    updateChildState,
+    //子组件的state
+    childState:state
+  }));
+
+  return <input ref={inputRef} />;
+})
+
+```
+
+父组件操作ref
+
+```js
+function App() {
+  const inputRef = useRef();
+
+  return (
+    <div>
+      <ForwardedCustomInput ref={inputRef} />
+      <button onClick={() => inputRef.current.clear()}>Clear Input</button>
+      <button onClick={() => console.log(inputRef.current.childState)}>getChildState</button>
+      <button onClick={() => inputRef.current.updateChildState({a:1})}>updateChildState</button>
+    </div>
+  );
+}
+
+```
+
+## useId
+
+useId的出现背景：
+
+:::tip  
+当你看到一个服务端渲染的应用，它的渲染过程会是这样：服务端会先生成 HTML，然后将这个 HTML 发送到客户端，在客户端，React 会进行一个叫做 hydration 的过程，即将服务器端生成的 HTML 和客户端的 DOM 进行匹配，并生成最终的 HTML。
+
+而在这个过程中，我们有时候需要给 DOM 生成唯一的 ID。例如：我们需要通过 JavaScript 或 CSS 选择器来访问 DOM 的时候；或者某些HTML属性（如 aria-labelledby）需要使用唯一的 ID 来关联元素。
+
+如果在 hydration 过程中，服务器端和客户端生成的 ID 不一致，那么就会导致 hydration 失败。为了解决这个问题，React v18 引入了一个新的 Hook——useId。通过使用一些内部机制，React 确保了`无论是在服务器端还是客户端，对于同一个组件实例，useId 都会返回相同的 ID`。
+
+:::
+
+
+
+```jsx
+const inputId = useId()
+const selectId = useId()
+```
+
+应用场景：
+
+- 创建DOM元素的唯一ID
+- 为同一组件实例的各个元素的属性生成统一前缀
+- ...
+
+## 自定义Hooks
+
+没有 Hooks 之前，高阶组件HOC和 Render Props 本质上都是将复用逻辑提升到父组件中。
+
+Hooks 出现之后，我们将复用逻辑提取到组件顶层，而不是强行提升到父组件中。这样就能够`逻辑解耦，避免 HOC 和 Render Props 带来的嵌套地狱`
+
+**示例1：获取当前组件的挂载时间**
+
+:::code-group 
+
+```jsx [Render Props]
+import { useEffect, useState } from 'react';
+const MountTimeProvider = ({ render }) => {
+  const [mountTime, setMountTime] = useState(null);
+  useEffect(() => {
+    setMountTime(Date.now());
+  }, []);
+  return render({ mountTime });
+};
+
+const Input = ({ mountTime, value }) => {
+  return (
+          <div>
+            <input type="text" value={value} />
+            <p>input mountTime:{mountTime}</p>
+          </div>
+  );
+};
+
+const App = () => {
+  return (
+          <MountTimeProvider
+                  render={({ mountTime }) => <Input value={'inputValue'} mountTime={mountTime} />}
+          />
+  );
+};
+export default App;
+
+```
+```jsx [高阶组件HOC]
+import { useEffect, useState } from 'react';
+const withMountTime = (Component) => {
+  // 相比Render Props，高阶组件还可以操控传入组件的props
+  return (props) => {
+    const [mountTime, setMountTime] = useState(null);
+    useEffect(() => {
+      setMountTime(Date.now());
+    }, []);
+    return <Component {...props} mountTime={mountTime} />;
+  };
+};
+
+const Input = withMountTime(({ mountTime, value }) => {
+  return (
+          <div>
+            <input type="text" value={value} />
+            <p>input mountTime:{mountTime}</p>
+          </div>
+  );
+});
+
+const App = () => <Input value={'inputValue'} />;
+export default App;
+```
+```jsx [自定义Hook]
+
+import { useEffect, useState } from 'react';
+
+const useMountTime = () => {
+  const [mountTime, setMountTime] = useState(null);
+
+  useEffect(() => {
+    setMountTime(Date.now());
+  }, []);
+
+  return mountTime;
+};
+
+const Input = ({ value }) => {
+  const mountTime = useMountTime();
+  return (
+          <div>
+            <input type="text" value={value} />
+            <p>input mountTime:{mountTime}</p>
+          </div>
+  );
+};
+
+const App = () => <Input value={'inputValue'} />;
+export default App;
+
+```
+:::
+
+**示例2：封装一个根据指定userId获取用户数据的插件**
+
+:::code-group
+
+```jsx [Render Props]
+import { useEffect, useState } from 'react';
+
+const UserDataProvider = ({ userId, render }) => {
+  const [loading, setLoading] = useState(false);
+  const [userData, setUserData] = useState(null);
+  const [error, setError] = useState(null);
+  useEffect(() => {
+    setLoading(true);
+    fetch(`http://example.api.com/getUser?id=${userId}`)
+            .then((response) => response.json())
+            .then((data) => {
+              setUserData(data);
+              setLoading(false);
+            })
+            .catch((error) => {
+              setError(error);
+              setLoading(false);
+            });
+  }, []);
+  return render({ loading, userData, error });
+};
+
+const UserData = ({ data }) => {
+  const { loading, userData, error } = data;
+  if (loading) return <span>loading...</span>;
+  if (error) return <span>error</span>;
+  return (
+          <div>
+            User Msg
+            <p>userName:{userData?.name}</p>
+            <p>userAge:{userData?.age}</p>
+          </div>
+  );
+};
+
+const App = () => {
+  return <UserDataProvider userId={1} render={(data) => <UserData data={data} />} />;
+};
+export default App;
+
+
+```
+```jsx [高阶组件HOC]
+import { useEffect, useState } from 'react';
+const withFetchUserData = (Component, userId) => {
+  // 相比Render Props，高阶组件还可以操控传入组件的props
+  return (props) => {
+    const [loading, setLoading] = useState(false);
+    const [userData, setUserData] = useState(null);
+    const [error, setError] = useState(null);
+    useEffect(() => {
+      setLoading(true);
+      fetch(`http://example.api.com/getUser?id=${userId}`)
+              .then((response) => response.json())
+              .then((data) => {
+                setUserData(data);
+                setLoading(false);
+              })
+              .catch((error) => {
+                setError(error);
+                setLoading(false);
+              });
+    }, []);
+    return <Component {...props} data={{ loading, userData, error }} />;
+  };
+};
+
+const UserData = withFetchUserData(({ data }) => {
+  const { loading, userData, error } = data;
+  if (loading) return <span>loading...</span>;
+  if (error) return <span>error</span>;
+  return (
+          <div>
+            User Msg
+            <p>userName:{userData?.name}</p>
+            <p>userAge:{userData?.age}</p>
+          </div>
+  );
+}, 1);
+
+const App = () => <UserData />;
+export default App;
+```
+```jsx [自定义Hook]
+import { useEffect, useState } from 'react';
+
+const useFetchUserData = (userId) => {
+  const [loading, setLoading] = useState(false);
+  const [userData, setUserData] = useState(null);
+  const [error, setError] = useState(null);
+  useEffect(() => {
+    setLoading(true);
+    fetch(`http://example.api.com/getUser?id=${userId}`)
+            .then((response) => response.json())
+            .then((data) => {
+              setUserData(data);
+              setLoading(false);
+            })
+            .catch((error) => {
+              setError(error);
+              setLoading(false);
+            });
+  }, []);
+
+  return { loading, userData, error };
+};
+
+const UserData = () => {
+  const { loading, userData, error } = useFetchUserData(1);
+  if (loading) return <span>loading...</span>;
+  if (error) return <span>error</span>;
+  return (
+          <div>
+            User Msg
+            <p>userName:{userData?.name}</p>
+            <p>userAge:{userData?.age}</p>
+          </div>
+  );
+};
+
+const App = () => <UserData />;
+export default App;
+
+
+```
+:::

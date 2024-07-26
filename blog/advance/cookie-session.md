@@ -16,7 +16,7 @@ Cookie是浏览器实现的一种数据存储技术。
 
 - cookie的**安全性不高**，别人可以分析存放在本地的cookie并进行cookie欺骗。
 
-- cookie**默认不可跨域**，可通过特殊的操作如**设置withCredentials属性为true**实现跨域（跨域介绍详见[这里](/principle/cross-origin)）。
+- cookie**默认不可跨域**，可通过特殊的操作如**设置withCredentials属性为true**实现跨域（跨域介绍详见[这里](/advance/cross-origin)）。
 
 ### 属性
 

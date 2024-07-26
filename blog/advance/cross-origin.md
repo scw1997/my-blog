@@ -105,7 +105,7 @@ export default defineConfig({
 
   使用`Nginx配置反向代理`来解决跨域。
 
-> 关于反向代理详见：[反向代理](/principle/http#反向代理)
+> 关于反向代理详见：[反向代理](/advance/http#反向代理)
 
 
 ### CORS

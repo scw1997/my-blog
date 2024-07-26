@@ -196,7 +196,7 @@ Object.prototype.toString.call(2) //[object Number]
 
 严格意义上讲，constructor并不表示"对象实例由...构造".
 
-详见:[原型链 > 迷惑的constructor属性](/js/prototype.html#迷惑的constructor属性)
+详见:[原型链 > 迷惑的constructor属性](/core/js/prototype.html#迷惑的constructor属性)
 
 ```js
 function Person(){

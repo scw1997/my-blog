@@ -19,4 +19,4 @@
 
 
 
-[Cookie]:/principle/cookie-session#cookie
+[Cookie]:/advance/cookie-session#cookie

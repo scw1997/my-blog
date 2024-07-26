@@ -138,4 +138,4 @@ input::placeholder {
 }
 ```
 
-[优先级]:/html-css/selector-priority
+[优先级]:/core/html-css/selector-priority
