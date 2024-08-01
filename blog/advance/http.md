@@ -329,7 +329,7 @@ ws.onclose = function(evt) {
 ```
 
 
-[三次握手]::/advance/browser-render#网络请求
+[三次握手]:/advance/browser-render#网络请求
 [四次挥手]:/advance/browser-render#断开连接
 [Cache-Control]:/advance/browser-cache#cache-control
 [Expires]:/advance/browser-cache#cache-control
