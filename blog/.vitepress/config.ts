@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitepress'
 import routes from "./routes.js";
 
+
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   title: "fanlaBoy前端随记册",

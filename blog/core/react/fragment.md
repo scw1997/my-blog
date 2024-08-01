@@ -219,3 +219,4 @@ cloneElement和createElement都返回jsx对象，最主要区别在于**第一�
 :::
 ## 其他
 
+- 不考虑memo缓存的情况下，父组件执行了render，子组件`除了children渲染部分`，其他部分也一定会重新render。

@@ -1,3 +1,5 @@
+
+const env = process.env.NODE_ENV
 const routes =  [
     {
         text:'简介',
@@ -90,8 +92,12 @@ const routes =  [
                         link:'/core/react/react-hooks'
                     },
                     {
-                        text:'React工作原理',
+                        text:'React 原理',
                         link:'/core/react/react-principle'
+                    },
+                    {
+                        text:'Fiber架构',
+                        link:'/core/react/react-fiber'
                     },
                     {
                         text:'React零碎',
@@ -172,7 +178,13 @@ const routes =  [
     {
         text: '其他',
         link:'/others'
-    }
+    },
+    ...(env==='development'?[
+        {
+            text: '测试题',
+            link:'/test'
+        }]:[])
+
 ]
 
 export default routes
