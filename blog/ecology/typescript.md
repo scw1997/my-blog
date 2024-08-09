@@ -664,12 +664,479 @@ department.printMeeting();
 department.generateReports(); // [!code error] 错误: 方法在声明的抽象类中不存在
 ```
 
-### implements
+
+## 映射类型
+
+- 只读类型`Readonly`
+
+```ts
+type Readonly<T> = {
+    readonly [P in keyof T]: T[P];
+}
+
+```
+
+- 只读数组`ReadonlyArray`
+```ts
+interface ReadonlyArray<T> {
+    /** Iterator of values in the array. */
+    [Symbol.iterator](): IterableIterator<T>;
+
+    /**
+     * Returns an iterable of key, value pairs for every entry in the array
+     */
+    entries(): IterableIterator<[number, T]>;
+
+    /**
+     * Returns an iterable of keys in the array
+     */
+    keys(): IterableIterator<number>;
+
+    /**
+     * Returns an iterable of values in the array
+     */
+    values(): IterableIterator<T>;
+}
+
+```
+使用注意:
+```ts
+interface Person {
+    name: string
+}
+
+//只能在数组初始化时为变量赋值，之后数组无法修改
+const personList: ReadonlyArray<Person> = [{ name: 'Jack' }, { name: 'Rose' }]
+
+// 会报错：Property 'push' does not exist on type 'readonly Person[]'
+personList.push({ name: 'Lucy' }) // [!code error]
+
+// 但是内部元素如果是引用类型，元素自身是可以进行修改的
+personList[0].name = 'Lily'
+
+```
+
+- 可选类型`Partial`
+```ts
+type Partial<T> = {
+    [P in keyof T]?: T[P];
+}
+```
+
+- 必选类型`Required`
+```ts
+type Required<T> = {
+  [P in keyof T]-?: T[P];
+}
+```
+
+- 提取属性`Pick`
+```ts
+type Pick<T, K extends keyof T> = {
+  [P in K]: T[P];
+}
+```
+
+- 排除属性`Omit`
+```ts
+type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>
+```
+
+- 摘取类型`Extract`
+```ts
+type Extract<T, U> = T extends U ? T : never;
+```
+使用:
+```ts
+type T01 = Extract<"a" | "b" | "c" | "d", "a" | "c" | "f">;  // "a" | "c"
+
+type T02 = Extract<string | number | (() => void), Function>;  // () => void
+
+```
+- 排除类型`Exclude`
+```ts
+type Exclude<T, U> = T extends U ? never : T
+```
+用法:
+```ts
+type T00 = Exclude<"a" | "b" | "c" | "d", "a" | "c" | "f">;  // "b" | "d"
+
+type T01 = Exclude<string | number | (() => void), Function>;  // string | number
+
+```
+- 属性映射`Record`
+```ts
+type Record<K extends string | number | symbol, T> = {
+  [P in K]: T;
+}
+```
+
+- 不可为空类型`NonNullable`
+```ts
+type NonNullable<T> = T extends null | undefined ? never : T
+```
+用于从 T 中剔除 null、undefined、never 类型，不会剔除 void、unknow 类型.
+
+用法:
+```ts
+
+type T01 = NonNullable<string | number | undefined>;  // string | number
+
+type T02 = NonNullable<(() => string) | string[] | null | undefined>;  // (() => string) | string[]
+
+type T03 = NonNullable<{name?: string, age: number} | string[] | null | undefined>;  // {name?: string, age: number} | string[]
+
+```
+- 函数参数类型`Parameters`
+```ts
+type Parameters<T extends (...args: any) => any> = T extends (...args: infer P) => any ? P : never;
+```
+用于获取函数的参数类型组成的`元组`
+
+用法:
+```ts
+type FunctionType = (name: string, age: number) => boolean
+
+type FunctionParamsType = Parameters<FunctionType>  // [name: string, age: number]
+
+const params:  FunctionParamsType = ['Jack', 20]
+
+```
+- 函数返回值类型`ReturnType`
+```ts
+type ReturnType<T extends (...args: any) => any> = T extends (...args: any) => infer R ? R : any;
+```
+
+使用:
+
+```ts
+type FunctionType = (name: string, age: number) => boolean | string
+
+type FunctionReturnType = ReturnType<FunctionType>  // boolean | string
+
+```
+
+## as const
+
+as count是对字面值的断言,断言后变量只能为当前值，无法做任何的修改
+
+- **针对基本类型变量,as const 和const的作用相同**
+
+```ts
+const a = 'hello';
+let b = 'hello' as const;
+
+a = 'world'; // [!code error] 错误
+b = 'world'; // [!code error] 错误
+```
+
+- **针对array,object等引用类型,as const 无法进行任何改动.但const可以修改对象内部数据的指针**
+
+```ts
+// 数组
+let arr1 = [10, 20] as const;
+const arr2 = [10, 20];
+
+arr1.push(30); // [!code error] 错误，此时已经断言字面量为[10, 20],数据无法做任何修改
+arr2.push(30); //  通过
+
+
+
+let obj1 = {
+   name: 'zhangsan',
+   age: 3
+} as const;
+
+const obj2 = {
+   name: 'zhangsan',
+   age: 3
+};
+
+obj1.name = 'lisi'; // [!code error] 错误，无法修改字段
+obj2.name = 'lisi'; // 通过
+```
+
+- **as const断言会在类型推断时得知具体值和类型，同时能推断出length等属性.但const无此效果**
+
+```ts
+const args = [10, 20] as const; // 断言args为[10, 20]
+// const args: readonly [10, 20]
+const angle = Math.atan2(...args); // 通过上面断言，得知args.length为2，函数接受两个参数，不会报错
+console.log(angle);
+```
+
+```ts
+// 会报错，此时只知道args是number数组，无法确定里面有多少个元素，所有atan2无法确定得到两个参数而报错
+const args = [10, 20];
+//上面相当于声明此类型 const args: number[]
+
+const angle = Math.atan2(...args); // [!code error] Expected 2 arguments, but got 0 or more.
+console.log(angle);
+```
+
+- **as const跟readonly相比,后者只是处理了字段无法再修改，不会断言出其他属性，例如length**：
+
+```ts
+let args: readonly number[];
+args = [10, 20];
+const angle = Math.atan2(...args); // [!code error] A spread argument must either have a tuple type or be passed to a rest parameter.(2556)
+```
+
+## extends
+
+在ts中,extends关键字具有以下三种功能
+
+### 继承
+- **类继承类**：从父类继承所有的属性和方法实现一个新类。新类支持属性/方法的重写和新增
+- **接口继承接口**：从父接口继承所有的属性和方法实现一个新接口，新接口只能新增属性或方法
+- **接口继承类**：从父类继承所有的属性和方法（不含静态方法/属性）实现一个新接口。新接口只能新增属性或方法。
+
+> 注意：extends不支持`类继承接口`
+
+:::code-group
+```ts [类继承类]
+class TestClass {
+  public state: Record<string, any> = { name: 'TestClass' };
+  public func(value: string): void {
+    console.log('TestClass');
+  }
+}
+
+
+class MyClass extends TestClass {
+  // 继承父类,可以重写属性和方法
+  public state: Record<string, any> = { name: 'MyClass' };
+
+  public func(value: string): void {
+    console.log('MyClass');
+  }
+}
+```
+```ts [接口继承接口]
+interface TestInterface {
+  name: string;
+  getAge: () => number;
+}
+
+interface MyInterface extends TestInterface {
+  // 继承接口,不能重写属性和方法
+  // name: number; // [!code error]
+  // getAge: () => string; // [!code error]
+  age: 27;
+}
+```
+```ts [接口继承类]
+class Animal {
+    public name:string;
+    constructor(name: string) {
+        this.name = name;
+    }
+    eat(food: string) {
+        console.log(`${this.name}正在吃${food}`);
+    }
+    static run() {
+        console.log(`${this.name} is running`);
+    }
+    static kind: string;
+}
+interface ISheep extends Animal {
+    //可新增属性或方法
+    miemie: () => void;
+}
+let lanyangyang: ISheep = {
+    name: '懒羊羊',
+    eat(food: string) {
+        console.log(`${this.name}正在吃${food}`);
+    },
+    miemie() {
+        console.log('别看我只是一只羊，羊儿的聪明难以想象～');
+    },
+    run() { // [!code error] 报错：不继承静态方法
+        //     
+    }, 
+    kind: 'xx' // [!code error] 报错：不继承静态属性
+};
+lanyangyang.eat('青草蛋糕');
+// 懒羊羊正在吃青草蛋糕
+lanyangyang.miemie();
+//别看我只是一只羊，羊儿的聪明难以想象～
+```
+:::
+
+### 三元表达式条件判断
+
+
+```ts
+type TypeRes = Type1 extends Type2 ? Type3 : Type4;
+```
+
+其中`Type1 extends Type2`可理解为`类型为Type1的值是否可被赋值给类型为Type2的变量`
+
+:::code-group
+```ts [同一类型]
+type Type1 = string;
+type Type2 = Type1;
+
+
+type TypeRes = Type1 extends Type2? true: false;
+// true
+
+```
+
+```ts [子类型]
+
+//第一种：联合类型
+type Type1 = string|number;
+type Type2 = string;
+
+type TypeRes = Type2 extends Type1? true: false;
+//true
+
+
+// 第二种：class继承
+class Animal {
+    //...     
+}
+
+class Sheep extends Animal {
+    //...     
+}
+
+type TypeRes = Sheep extends Animal? true: false;
+// true
+
+
+```
+
+```ts [兼容类型]
+//第一种：对象类型
+type Type1={
+  name:string;
+  age:number;
+  gender:string;
+}
+type Type2={
+  name:string;
+  age:number;
+}
+
+type TypeRes = Type1 extends Type2 ? true: false;
+// true
+
+
+//第二种：函数类型
+type Type1 = (a:number)=>void;
+type Type2 = (a:number,b:string)=>void;
+
+
+// 主要按顺序看Type1的每个参数都是否能在Type2里找到对应类型的参数
+type TypeRes = Type1 extends Type2? true: false;
+// true
+
+
+```
+:::
+
+#### 带泛型的三元表达式条件判断
+
+示例：
+```ts
+type Type1 = string|number;
+
+type Type2 = string;
+
+type Type3<T>=T extends Type2? true: false;
+
+type TypeRes = Type3<Type1> // boolean
+
+
+```
+
+如上所示，原本`Type1 extends Type2`的返回类型应该是false，但这里为什么是boolean?
+
+原因：**使用`泛型`时，若extends`左侧`的泛型具体取为一个`联合类型`时，就会把联合类型中的类型拆开，分别带入到条件判断式中进行判断，最后把结果再进行联合**。
+
+
+上面`TypeRes`可以这么理解：
+
+```ts
+type TypeRes = (string extends Type2 ?true:false)|(number extends Type2 ? true:false)
+
+// 最终type TypeRes =  true | false 即boolean
+
+```
+
+例如排除类型Exclude的实现：
+```ts
+type Exclude<T, U> = T extends U ? never : T
+```
+示例：
+```ts
+type TypeRes = Exclude<'a' | 'b' | 'c' | 'd', 'a'|'c'|'f'>  //'b'|'d'
+
+//等价于
+
+type TypeRes = ('a' extends 'a'|'c'|'f'?never:'a') | ('b' extends 'a'|'c'|'f'?never:'b') |
+        ('c' extends 'a'|'c'|'f'?never:'c')  |('d' extends 'a'|'c'|'f'?never:'d')
+
+// 即type TypeRes = never|'b'|never|'d' 即 'b'|'d'
+```
+
+那么如何让泛型三元表达式中extends条件判断规则和普通的extends规则相同呢？答案是使用`[T]`
+
+```ts
+type Type1 = string|number;
+
+type Type2 = string;
+
+type Type3<T>=[T] extends Type2? true: false;
+
+type TypeRes = Type3<Type1> //false
+
+```
+
+### 泛型约束
+
+使用extends可以对泛型进行约束，让泛型表示满足一定条件的类型。
+
+泛型约束中的extends同样是表示**前者类型必须可以分配给后者类型**
+
+```ts
+interface ISheep{
+  name:string;
+  eat:(food:string)=>void;
+  miemie:()=>void;
+}
+
+// 对泛型T进行了约束，其必须至少要拥有ISheep的name属性及eat、miemie方法
+function eatAndMiemie<T extends ISheep>(sheep:T):void{
+    sheep.eat("青草蛋糕");
+    sheep.miemie();
+}
+
+
+eatAndMiemie(
+{
+  name: "懒羊羊",
+  eat(food:string){
+    console.log(`${this.name}正在吃${food}`);
+  },
+  miemie() {
+    console.log("别看我只是一只羊，羊儿的聪明难以想象～");
+  }   
+  run() {console.log(`${this.name}正在奔跑`)};
+  }
+)
+// 懒羊羊正在吃青草蛋糕
+//别看我只是一只羊，羊儿的聪明难以想象～
+
+```
+## implements
 
 
 implements用于实现一个新的`类`，**从父类或者接口实现所有的属性和方法，同时可以重写属性和方法**，包含一些新的功能。
 
-> implements 并`不涉及类的继承`，而是用于实现接口定义的契约。
+> implements 并`不涉及继承机制`，而是用于实现接口定义的契约。
 
 
 ```ts
@@ -701,37 +1168,139 @@ class MyClass2 implements TestClass {
 }
 ```
 
-而`extends`是继承一个接口或者类来实现一个新的接口或者类，从父类或者接口继承所有的属性和方法。对于接口来说，只能新增属性或方法。对于类来说，可以重写属性和方法：
 
 
+## infer
+
+infer 关键字只能在`条件类型`中使用，作为某未知类型的占位符.**通常与泛型和 extends 关键字一起使用**。
+
+使用示例:
+
+提取函数返回类型:
+```ts 
+type GetReturnType<T> = T extends (...args: any[]) => infer R ? R : never;
+
+type ExampleFunction = (x: number, y: string) => boolean;
+type ReturnTypeOfExampleFunction = GetReturnType<ExampleFunction>; // boolean
+
+```
+提取数组元素类型:
+```ts 
+type GetArrayElementType<T> = T extends (infer U)[] ? U : never;
+
+type Moment = string[];
+type Example1Array = Array<number>;
+
+type ElementTypeOfExampleArray = GetArrayElementType<Moment>; // string
+type ElementTypeOfExample1Array = GetArrayElementType<Example1Array>; //number
+
+```
+提取Promise值类型:
 ```ts
-class TestClass {
-  public state: Record<string, any> = { name: 'TestClass' };
-  public func(value: string): void {
-    console.log('TestClass');
-  }
+type GetPromiseValueType<T> = T extends Promise<infer U> ? U : never;
+
+// 示例
+type ExamplePromise = Promise<number>;
+type ValueTypeOfExamplePromise = GetPromiseValueType<ExamplePromise>; // number
+
+```
+提取函数参数类型:
+```ts
+type GetParameters<T> = T extends (...args: infer P) => any ? P : never;
+
+type ExampleFunction = (a: number, b: string) => void;
+type Params = GetParameters<ExampleFunction>; // [number, string]
+
+
+```
+
+## namespace & module
+
+`namespace`用于给类型设置独立的管理空间，可以理解为**给类型分门别类进行管理**，可以避免例如类型命名冲突的问题。
+
+
+:::code-group
+```ts [全局声明]
+// global.d.ts
+declare namespace Test1NameSpace {
+  // 这里内部定义的类型不需要添加export，因为是全局声明文件
+  type TestFunc = () => void;
+  type TestVar = string|number
+}
+declare namespace Test2NameSpace {
+  type TestFunc = () => string;
 }
 
-interface TestInterface {
-  name: string;
-  getAge: () => number;
+//在代码中使用
+const func1:Test1NameSpace.TestFunc = ()=>{
+    console.log('func1')
 }
+const age:Test1NameSpace.TestVar = 2
 
-interface MyInterface extends TestInterface {
-  // 继承接口,不能重写属性和方法
-  // name: number; // [!code error]
-  // getAge: () => string; // [!code error]
-  age: 27;
-}
-class MyClass extends TestClass {
-  // 继承父类,可以重写属性和方法
-  public state: Record<string, any> = { name: 'MyClass' };
-
-  public func(value: string): void {
-    console.log('MyClass');
-  }
+const func2:Test2NameSpace.TestFunc = ()=>{
+    return 'func2'
 }
 ```
+```ts [模块导入]
+// global.d.ts
+export namespace TestNameSpace {
+    type TestFunc = () => void;
+}
+
+////在代码中使用 
+import { TestNameSpace } from '@/typings/global';
+
+type Test = TestNameSpace.TestFunc;
+```
+:::
+
+:::warning 注意
+随着ES Module已经支持Ts类型的模块化后，已经不需要使用namespace进行类型导出
+:::
+
+`module`关键字也同样被ES Module取代，不过在**全局模块类型声明**方面仍有一定的作用：
+
+```ts
+// global.d.ts
+declare module "some-module" {  
+    // 在这里声明模块的类型  
+    export function doSomething(): void;  
+    export class SomeClass {  
+        constructor(options?: any);  
+        doSomethingElse(): void;  
+    }  
+    // 可以继续声明更多的类型、接口、类等  
+}  
+  
+// 现在你可以在TypeScript文件中这样使用它  
+import { doSomething, SomeClass } from "some-module";  
+  
+doSomething();  
+const myClass = new SomeClass();  
+myClass.doSomethingElse();
+```
+综上，你可以对一些你在代码中引入的第三方包但不具备配套ts类型声明的时候使用`decalare module`，比如我引入了一个cdn链接的script全局脚本的第三方包，我需要在使用它时进行类型检查就需要declare module来定义其类型。
+
+又或者我们在webpack+ts配置的项目中需要通过`ES Module方式`引入less/scss样式文件或者jpg/png等图片文件时，但TS默认不支持这些文件的模块类型，也需要declare module进行类型定义：
+
+```ts
+// global.d.ts
+declare module '*.svg';
+declare module '*.png';
+declare module '*.jpg';
+declare module '*.jpeg';
+declare module '*.gif';
+declare module '*.bmp';
+declare module '*.webp';
+declare module '*.less';
+
+
+//在代码中引入
+import style from './style.module.less'
+import icon from './icon.png'
+```
+
+
 
 ## 零碎
 
@@ -743,7 +1312,7 @@ class MyClass extends TestClass {
     type A = keyof string; //"toString" | "charAt" | "charCodeAt" | ...
     type B = Partial<string>; //string
     
-    type C = keyof number; //"toString" | "toFixed" | "valueOf" | "toLocaleString"...
+    type C = keyof number; //"toString" | "toFixed" | "valueOf" | "toLocaleString"..有.
     type D = Partial<number>; //number
     
     type E = keyof boolean; //"valueOf".
@@ -751,7 +1320,6 @@ class MyClass extends TestClass {
     
     type G = keyof { a: string; b: number }; //"a"|"b"
     type H = Partial<{ a: string; b: number }>; //{a?: string, b?: number}
-    
     
     ```
 

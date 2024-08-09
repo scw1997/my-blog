@@ -1,5 +1,4 @@
 
-const env = process.env.NODE_ENV
 const routes =  [
     {
         text:'简介',
@@ -179,11 +178,11 @@ const routes =  [
         text: '其他',
         link:'/others'
     },
-    ...(env==='development'?[
+
         {
             text: '测试题',
             link:'/test'
-        }]:[])
+        }
 
 ]
 
