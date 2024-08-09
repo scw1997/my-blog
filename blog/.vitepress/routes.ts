@@ -108,7 +108,20 @@ const routes =  [
             {
                 text:'Vue',
                 collapsed: true,
-                items:[]
+                items:[
+                    {
+                        text:'ref & reactive',
+                        link:'/core/vue/ref-reactive'
+                    },
+                    {
+                        text:'Vue 原理',
+                        link:'/core/vue/vue-principle'
+                    },
+                    {
+                        text:'Vue零碎',
+                        link:'/core/vue/fragment'
+                    },
+                ]
             }
         ]
     },
