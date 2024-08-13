@@ -13,78 +13,88 @@
 
 :::code-group
 ```js [vue3]
+// Dep类负责依赖追踪和派发更新
 class Dep {
+
+
     constructor() {
+        // 定义一个set集合用于管理订阅者，即
         this.subscribers = new Set();
     }
-
+    
     depend() {
-        // 在实际 Vue 中，这里会处理依赖收集  
-        // 但为了简化，我们仅记录依赖（虽然不实际使用）  
-        console.log('A component is watching this property.');
+      
+        // depend负责添加订阅者（如果当前订阅者有值则表示需要新增，否则不用处理）
+        if (currentSubscriber) {
+            this.subscribers.add(currentSubscriber);
+        }
     }
 
     notify() {
-        // 当属性值变化时，通知所有订阅者  
-        this.subscribers.forEach(sub => sub());
-    }
-
-    subscribe(watcher) {
-        this.subscribers.add(watcher);
+      
+        // 当响应式数据变化时，通知所有订阅者，重新执行各个订阅者的回调逻辑，使其访问到响应式数据最新值  
+        this.subscribers.forEach(subscriber =>subscriber());
     }
 }
 
+//定义一个当前正在处理的订阅者变量值
+let currentSubscriber = null;
+
+// 模拟Vue的watch API
+// 第一次定义watcher时，会设置currentSubscriber值并会执行回调函数（函数内部可能会包含对响应式数据的访问），此时将回调函数作为观察者添加进集合里
+// 后续当响应式数据被修改时，则会执行订阅者集合里的对应回调函数，访问到响应式数据的最新值
+function watcher(callBack) {
+    currentSubscriber = callBack;
+    callBack();
+    // 重置currentSubscriber值，避免访问响应式数据时重复添加订阅者
+    currentSubscriber = null;
+}
+
 function reactive(target) {
-    if (typeof target !== 'object' || target === null) {
-        return target;
-    }
-
-    const handler = {
+    const dep = new Dep();
+    const handlers = {
         get(target, key, receiver) {
-            const dep = new Dep();
-            // 假设每次访问都触发依赖收集（实际中会更复杂）  
+            // 触发添加订阅者（如果currentSubscriber有值的话） 
             dep.depend();
-
-            // 递归地将对象属性也转换为响应式（深度响应式）  
+            // 以默认行为返回当前属性值
+            // 如果当前属性值也为对象类型，递归地将对象属性也转换为响应式（深度响应式）  
             const result = Reflect.get(target, key, receiver);
             if (typeof result === 'object' && result !== null) {
                 return reactive(result);
             }
             return result;
         },
-        set(target, key, value, receiver) {
-            const result = Reflect.set(target, key, value, receiver);
-            // 这里应该有一个地方来存储每个属性的 Dep 实例  
-            // 但为了简化，我们假设每次设置都触发全局通知  
-            console.log(`Property ${key} changed to ${value}`);
-            // 在实际中，你需要根据 key 来找到对应的 Dep 实例并调用 notify  
-            // 但由于我们没有存储这些 Dep 实例，所以我们不调用 notify  
-            return result;
+        set(target, key, newValue, receiver) {
+            const res = Reflect.set(target, key, newValue, receiver)
+            if (target[key] === newValue) return;
+            // 属性值变化，触发订阅者的回调重新执行
+            dep.notify();
+            return res
+  
         }
     };
+    
 
-    return new Proxy(target, handler);
+    return new Proxy(target, handlers);
 }
 
 // 使用示例  
 const state = reactive({
-    count: 0,
-    nested: {
-        value: 'Hello'
-    }
+    count: 1
 });
 
-// 访问属性会触发依赖收集（虽然在这个简化示例中没有实际作用）  
-console.log(state.count); // 0  
-console.log(state.nested.value); // Hello  
+let total = 0;
 
-// 修改属性会触发通知（但在这个示例中，我们没有实现真正的通知机制）  
-state.count = 1; // 控制台输出：Property count changed to 1  
-state.nested.value = 'World'; // 控制台输出：Property value changed to World  
+watcher(() => {
+    console.log('xxxx',state.count)
+    total = state.count *2;
+});
 
-// 注意：这个示例没有实现真正的依赖收集和派发更新机制。  
-// 在实际 Vue 3 中，每个属性都会有一个 Dep 实例来跟踪其依赖，  
-// 当属性值变化时，Dep 实例会通知所有订阅了该属性的 watcher 执行更新。
+console.log(total); // 输出：2
+state.count = 2
+console.log(total); // 输出：4
+
+
 ```
 ```js [vue2]
 function defineReactive(obj, key, val) {
