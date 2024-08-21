@@ -110,10 +110,6 @@ const routes =  [
                 collapsed: true,
                 items:[
                     {
-                        text:'ref & reactive',
-                        link:'/core/vue/ref-reactive'
-                    },
-                    {
                         text:'Vue 原理',
                         link:'/core/vue/vue-principle'
                     },

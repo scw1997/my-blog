@@ -1,5 +1,62 @@
 # Vue零碎
 
+## ref vs reactive
+
+### ref
+
+- 接收一个类型为**基本类型，引用类型或DOM Ref引用**的参数，返回一个响应式的Ref对象。此Ref对象只包含一个指向其内部值的value属性
+- 若Ref传入值为基本类型，则.value指向传入值值本身。若为非基本类型，则.value指向的值为传入值通过reactive转换成的响应式Proxy对象。
+- 若传入值为一个对象且在顶层解构使用该ref，其属性值会失去响应性。所以必须通过例如**ref.value.xx**等方式来获取或者设置属性最新值
+- 在template中使用时若最终渲染值类型为Ref对象，则会自动解包（无需调用.value）
+- 若传入一个对象，watch默认对ref做浅层监听（可通过设置deep:true开启深层监听），这意味着对象内部属性被修改后默认不会触发watch回调
+
+```vue
+<script setup lang="ts">
+import { ref, watch } from 'vue';
+const person = ref({ name: 'scw' });
+const { name } = person.value;
+
+watch(person, () => {
+    // 不会触发
+    console.log('watch监听到person变化');
+});
+</script>
+
+<template>
+    <!-- 这里如果使用解构的name会永远是第一次的值，需要使用person.name -->
+    <span @click="() => (person.name = 'scw1')">{{ person.name }}</span>
+</template>
+
+```
+
+### reactive
+
+- 接收一个类型为**对象，数组，Map，Set**之一的参数，返回一个对应传入对象的响应式的Proxy对象
+- 返回的proxy对象与传入对象是不对等的，传入对象被修改，proxy对象也会同步更新，反之也一样。
+- reactive会递归地将对象的所有属性都转换为响应式数据
+- 若reactive返回值在顶层解构使用，其属性值会失去响应性。所以必须通过例如**obj.xx**等方式来获取或设置最新值
+- watch默认对reactive做深层监听，这意味着对象内部属性被修改后默认会触发watch回调
+
+```vue
+<script setup lang="ts">
+import { reactive, watch } from 'vue';
+const person = reactive({ name: 'scw' });
+const { name } = person;
+
+watch(person, () => {
+    // 会触发
+    console.log('watch监听到person变化');
+});
+</script>
+
+<template>
+    <!-- 这里如果使用解构的name会永远是第一次的值，需要使用person.name -->
+    <span @click="() => (person.name = 'scw1')">{{ person.name }}</span>
+</template>
+
+```
+
+
 ## KeepAlive
 
 `KeepAlive`为vue的全局内置组件，其本身不会渲染出来，也不会出现在父组件链中。包裹动态组件时，会缓存不活动的组件，而不是销毁它们。
@@ -155,58 +212,60 @@ export default {
 
 - `h函数`（`createElementVNode` API的别名）用于创建vnode节点，通常在函数式组件、渲染函数中使用。
 
-:::code-group 
-```vue [函数式组件]
-<script setup lang="ts">
-  import { h, createApp } from 'vue';
-  // 定义一个函数式组件，使用h函数来渲染内容
-  const MyComponent = (props, { slots }) => {
-    return h('div', null, [
-      h('h1', null, 'Hello Vue 3'),
-      h(
-          'p',
-          null,
-          `This is a functional component using the h function. Props: ${props.message}`
-      ),
-      slots.default ? slots.default() : null // 使用插槽
-    ]);
-  };
-</script>
+    :::code-group 
+    ```vue [函数式组件]
+    <script setup lang="ts">
+      import { h, createApp } from 'vue';
+      // 定义一个函数式组件，使用h函数来渲染内容
+      const MyComponent = (props, { slots }) => {
+        return h('div', null, [
+          h('h1', null, 'Hello Vue 3'),
+          h(
+              'p',
+              null,
+              `This is a functional component using the h function. Props: ${props.message}`
+          ),
+          slots.default ? slots.default() : null // 使用插槽
+        ]);
+      };
+    </script>
+    
+    <template>
+      <MyComponent message="Hello Vue 3">
+        <div>我是Slot</div>
+      </MyComponent>
+    </template>
+    
+    
+    ```
+    ```vue [渲染函数]
+    <script setup lang="ts">
+      import { h, createApp, defineComponent } from 'vue';
+      // 通过模板语法和来定义一个组件
+      const MyComponent = defineComponent({
+        setup(props, { slots }) {
+          //渲染函数
+          return () =>
+              h('div', null, [
+                h('h1', null, 'Hello Vue 3'),
+                h(
+                    'p',
+                    null,
+                    `This is a functional component using the h function. Props: ${props.message}`
+                ),
+                slots.default ? slots.default() : null // 使用插槽
+              ]);
+        }
+      });
+    </script>
+    
+    <template>
+      <MyComponent message="Hello Vue 3">
+        <div>我是Slot</div>
+      </MyComponent>
+    </template>
+    
+    ```
+    :::
+- `useAttrs()`用于获取当前组件props声明以外的父组件传递的属性（在template中亦可通过`$attrs`获取），与props是互补关系。此外attrs无法通过watch等方式监听变化。
 
-<template>
-  <MyComponent message="Hello Vue 3">
-    <div>我是Slot</div>
-  </MyComponent>
-</template>
-
-
-```
-```vue [渲染函数]
-<script setup lang="ts">
-  import { h, createApp, defineComponent } from 'vue';
-  // 通过模板语法和来定义一个组件
-  const MyComponent = defineComponent({
-    setup(props, { slots }) {
-      //渲染函数
-      return () =>
-          h('div', null, [
-            h('h1', null, 'Hello Vue 3'),
-            h(
-                'p',
-                null,
-                `This is a functional component using the h function. Props: ${props.message}`
-            ),
-            slots.default ? slots.default() : null // 使用插槽
-          ]);
-    }
-  });
-</script>
-
-<template>
-  <MyComponent message="Hello Vue 3">
-    <div>我是Slot</div>
-  </MyComponent>
-</template>
-
-```
-:::
