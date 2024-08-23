@@ -210,9 +210,20 @@ export default {
 
 ## 其他
 
-- `h函数`（`createElementVNode` API的别名）用于创建vnode节点，通常在函数式组件、渲染函数中使用。
+- `h函数`（**createElementVNode** API的别名）用于创建vnode节点，通常在函数式组件、渲染函数中使用。
 
     :::code-group 
+    ```vue [基本用法]
+    <script setup lang="ts">
+    import { h } from 'vue';
+    
+    const MyDiv = h('div', {class:'xxx',style:{color:'red'}}, [h('h1', null, '第一个子节点')]);
+    </script>
+    
+    <template>
+        <MyDiv />
+    </template>
+    ```
     ```vue [函数式组件]
     <script setup lang="ts">
       import { h, createApp } from 'vue';
