@@ -280,3 +280,4 @@ export default {
     :::
 - `useAttrs()`用于获取当前组件props声明以外的父组件传递的属性（在template中亦可通过`$attrs`获取），与props是互补关系。此外attrs无法通过watch等方式监听变化。
 
+-  `<style scoped>`中的样式默认只对当前组件内标签元素生效，对于**内部的子组件则不生效**。否则请使用`:deep`进行深度作用。另外当前组件里通过**v-html**渲染的内容也默认不会被sccoped样式应用
