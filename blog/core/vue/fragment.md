@@ -346,6 +346,7 @@ import {ref,reactive } from 'vue'
 - **递归组件**
 
 ```vue
+<template>
  <div>
     <div class="item" v-for="(item, index) in list" :key="index">
       <div class="item-title border-bottom">
