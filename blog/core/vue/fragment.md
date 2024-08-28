@@ -339,7 +339,7 @@ import {ref,reactive } from 'vue'
 如unplugin-vue-define-options，具体配置方法自行查询。
 
 
-### 使用name
+#### 使用name
 
 组合的name属性主要有以下应用场景：
 
@@ -388,6 +388,124 @@ export default {
 - @keydown.enter/delete/tab：按键相关
 - @click.left/right：鼠标相关
 - .....
+
+## 组件通信方式
+
+- props
+- emit自定义事件（子组件调用父组件方法并传递参数）
+- useAttrs（获取除props定义以外的传递的方法和属性）
+- provide/inject（跨多层组件通信）
+- ref配合defineExpose（父组件获取子组件方法/状态）
+- slot中的作用域插槽
+- 第三方状态管理工具（vuex，pina等）
+- 全局事件总线（非Vue标准api，只是一种解决方案思想）
+  :::code-group
+    ```ts [入口文件]
+    // main.js 或 main.ts  
+    import { createApp } from 'vue'  
+    import App from './App.vue'  
+    
+    // 创建一个空的Vue实例作为全局事件总线  
+    const EventBus = new Vue();  
+    
+    // 将EventBus添加到Vue的原型上，以便在组件中通过this.$eventBus访问  
+    const app = createApp(App);  
+    app.config.globalProperties.$eventBus = EventBus;  
+    
+    app.mount('#app');
+    ```
+    ```vue [组件A]
+    <template>  
+      <button @click="sendMessage">Send Message</button>  
+    </template>  
+    
+    <script>  
+    export default {  
+      methods: {  
+        sendMessage() {  
+          // 使用全局事件总线触发事件  
+          this.$eventBus.$emit('message-sent', 'Hello from Component A!');  
+        }  
+      }  
+    }  
+    </script>
+    ```
+    ```vue [组件B]
+    <template>  
+      <div>Message: {{ message }}</div>  
+    </template>  
+    
+    <script>  
+    export default {  
+      data() {  
+        return {  
+          message: ''  
+        };  
+      },  
+      created() {  
+        // 组件创建时监听事件  
+        this.$eventBus.$on('message-sent', (msg) => {  
+          this.message = msg;  
+        });  
+      },  
+      beforeUnmount() {  
+        // 组件销毁前移除监听器，防止内存泄漏  
+        this.$eventBus.$off('message-sent');  
+      }  
+    }  
+    </script>
+    ```
+    :::
+
+## toRef & toRefs
+
+**toRef**
+
+传入一个响应式reactive对象和该对象的一个属性Key，将**该属性转为ref对象**并返回该属性
+
+```vue
+<script setup lang="ts">
+import { reactive, toRef, toRefs } from 'vue';
+
+const obj = reactive({ name: 'scw' });
+// 以下写法，name属性不具备响应式
+// const name = obj.name;
+
+// toRef将属性值转成ref对象可使属性具有响应式
+// 若属性key不存在,则toRef返回值为undefined
+const name = toRef(obj, 'name');
+</script>
+<template>
+    <div @click="obj.name = 'scw1'">name：{{ name }}</div>
+</template>
+
+```
+
+**toRefs**
+
+传入一个响应式reactive对象，将该对象的**每个属性转为ref对象**并返回一个新的对象
+
+```vue
+<script setup lang="ts">
+  import { reactive, toRefs } from 'vue';
+
+  const obj = reactive({ name: 'scw' });
+  // 解构方式下，name属性不具备响应式
+  // const { name } = obj;
+
+  // toRefs可使属性具有响应式
+  const { name } = toRefs(obj);
+</script>
+<template>
+  <div @click="obj.name = 'scw1'">name：{{ name }}</div>
+</template>
+
+
+```
+:::tip 技巧
+- 可对`defineProps`的返回值进行toRefs包裹,然后解构使用
+:::
+
 
 ## 其他
 
@@ -487,4 +605,5 @@ export default {
     <button id="counter" @click="increment">{{ count }}</button>
   </template>
   ```
-- `v-once` 表示只渲染一次，后续哪怕data有更新也不更新渲染（虽然data已变化）  
+- `v-once` 表示只渲染一次，后续哪怕data有更新也不更新渲染（虽然data已变化）
+- Vue2组件中普通函数声明的this指向的是当前`组件实例`（箭头函数则指向window），在Vue3的setup方法里**无法使用this**，因为setup() 函数在组件实例被创建之前被调用，此时this还未指向组件实例（此时为undefined），而script setup中的代码是在组件的 setup() 函数的作用域内执行的，同样无法使用this。
