@@ -379,7 +379,9 @@ export default {
 
 在Vue有报错或者调试（如vue-devtools）的时候可以看到组件的name
 
-## 事件修饰符
+## 修饰符
+
+#### 事件修饰符
 
 - @click.prevent：阻止默认行为
 - @click.stop：阻止冒泡
@@ -388,6 +390,12 @@ export default {
 - @keydown.enter/delete/tab：按键相关
 - @click.left/right：鼠标相关
 - .....
+
+#### v-model修饰符
+
+- v-model.trim:对表单值进行两端的空格去除并存储
+- v-model.lazy:只有当input失去焦点时，才执行数据双向同步
+- v-model.number:对表单值进行number转换并存储
 
 ## 组件通信方式
 
@@ -506,6 +514,105 @@ const name = toRef(obj, 'name');
 - 可对`defineProps`的返回值进行toRefs包裹,然后解构使用
 :::
 
+## v-model实现
+
+自定义表单组件
+
+```vue
+<!--CustomInput.vue-->
+
+<script setup>
+  // 默认情况下，v-model 使用的 prop 是 'modelValue'
+  // Vue 会自动处理 update:modelValue 事件
+  const props = defineProps({
+    modelValue: String
+  });
+</script>
+<template>
+  <div>
+    <input
+            :value="modelValue"
+            @input="$emit('update:modelValue', $event.target.value)"
+            type="text"
+            placeholder="Edit me"
+    />
+  </div>
+</template>
+
+
+```
+
+使用示例:
+
+```vue
+<script setup>
+import CustomInput from './CustomInput.vue';
+import { ref } from 'vue';
+
+const inputValue = ref();
+</script>
+
+<template>
+    <div>
+        <CustomInput v-model="inputValue" />
+        <p>The value is: {{ inputValue }}</p>
+    </div>
+</template>
+
+```
+
+多个v-model:
+
+:::code-group
+```vue [表单组件]
+<script setup>
+// 默认情况下，v-model 使用的 prop 是 'modelValue'
+// Vue 会自动处理 update:modelValue 事件
+const props = defineProps({
+    model1: String,
+    model2: String
+});
+</script>
+<template>
+    <div>
+        <input
+            :value="model1"
+            @input="$emit('update:model1', $event.target.value)"
+            type="text"
+            placeholder="Edit me"
+        />
+        <input
+            :value="model2"
+            @input="$emit('update:model2', $event.target.value)"
+            type="text"
+            placeholder="Edit me"
+        />
+    </div>
+</template>
+
+```
+
+
+```vue [使用]
+<script setup>
+import CustomInput from './CustomInput.vue';
+import { ref } from 'vue';
+
+const inputValue1 = ref();
+const inputValue2 = ref();
+</script>
+
+<template>
+    <div>
+        <CustomInput v-model:model1="inputValue1" v-model:model2="inputValue2" />
+        <p>The value1 is: {{ inputValue1 }}</p>
+        <p>The value2 is: {{ inputValue2 }}</p>
+    </div>
+</template>
+
+
+```
+:::
 
 ## 其他
 
@@ -607,3 +714,42 @@ const name = toRef(obj, 'name');
   ```
 - `v-once` 表示只渲染一次，后续哪怕data有更新也不更新渲染（虽然data已变化）
 - Vue2组件中普通函数声明的this指向的是当前`组件实例`（箭头函数则指向window），在Vue3的setup方法里**无法使用this**，因为setup() 函数在组件实例被创建之前被调用，此时this还未指向组件实例（此时为undefined），而script setup中的代码是在组件的 setup() 函数的作用域内执行的，同样无法使用this。
+- v-if与v-for不能同时使用在同一个标签上，因为v-if的优先级更高，这意味着 v-if 的条件将无法访问到 v-for 作用域内定义的变量别名。可采用以下方式:
+  ```vue
+  <template v-for="(item, index) in list">
+    <div :key="item.id" v-if="item.age > 18">
+      <span>age>18</span>
+    </div>
+  </template> 
+  ```
+- 事件绑定函数默认传递第一个参数为event，若要额外手动传递其他参数，则要获取到event参数则需要手动传递  
+
+  ```vue
+  <script setup lang="ts">
+  //默认参数
+  const handleSpanClick = (event) => {
+      console.log('event', event);
+  };
+  
+  // 带额外参数
+  const handleDivClick = (event, params) => {
+      console.log('event', event);
+    console.log('params', params); //scw
+  };
+  </script>
+  <template>
+      <span @click="handleSpanClick"></span>
+      <div @click="handleDivClick($event, 'scw')"></div>
+  </template>
+
+  ```
+-`app.component`定义的是全局组件，处处可以使用,不用仍占内存空间. 在Vue2中通过`compoent:{xxx: xxx}`引入并注册的组件是局部组件，只有在注册时才能使用.
+- 默认情况下,非props中接收的属性会被自动接收并添加到组件的根元素节点属性上,可通过设置`inheritAttrs: false`来关闭这一行为
+  ```vue
+  <script setup lang="ts">
+  
+  defineOptions({
+      inheritAttrs: false
+  });
+  </script>
+  ```
