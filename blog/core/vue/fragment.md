@@ -614,6 +614,191 @@ const inputValue2 = ref();
 ```
 :::
 
+## slot插槽
+
+:::code-group
+```vue [默认插槽]
+<!--子组件Child.vue-->
+<template>
+  <slot>我是插槽的默认值，父组件未传插槽时会显示我</slot>
+</template>
+
+<!--父组件-->
+<template>
+  <Child>插槽值</Child>
+</template>
+```
+```vue [具名插槽]
+<!--具名插槽用于设置多个插槽-->
+
+<!--子组件Child.vue-->
+<template>
+  <slot name="name1">插槽name1的默认值</slot>
+  <slot name="name2">插槽name2的默认值</slot>
+</template>
+
+<!--父组件-->
+<template>
+  <Child>
+    <template #name1>name1的插槽值</template>
+    <template #name2>name2的插槽值</template>
+  </Child>
+</template>
+```
+
+```vue [作用域插槽]
+<!--作用域插槽用于在子组件中将一些参数传给调用的父组件来控制渲染结构数据-->
+
+<!--子组件Child.vue-->
+<template>
+  <slot a="a" b="b">插槽name1的默认值</slot>
+</template>
+
+<!--父组件-->
+<template>
+  <Child v-slot="slotProps">
+    <span>a:{{slotProps.a}}</span>
+    <span>b:{{slotProps.b}}</span>
+  </Child>
+</template>
+```
+
+```vue [具名作用域插槽]
+<!--子组件Child.vue-->
+<template>
+  <slot name="name1" a="a1" b="b1">插槽name1的默认值</slot>
+  <slot name="name2" a="a2" b="b2">插槽name2的默认值</slot>
+</template>
+
+<!--父组件-->
+<template>
+  <Child >
+    <template #name1="slot1Props">
+      <span>a:{{slot1Props.a}}</span>
+      <span>b:{{slot1Props.b}}</span>
+    </template>
+    
+    <template #name2="slot2Props">
+      <span>a:{{slot2Props.a}}</span>
+      <span>b:{{slot2Props.b}}</span>
+    </template>
+  </Child>
+</template>
+```
+:::
+
+## watch & watchEffect
+
+#### watch
+
+watch用于监听响应式数据的变化，但是默认属于懒执行（初始创建自身时不会执行，后续数据变化才会执行回调）。
+
+可以通过设置`{immediate:true}`选项来实现初始渲染会执行回调，后续变化依然会执行回调.
+
+watch可以设置一个数组来监听多个响应式数据
+
+:::code-group 
+```vue [基本用法]
+<script setup>
+import {reactive, ref, watch} from 'vue';
+
+const a = ref(1)
+
+const b= reactive({name:'scw'})
+
+watch(a, (newValue, oldValue) => {
+  console.log(`a changed from ${oldValue} to ${newValue}`);
+});
+
+// 这里监听reactive对象b的name属性时，必须写成()=>b.name，而不是b.name
+// 因为watch监听的数据源（即第一个参数）类型必须为getter/effect function，ref，reactive或者一个其元素为以上类型的数组
+watch(()=>b.name, (newValue, oldValue) => {
+  console.log(`b.name changed from ${oldValue} to ${newValue}`);
+});
+
+
+
+</script>
+
+<template>
+  <AButton @click="()=>a=2">
+    <span>{{ a }}</span>
+  </AButton>
+
+  <AButton @click="()=>b.name='scw1'">
+    <span>{{ b.name }}</span>
+  </AButton>
+</template>
+```
+```vue [多个数据源]
+<script setup>
+import {reactive, ref, watch} from 'vue';
+
+const a = ref(1)
+
+const b= reactive({name:'scw'})
+
+// 监听数据源中任何一个改变都会触发回调
+watch([a,()=>b.name],([newA,newBName],[oldA,oldBName])=>{
+  console.log(`a current value：${newA}`);
+  console.log(`b.name current value： ${newBName}`);
+})
+
+</script>
+
+<template>
+  <AButton @click="()=>a=2">
+    <span>{{ a }}</span>
+  </AButton>
+
+  <AButton @click="()=>b.name='scw1'">
+    <span>{{ b.name }}</span>
+  </AButton>
+</template>
+
+```
+:::   
+
+#### watchEffect
+
+watchEffect同样是监听响应式数据，但会默认创建自身时立即执行，并且无需手动传递监听数据源，会自动感知回调代码中的数据依赖，监听其变化。
+
+缺点是无法在回调中获取相应数据依赖的旧值
+
+```vue
+<script setup>
+
+import {reactive, ref, watchEffect} from 'vue';
+
+const a = ref('scw')
+
+const b= reactive({name:'wcs'})
+
+
+watchEffect(()=>{
+  // a和b.name变化都会触发回调
+  console.log( a.value+b.name)
+})
+</script>
+
+<template>
+    <AButton @click="()=>a='scw1'">
+        <span>{{ a }}</span>
+    </AButton>
+
+  <AButton @click="()=>b.name='scw1'">
+    <span>{{ b.name }}</span>
+  </AButton>
+</template>
+```
+:::warning 注意
+默认情况下，watchEffect将在`组件渲染之前执行`。
+
+设置` flush: 'post'` 将会使侦听器延迟到`组件渲染之后再执行`。
+
+在某些特殊情况下 (例如要使缓存失效)，可能有必要在`响应式依赖发生改变时立即触发侦听器`。这可以通过设置` flush: 'sync'` 来实现。
+:::
+
 ## 其他
 
 - `h函数`（**createElementVNode** API的别名）用于创建vnode节点，通常在函数式组件、渲染函数中使用。
@@ -743,7 +928,7 @@ const inputValue2 = ref();
   </template>
 
   ```
--`app.component`定义的是全局组件，处处可以使用,不用仍占内存空间. 在Vue2中通过`compoent:{xxx: xxx}`引入并注册的组件是局部组件，只有在注册时才能使用.
+- `app.component`定义的是全局组件，处处可以使用,不用仍占内存空间. 在Vue2中通过`compoent:{xxx: xxx}`引入并注册的组件是局部组件，只有在注册时才能使用.
 - 默认情况下,非props中接收的属性会被自动接收并添加到组件的根元素节点属性上,可通过设置`inheritAttrs: false`来关闭这一行为
   ```vue
   <script setup lang="ts">
@@ -753,3 +938,17 @@ const inputValue2 = ref();
   });
   </script>
   ```
+- `telport` 用于渲染元素到指定DOM下（类似react的`createPortal`）
+  ```vue
+  <template>
+    <div>
+          <span>正常元素</span>
+          <telport to="#hello">
+            我会被渲染到id为hello的元素下
+          </telport>
+    </div>
+  </template>
+  
+  ```
+
+- 计算属性（computed）应该是**只读**的，不要尝试修改计算属性的返回值，应该由依赖源的变化触发它的改变
