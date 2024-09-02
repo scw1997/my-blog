@@ -799,6 +799,91 @@ watchEffect(()=>{
 在某些特殊情况下 (例如要使缓存失效)，可能有必要在`响应式依赖发生改变时立即触发侦听器`。这可以通过设置` flush: 'sync'` 来实现。
 :::
 
+## ref
+
+ref作为dom引用时的几种场景：
+
+:::code-group
+```vue [基本用法]
+<!--ref直接赋值-->
+
+<script setup>
+import {ref} from 'vue';
+const inputRef = ref()
+</script>
+
+<template>
+    <div>
+        <input ref="inputRef" />
+    </div>
+</template>
+
+```
+```vue [函数形式]
+<script setup>
+
+</script>
+
+<template>
+  <div>
+    <input
+            :ref="
+                (ele) => {
+                    //返回当前dom引用
+                }
+            "
+    />
+  </div>
+</template>
+```
+
+```vue [ref列表]
+<script setup>
+import { ref } from 'vue';
+const refList = ref([]);
+</script>
+
+<template>
+    <div>
+        <div v-for="item in list" ref="refList"></div>
+    </div>
+</template>
+
+```
+:::
+:::warning 注意
+- 对于使用了`script setup`的组件，通过ref不能获取其内部的任何数据和方法，如果需要则使用`defineExpose`
+:::
+
+## 状态管理工具
+
+#### vuex
+
+Vuex采用集中式的架构，通过一个store对象来管理所有的状态。
+
+通过store来派发已定义的actions，从而在mutations中修改store的状态。确保了状态变更的可预测性和可追踪性。这种设计适合大型应用，能够有效地管理复杂的状态变化。
+
+此外还有getter作为计算属性用。modules用于切割store为多模块
+#### pinia
+
+采用去中心化的架构，每个组件可以拥有自己的store实例，包括getters和actions。这种设计使得Pinia在小型或中型应用中更加灵活和易用，同时也便于维护和扩展。
+
+Pinia 通过在创建 store 时指定 name 来区分不同的 store，不再需要类型Vuex的module，并且对Ts的支持较好。
+
+## 对比React Hooks
+
+在React Hooks中：
+
+- Hooks有严格调用顺序，并且不可写在条件语句中
+- 存在闭包陷阱
+- 需要主动使用useMemo或useCallback来避免很容易造成的重复渲染等性能问题，并且要正确传递依赖。
+
+而Vue3的组合式API中：
+
+- 仅需调用setup一次，无需担心闭包，hooks调用顺序问题
+- 响应式系统自动收集计算属性和响应式数据依赖，无需手动声明。
+- 不需要手动缓存来避免性能问题，可确保绝大部分情况下仅执行必要的更新
+
 ## 其他
 
 - `h函数`（**createElementVNode** API的别名）用于创建vnode节点，通常在函数式组件、渲染函数中使用。
