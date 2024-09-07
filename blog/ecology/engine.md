@@ -53,6 +53,15 @@ Webpack 最核心的功能，是将各种类型的资源，包括图片、css、
 - 浏览器加载发生变更的增量模块
 - Webpack 运行时触发变更模块的 module.hot.accept 回调，执行代码变更逻辑
 
+### Tree Shaking原理
+
+- Make 阶段，收集模块导出变量并记录到模块依赖关系图 ModuleGraph 变量中
+- Seal 阶段，遍历 ModuleGraph 标记模块导出变量有没有被使用
+- 生成产物时，若变量没有被其它模块使用则使用Terser删除对应的导出语句
+:::warning
+标记功能需要配置 `optimization.usedExports = true` 开启
+:::
+
 ### 性能优化
 
 常见的优化方法总结：
@@ -73,7 +82,48 @@ Webpack 最核心的功能，是将各种类型的资源，包括图片、css、
 - 压缩js,css，图片等资源
 - Tree Shaking
 - 使用CDN链接代替本地安装第三方依赖
-- 代码分割
+
+### 优化运行时体验
+- 使用异步加载，例如点击某个按钮的时候才需要加载某个图片资源
+- 使用splitChunks实现代码分割（将分割成不同的 bundle，按需加载资源）
+```js
+module.exports = {  
+  // ...  
+  optimization: {  
+    splitChunks: {  
+      chunks: 'all', // 可以是 'all'（推荐用于生产环境）、'async（默认）' 或 'initial'  
+      minSize: 20000, //生成 chunk 的最小体积（以字节为单位）  
+      maxSize: 0, // 生成chunk的最大体积（以字节为单位），如果设置为 0，则没有限制  
+      minChunks: 1, // 被至少多少个 chunk 共享时，才会被分割  
+      maxInitialRequests: 30, // 入口点处的并行请求的最大数量  
+      automaticNameDelimiter: '~', // 生成名称时使用的分隔符  
+      enforceSizeThreshold: 50000, // 强制分割前需要达到的体积阈值  
+      cacheGroups: {  
+        // 缓存组可以继承和覆盖 splitChunks 里的选项 
+        //创建了一个名为 vendors 的缓存组，用于将来自 node_modules 的模块分割到一个单独的 bundle 中。  
+        vendors: {  
+          test: /[\\/]node_modules[\\/]/,  
+          priority: -10, // 优先级  
+          reuseExistingChunk: true, // 如果可复用已有 chunk，则不再创建新的 chunk  
+        },  
+        default: false, // 禁用默认的缓存组  
+      },  
+    },  
+  },  
+  // ...  
+};
+     
+```
+- 预获取和预加载
+
+预获取（prefetch）：浏览器空闲的时候进行资源的拉取
+```js
+import(/* webpackPrefetch: true */ './test.png').then();
+```
+预加载（preload）：提前加载后面会用到的关键资源（慎用）
+```js
+import(/* webpackPreload: true */ './test.png').then();
+```
 ### 零碎
 
 - `babel-loader`只是将ts转成js，不包括类型检查功能；`ts-loader`默认转译+类型检查都支持。
