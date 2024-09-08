@@ -870,7 +870,22 @@ Vuex采用集中式的架构，通过一个store对象来管理所有的状态�
 
 Pinia 通过在创建 store 时指定 name 来区分不同的 store，不再需要类型Vuex的module，并且对Ts的支持较好。
 
-## 对比React Hooks
+## Vue vs React
+
+#### 框架性质
+Vue是MVVM，React可以认为是MVC中的view
+
+#### 数据绑定
+Vue是双向绑定，React是单向绑定。但是二者都是单向数据流
+
+#### 更新机制
+
+
+React 推崇 Immutable(不可变)，通过重新 render 去发现和更新自身。 会递归地把所有的子组件重新 render 一下，不管是不是更新的数据，此时，都是新的。然后通过 diff 算法 来决定更新哪部分的视图。所以，React 的更新粒度是一个**整体**。
+
+Vue 通过依赖收集，当数据更新时 ，Vue 明确知道是哪些数据更新了，每个组件都有自己的渲染 Watcher，，掌管当前组件的视图更新，所以可以精确地更新对应的组件，所以更新的粒度是**组件级别**的。
+
+#### Hooks 
 
 在React Hooks中：
 
