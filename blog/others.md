@@ -42,8 +42,8 @@
 - 使用 webp 格式的图片减小图片体积
 
 ### React
-- 使用hooks那些api
-- 使用shuouldComponetUpdate和pureComponent
+- 使用useMemo，useCallback进行必要缓存
+- 使用shuouldComponetUpdate和pureComponent避免非必要更新
 - 路由懒加载
 - 使用React.fragment避免不必要的dom添加
 - 尽量使用函数式组件
