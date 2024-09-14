@@ -129,6 +129,7 @@ export default {
 - keepAlive `不会在函数式组件`中正常工作，因为它们没有缓存实例。
 - 当匹配条件同时在 include 与 exclude 存在时，以 exclude 优先级最高。
 - 包含在 KeepAlive但符合exclude的组件，不会调用`activated`和 `deactivated`。
+- 包含在 KeepAlive且符合include的组件，`beforeUnmount` 和 `Unmounted` 就不会再被触发了，因为组件不会被真正销毁。
 :::
 
 
@@ -209,6 +210,8 @@ export default {
 
 ## 生命周期
 
+以下为Vue3生命周期：
+
 - `onBeforeMount`：组件被挂载之前被调用。此时还没有创建 DOM 节点，即将进行首次渲染
 - `onMounted`：组件挂载完成后执行，主要用于访问DOM相关。此时所有**同步**子组件都已经被挂载,自身的 DOM 树已经创建完成并插入了父容器中。
 - `onBeforeUpdate`：在组件即将因为响应式状态变更而更新其 DOM 树之前调用。
@@ -221,10 +224,36 @@ export default {
 
 :::warning
 - 不要在 `onUpdated` 钩子中更改组件的状态，这可能会导致无限的更新循环
-- Vue3中的setup函数替代了Vue2中的`beforeCreate`和`created`生命周期钩子，所有的初始化逻辑都可以在setup函数中编写。
+- Vue3中的setup函数替代了Vue2中的`beforeCreate`和`created`生命周期钩子，所有的初始化逻辑（例如一些初始化属性值）都可以在setup函数中编写。
 - Vue3中的`onBeforeUnmount/onUnmounted`相当于Vue2中的`beforeDestroy`和`destroyed`生命周期钩子。
-
 :::
+
+#### 父子组件生命周期执行顺序
+挂载过程：
+
+- 父组件 beforeCreate
+- 父组件 created
+- 父组件 beforeMount
+- 子组件 beforeCreate
+- 子组件 created
+- 子组件 beforeMount
+- 子组件 mounted
+- 父组件 mounted
+
+更新过程：
+
+- 父组件 beforeUpdate
+- 子组件 beforeUpdate
+- 子组件 updated
+- 父组件 updated
+
+销毁过程：
+
+- 父组件 beforeDestroy
+- 子组件 beforeDestroy
+- 子组件 destroyed
+- 父组件 destoryed
+
 
 ## setup
 
@@ -861,7 +890,7 @@ const refList = ref([]);
 
 Vuex采用集中式的架构，通过一个store对象来管理所有的状态。
 
-通过store来派发已定义的actions，从而在mutations中修改store的状态。确保了状态变更的可预测性和可追踪性。这种设计适合大型应用，能够有效地管理复杂的状态变化。
+通过store来派发已定义的actions，从而在mutations（默认同步，使用action可以使用**异步**）中修改store的状态。确保了状态变更的可预测性和可追踪性。这种设计适合大型应用，能够有效地管理复杂的状态变化。
 
 此外还有getter作为计算属性用。modules用于切割store为多模块
 #### pinia
