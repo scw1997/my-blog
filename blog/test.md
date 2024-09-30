@@ -15,10 +15,12 @@
 - react性能优化手段
 - setState的同步异步问题
 - useState等基本hook的实现原理
+- React合成事件和原生事件
 - hooks 解决了class组件的什么问题
-- useLayoutEffect的区别和应用场景
+- useLayoutEffect和useEffect的区别和应用场景
 - hoc的应用场景
 - diff算法的执行策略
+- react-router的基本实现原理
 ##  Vue相关
 - watch和watchEffect
 - ref和reactive以及实现原理

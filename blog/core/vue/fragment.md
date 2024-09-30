@@ -1004,6 +1004,11 @@ Vue在运行时和预编译之间做了非常好的权衡和取舍，它保留�
 - `Vue.createApp()`允许你在同一个页面中创建**多个**共存的 Vue 应用，而且每个应用都拥有自己的用于配置和全局资源的作用域。
 - `app.mount()`的返回值是`根组件实例`，而非应用实例。
 - `nextTick()` 可以在状态改变后立即使用，以等待 DOM 更新完成。
+   :::info
+   nextTick 其本质是对 JavaScript 执行原理 EventLoop 的一种应用。
+
+   nextTick 的核心是利用了如 Promise 、MutationObserver、setImmediate、setTimeout的原生 JavaScript 方法来模拟对应的微/宏任务的实现，本质是为了利用 JavaScript 的这些异步回调任务队列来实现 Vue 框架中自己的异步回调队列。
+   :::
   ```vue
   <script setup>
   import { ref, nextTick } from 'vue'

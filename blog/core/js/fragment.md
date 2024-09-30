@@ -103,11 +103,13 @@ console.log(asyncRes);
       };  
   }  
     
-  var myFunction = outerFunction(); // myFunction 持有对 largeObject 的引用  
+  var myFunction = outerFunction(); // myFunction 持有对 largeObject 的引用
+    myFunction()  
+   myFunction()  
   // 如果 myFunction 一直被引用，largeObject 也不会被垃圾回收
   ```
 
-  **解决方法**：确保闭包中的变量在不再需要时可以被垃圾回收。
+  **解决方法**：确保闭包中的变量在不再需要时可以被垃圾回收，例如`myFunction = null`。
 
 ## WeakSet/WeakMap
 
@@ -586,12 +588,21 @@ getArea(shapeType.circle, { width: 200, height: 200 });
   此外`函数声明提升比变量提升优先级高`，这会导致同名的变量一定会被忽略掉(无论函数声明与变量声明的各自前后顺序如何)。如果存在多个同名的函数声明，后面的会覆盖前面的。
 
   ```js
-  console.log(func) //ƒ func(){console.log(new.target)}
-  function func(){
-        console.log(new.target)
+  var c = 1
+  function c(c) {
+    console.log(c)
+    var c = 3
   }
-  var func = 'a'
-
+  c(2) //Uncaught TypeError: c is not a function
+  
+  // 上述代码相当于：
+  // var c
+  // function c(c) {
+  //   console.log(c)
+  //   var c = 3
+  // }
+  // c = 1
+  // c(2) //执行时发现c不是一个函数！报错！
   ``` 
 - 闭包就是可以记住并继续访问一个已执行完毕的函数的词法作用域（或者说访问一个已经执行完毕的函数的内部变量）。所以在`定时器，事件监听，异步请求`这些用到了回调函数的地方都用到了闭包。
 - `obj.hasOwnProperty(key)`：检查某个属性(不包括原型链)是否存在于该对象中。
