@@ -281,6 +281,44 @@ console.log(distinct([2,2,3,5,7,9,7])) //[2, 3, 5, 7, 9]
 ```
 :::
 
+## 数组扁平化
+
+:::code-group
+```js [flat]
+const arr = [1, [2, [3, [4, 5]]], 6];
+
+// 注意：使用Infinity会影响性能，不推荐
+console.log(arr.flat(Infinity)) // [1,2,3,4,5,6]
+```
+```js [reduce]
+function flatReduce(arr) {
+    return arr.reduce((pre, cur) => {
+          return pre.concat(Array.isArray(cur) ? flatReduce(cur) : cur);
+    }, []);
+}
+const arr = [1, [2, [3, [4, 5]]], 6];
+
+console.log(flatReduce(arr)) // [1,2,3,4,5,6]
+```
+```js [递归]
+function flatByArray(arr, res) {
+    res = res || [];
+    for (let i = 0; i < arr.length; i++) {
+        const a = arr[i];
+        if (Array.isArray(a)) {
+            flatByArray(a, res)
+        } else {
+            res.push(a)
+        }
+    }
+    return res
+}
+const arr = [1, [2, [3, [4, 5]]], 6];
+
+console.log(flatByArray(arr)) // [1,2,3,4,5,6]
+```
+:::
+
 ## Promise
 
 ```js

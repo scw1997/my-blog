@@ -131,6 +131,7 @@ React 中最多会存在两颗 Fiber树：
 
 在Fiber架构下，React的更新渲染过程大致如下：
 
+![fiber_3.png](/fiber_3.png)
 
 1. **`ReactDOM.render()` 引导 React 启动或调用 `setState()` 的时候开始创建或更新 Fiber 树。**
 
