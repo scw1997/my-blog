@@ -360,18 +360,17 @@ v-model 在内部是语法糖，背后具体表现为监听表单元素的 input
 ### 组件的v-model
 
 :::info 原理
-组件上面的v-model编译后会生成modelValue属性和@update:modelValue事件。
+组件上面的v-model编译后会生成`modelValue`属性和`@update:modelValue`事件。
 
-在组件上面使用v-model，是由子组件中定义一个名为`modelValue`的props来接收父组件使用v-model绑定的变量，然后使用这个modelValue绑定到子组件的指定表单元素中。
+在组件上面使用v-model，需要子组件中定义一个名为modelValue的props来接收父组件使用v-model绑定的变量，然后使用这个modelValue绑定到子组件的指定表单元素中。
 
-子组件使用emit抛出`@update:modelValue`事件去更新v-model绑定的变量，这操作通常是在指定表单元素的原生input事件回调中去触发。
+子组件使用emit抛出`@update:modelValue`事件去更新v-model属性绑定的变量，该操作通常是在指定表单元素的原生input事件回调中去触发。
 :::
 
 自定义表单组件
 
 ```vue
 <!--CustomInput.vue-->
-
 <script setup>
   // 默认情况下，v-model 使用的 prop 是 'modelValue'
   // Vue 会自动处理 update:modelValue 事件
@@ -473,9 +472,9 @@ const inputValue2 = ref();
 :::info 原理
 原生input上面使用v-model编译后不会生成modelValue属性，只会生成`onUpdate:modelValue`回调函数和`vModelText`自定义指令。（@update:modelValue事件其实等价于onUpdate:modelValue回调函数）
 
-在原生input上面使用v-model，是由编译后生成的vModelText自定义指令在mounted和beforeUpdate钩子函数中去将v-model绑定的变量值更新到原生input输入框的value属性，以保证v-model绑定的变量值和input输入框中的值始终一致。
+在原生input上面使用v-model，是由编译后自动生成的vModelText自定义指令在mounted和beforeUpdate钩子函数中去将v-model绑定的变量值更新到原生input输入框的value属性，以保证v-model绑定的变量值和input输入框中的值始终一致。
 
-编译后生成的vModelText自定义指令在created钩子函数中去监听原生input标签的input或者change事件。在事件回调函数中去手动调用onUpdate:modelValue回调函数，然后在回调函数中去更新v-model绑定的变量。
+vModelText自定义指令会在created钩子函数中去监听原生input标签的input或者change事件。在事件回调函数中去调用onUpdate:modelValue回调函数，然后在回调函数中去更新v-model绑定的变量。在原生input标签中，这些操作是由vue内部完成的。
 :::
 
 
