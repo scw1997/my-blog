@@ -357,14 +357,135 @@ Vue的双向数据绑定是**基于MVVM模式和上述的响应式系统原理�
 
 v-model 在内部是语法糖，背后具体表现为监听表单元素的 input 事件，并更新数据模型中对应的数据。同时，当数据模型中的数据被手动修改变时，表单元素视图也会同时反映最新数据。
 
+### 组件的v-model
+
+:::info 原理
+组件上面的v-model编译后会生成modelValue属性和@update:modelValue事件。
+
+在组件上面使用v-model，是由子组件中定义一个名为`modelValue`的props来接收父组件使用v-model绑定的变量，然后使用这个modelValue绑定到子组件的指定表单元素中。
+
+子组件使用emit抛出`@update:modelValue`事件去更新v-model绑定的变量，这操作通常是在指定表单元素的原生input事件回调中去触发。
+:::
+
+自定义表单组件
+
+```vue
+<!--CustomInput.vue-->
+
+<script setup>
+  // 默认情况下，v-model 使用的 prop 是 'modelValue'
+  // Vue 会自动处理 update:modelValue 事件
+  const props = defineProps({
+    modelValue: String
+  });
+</script>
+<template>
+  <div>
+    <input
+            :value="modelValue"
+            @input="$emit('update:modelValue', $event.target.value)"
+            type="text"
+            placeholder="Edit me"
+    />
+  </div>
+</template>
+
+
+```
+
+使用示例:
+
+```vue
+<script setup>
+import CustomInput from './CustomInput.vue';
+import { ref } from 'vue';
+
+const inputValue = ref();
+</script>
+
+<template>
+    <div>
+        <CustomInput v-model="inputValue" />
+        <p>The value is: {{ inputValue }}</p>
+    </div>
+</template>
+
+```
+
+多个v-model:
+
+:::code-group
+```vue [表单组件]
+<script setup>
+// 默认情况下，v-model 使用的 prop 是 'modelValue'
+// Vue 会自动处理 update:modelValue 事件
+const props = defineProps({
+    model1: String,
+    model2: String
+});
+</script>
+<template>
+    <div>
+        <input
+            :value="model1"
+            @input="$emit('update:model1', $event.target.value)"
+            type="text"
+            placeholder="Edit me"
+        />
+        <input
+            :value="model2"
+            @input="$emit('update:model2', $event.target.value)"
+            type="text"
+            placeholder="Edit me"
+        />
+    </div>
+</template>
+
+```
+
+
+```vue [使用]
+<script setup>
+import CustomInput from './CustomInput.vue';
+import { ref } from 'vue';
+
+const inputValue1 = ref();
+const inputValue2 = ref();
+</script>
+
+<template>
+    <div>
+        <CustomInput v-model:model1="inputValue1" v-model:model2="inputValue2" />
+        <p>The value1 is: {{ inputValue1 }}</p>
+        <p>The value2 is: {{ inputValue2 }}</p>
+    </div>
+</template>
+
+
+```
+:::
+
+
+
+
+### 原生标签的v-model
+
+:::info 原理
+原生input上面使用v-model编译后不会生成modelValue属性，只会生成`onUpdate:modelValue`回调函数和`vModelText`自定义指令。（@update:modelValue事件其实等价于onUpdate:modelValue回调函数）
+
+在原生input上面使用v-model，是由编译后生成的vModelText自定义指令在mounted和beforeUpdate钩子函数中去将v-model绑定的变量值更新到原生input输入框的value属性，以保证v-model绑定的变量值和input输入框中的值始终一致。
+
+编译后生成的vModelText自定义指令在created钩子函数中去监听原生input标签的input或者change事件。在事件回调函数中去手动调用onUpdate:modelValue回调函数，然后在回调函数中去更新v-model绑定的变量。
+:::
+
+
 ```vue
 <template>
    <input v-model='localValue'/>
 </template>
 
 ```
-上述的组件就相当于如下代码：
-
+上述的代码就相当于如下代码：
 
 ```vue
 <template>
@@ -389,4 +510,10 @@ v-model 在内部是语法糖，背后具体表现为监听表单元素的 input
   }
 </script>
 
+
+
 ```
+
+
+
+
