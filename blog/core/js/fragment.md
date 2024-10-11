@@ -462,7 +462,7 @@ Symbol表示独一无二的值。它是用来创建唯一标识符的。
 
 - **对象唯一属性名**
 
-使用Symbol定义属性名可防止后续属性名冲突
+使用Symbol定义属性名可防止后续属性名冲突,也可模拟不可被外部访问的私有属性
 ```js
 let userId = Symbol('id');  
 let userName = Symbol('name');  
@@ -477,17 +477,20 @@ let user = {
 console.log(user[userId]); // 输出: 12345  
 console.log(user[userName]); // 输出: John Doe  
 console.log(user.age); // 输出: 30  
-  
+
+// 除非有对应key的symbol引用，否则无法访问指定key的属性值
 // 尝试通过字符串访问Symbol属性会失败  
 console.log(user['id']); // undefined  
 console.log(user['name']); // undefined
 ```
+
+
+
 - **作为常量使用**
 
 常量通常无需记住其具体值，只需要知道它和其他常量是不一样的值即可。通常可用来消除魔术字符串现象。
 
 ```js
-
 function getArea(shape, options) {   
  let area = 0;
    switch (shape) {
@@ -613,4 +616,4 @@ getArea(shapeType.circle, { width: 200, height: 200 });
 
 - 箭头函数不可作为构造函数，不可使用super(比如在class中)，new.target（判断当前函数是否通过new来调用）等关键字，此外也没有prototype属性,以及不可作为generator函数。
 - `Object.assign`和对象扩展运算符`[...obj，obj1]`除了使用语法的区别，拷贝对象的实际效果没有什么区别(除了Object.assign会触发setter，而扩展运算符不会)。扩展运算符语法更简洁,都是`浅拷贝原对象中可枚举的直接包含属性`。
-
+- 通过`globalThis`可以区分当前环境是Node还是浏览器
