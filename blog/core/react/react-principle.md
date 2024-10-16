@@ -134,7 +134,7 @@ React 16之后提出了Fiber机制和Fiber节点，对Diff算法机制进行了�
 
 > 这种机制使得React能够更好地处理高优先级任务，如用户交互，同时不会阻塞其他重要操作的执行。
 
-详见：[Fiber架构](/core/react/react-fiber)
+详见：[React架构](/core/react/react-architecture)
 
 ## Key机制
 
@@ -142,7 +142,7 @@ React可以给节点/组件（后续统称为元素）添加`key` props，来为
 
 ### 主要规则
 
-React每次更新渲染时，`对于属于同一层级的全体元素`，如果在新旧虚拟DOM树中：
+React每次更新渲染时，`对于属于同一层级的全体元素（同一层级只有一个元素也算）`，如果在新旧虚拟DOM树中：
 
 :::info 规则
 **存在key相同的元素时：**

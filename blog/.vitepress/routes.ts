@@ -95,8 +95,8 @@ const routes =  [
                         link:'/core/react/react-principle'
                     },
                     {
-                        text:'Fiber架构',
-                        link:'/core/react/react-fiber'
+                        text:'React 架构',
+                        link:'/core/react/react-architecture'
                     },
                     {
                         text:'React零碎',
