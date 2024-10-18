@@ -308,7 +308,9 @@ HTTP 协议有一个缺陷：`通信只能由客户端发起`。
 - `没有同源限制`，客户端可以与任意服务器通信。
 - 协议标识符是ws（如果加密，则为wss），服务器网址就是 URL。
 
-基本示例
+相比Http（长轮询）来说，**WebSocket数据实时性更好，内存占用低，且支持跨域**。
+
+基本示例：
 ```js
 var ws = new WebSocket("wss://echo.websocket.org");
 
@@ -327,7 +329,9 @@ ws.onclose = function(evt) {
 };      
 
 ```
-
+:::warning 注意
+当WebSocket 断开连接时，客户端和服务端需要实现相应的处理机制，包括断线重连、ping/pong 检测、心跳机制等，以确保通信的可靠性和稳定性。
+:::
 
 [三次握手]:/advance/browser-render#网络请求
 [四次挥手]:/advance/browser-render#断开连接

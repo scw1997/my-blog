@@ -46,70 +46,6 @@ console.log(asyncRes);
 
 - `unload`： 事件在页面被卸载后触发，适用于执行最后的清理操作。
 
-## 内存泄漏
-
-- **意外的全局变量**：
-
-  由于使用未声明的变量，而意外的创建了一个全局变量，而使这个变量一直留在内存中无法被回收。
-
-  ```js
-  function myFunction() {  
-      leak = "这是一个全局变量，可能导致内存泄露";  
-  }  
-  myFunction();
-  ```
-  **解决方法**：尽量使用 let 和 const 在局部作用域中声明变量。
-
-- **被遗忘的计时器或回调函数**：
-
-  设置了 setInterval定时器，而忘记取消它，如果循环函数有对外部变量的引用的话，那么这个变量会被一直留在内存中，而无法被回收。
-
-  ```js
-  var someResource = getData();  
-  setInterval(function() {  
-      var node = document.getElementById('someId');  
-      if (node) {  
-          // 处理 node  
-      }  
-  }, 1000);  
-  // 如果这个间隔调用函数被忘记清除，即使节点不再需要，它也会继续执行
-  ```
-  **解决方法**：使用 clearInterval 和 clearTimeout 清理不再需要的定时器，以及使用 removeEventListener 移除不再需要的事件监听器。
-
-- **脱离 DOM 的引用**： 
-
-  获取一个 DOM 元素的引用，而后面这个元素被删除，由于一直保留了对这个元素的引用，所以它也无法被回收。
-
-  ```js
-  var elements = [];  
-  function removeElement() {  
-      var element = document.getElementById('someElement');  
-      document.body.removeChild(element);  
-      elements.push(element); // 虽然dom树移除了该元素，但这里的引用阻止了元素被垃圾回收  
-  }
-  ```
-
-  **解决方法**：在 DOM 元素被移除后，清理对它们的引用。。
-
-- **不合理的闭包**：  
-
-  不合理的使用闭包（闭包本身不属于内存泄漏，因为我们需要使用闭包的变量），从而导致某些变量一直被留在内存当中。
-
-  ```js
-  function outerFunction() {  
-      var largeObject = {}; // 假设这是一个很大的对象  
-      return function innerFunction() {  
-          // 使用 largeObject  
-      };  
-  }  
-    
-  var myFunction = outerFunction(); // myFunction 持有对 largeObject 的引用
-    myFunction()  
-   myFunction()  
-  // 如果 myFunction 一直被引用，largeObject 也不会被垃圾回收
-  ```
-
-  **解决方法**：确保闭包中的变量在不再需要时可以被垃圾回收，例如`myFunction = null`。
 
 ## WeakSet/WeakMap
 
@@ -533,7 +469,167 @@ getArea(shapeType.triangle, { width: 100, height: 100 });
 getArea(shapeType.circle, { width: 200, height: 200 });
 ```
 
-## 类型检测
+## Web Worker
+
+Web Worker 的作用，就是为 JavaScript 创造**多线程**环境，允许主线程创建 Worker 线程，用Worker线程去执行**计算密集型或高延迟**的任务，可以避免主线程被阻塞。
+
+#### 分类
+
+- 专用线程：只能被创建该Woker的脚本访问（**主要使用**）
+
+- 共享线程：可以被多个脚本所访问。为跨浏览器 tab 共享数据提供了一种解决方案。
+
+#### 使用限制
+
+- Worker 线程运行的脚本文件，必须与主线程的脚本文件同源
+- Worker 线程无法读取本地文件（file://）
+- Worker 线程无法读取主线程所在网页的document、window、parent等对象
+- Worker 线程不能执行alert()方法和confirm()方法
+
+#### 适用场景
+前端导出生成excel， 图片批量压缩等cpu密集型任务
+
+实例：
+
+:::code-group
+```js  [main.js]
+<div>计算从 1 到给定数值的总和</div>
+<input type="text" placeholder="请输入数字" id="num" />
+<button onclick="calc()">开始计算</button>
+<span>计算结果为：<span id="result">-</span></span>
+
+<div>在计算期间你可以填XX表单</div>
+<input type="text" placeholder="请输入姓名" />
+<input type="text" placeholder="请输入年龄" />
+
+
+function calc() {
+  const worker = new Worker('./worker.js')
+
+  function calc() {
+    const num = parseInt(document.getElementById('num').value)
+    worker.postMessage(num)
+  }
+
+  worker.onmessage = function (e) {
+    document.getElementById('result').innerHTML = e.data
+  }
+}
+
+```
+```js [worker.js]
+
+function calc(num) {
+  let result = 0
+  let startTime = performance.now()
+  // 计算求和（模拟复杂计算）
+  for (let i = 0; i <= num; i++) {
+    result += i
+  }
+  // 由于是同步计算，在没计算完成之前下面的代码都无法执行
+  const time = performance.now() - startTime
+  console.log('总计算花费时间:', time)
+  self.postMessage(result)
+}
+
+self.onmessage = function (e) {
+  calc(e.data)
+}
+
+```
+
+
+## 闭包
+
+闭包就是可以记住并继续访问一个已执行完毕的函数的**词法作用域**（或者说访问一个已经执行完毕的函数的内部变量）。所以在`定时器，事件监听，异步请求`这些用到了回调函数的地方都用到了闭包。
+
+```js
+
+//闭包实例代码
+function fn1() {
+  let a = 1;
+  function fn2() {
+    a++;
+    console.log(a);
+  }
+  return fn2;
+}
+const fn2 = fn1();
+//闭包函数执行完后外部作用域变量仍然存在，并保持状态
+fn2() //2
+fn2() //3
+
+```
+**优点：** 缓存变量状态，延长变量生命周期。可应用于封装私有变量来实现模块化等场景
+
+**缺点：** 增加内存占用，影响性能。
+
+#### 应用场景
+
+## 内存泄漏
+
+- **意外的全局变量**：
+
+  由于使用未声明的变量，而意外的创建了一个全局变量，而使这个变量一直留在内存中无法被回收。
+
+  ```js
+  function myFunction() {  
+      leak = "这是一个全局变量，可能导致内存泄露";  
+  }  
+  myFunction();
+  ```
+  **解决方法**：尽量使用 let 和 const 在局部作用域中声明变量。
+
+- **被遗忘的计时器或回调函数**：
+
+  设置了 setInterval定时器，而忘记取消它，如果循环函数有对外部变量的引用的话，那么这个变量会被一直留在内存中，而无法被回收。
+
+  ```js
+  var someResource = getData();  
+  setInterval(function() {  
+      var node = document.getElementById('someId');  
+      if (node) {  
+          // 处理 node  
+      }  
+  }, 1000);  
+  // 如果这个间隔调用函数被忘记清除，即使节点不再需要，它也会继续执行
+  ```
+  **解决方法**：使用 clearInterval 和 clearTimeout 清理不再需要的定时器，以及使用 removeEventListener 移除不再需要的事件监听器。
+
+- **脱离 DOM 的引用**：
+
+  获取一个 DOM 元素的引用，而后面这个元素被删除，由于一直保留了对这个元素的引用，所以它也无法被回收。
+
+  ```js
+  var elements = [];  
+  function removeElement() {  
+      var element = document.getElementById('someElement');  
+      document.body.removeChild(element);  
+      elements.push(element); // 虽然dom树移除了该元素，但这里的引用阻止了元素被垃圾回收  
+  }
+  ```
+
+  **解决方法**：在 DOM 元素被移除后，清理对它们的引用。。
+
+- **不合理的闭包**：
+
+  不合理的使用闭包（闭包本身不属于内存泄漏，因为我们需要使用闭包的变量），从而导致某些变量一直被留在内存当中。
+
+  ```js
+  function outerFunction() {  
+      var largeObject = {}; // 假设这是一个很大的对象  
+      return function innerFunction() {  
+          // 使用 largeObject  
+      };  
+  }  
+    
+  var myFunction = outerFunction(); // myFunction 持有对 largeObject 的引用
+    myFunction()  
+   myFunction()  
+  // 如果 myFunction 一直被引用，largeObject 也不会被垃圾回收
+  ```
+
+  **解决方法**：确保闭包中的变量在不再需要时可以被垃圾回收，例如`myFunction = null`。
 
 
 ## 其他
@@ -606,8 +702,7 @@ getArea(shapeType.circle, { width: 200, height: 200 });
   // }
   // c = 1
   // c(2) //执行时发现c不是一个函数！报错！
-  ``` 
-- 闭包就是可以记住并继续访问一个已执行完毕的函数的词法作用域（或者说访问一个已经执行完毕的函数的内部变量）。所以在`定时器，事件监听，异步请求`这些用到了回调函数的地方都用到了闭包。
+  ```
 - `obj.hasOwnProperty(key)`：检查某个属性(不包括原型链)是否存在于该对象中。
 
   `Object.getOwnPropertyNames(obj)`：查找该对象(不包括原型链)的所有属性名(无论是否可枚举)，以数组形式返回。
@@ -617,3 +712,5 @@ getArea(shapeType.circle, { width: 200, height: 200 });
 - 箭头函数不可作为构造函数，不可使用super(比如在class中)，new.target（判断当前函数是否通过new来调用）等关键字，此外也没有prototype属性,以及不可作为generator函数。
 - `Object.assign`和对象扩展运算符`[...obj，obj1]`除了使用语法的区别，拷贝对象的实际效果没有什么区别(除了Object.assign会触发setter，而扩展运算符不会)。扩展运算符语法更简洁,都是`浅拷贝原对象中可枚举的直接包含属性`。
 - 通过`globalThis`可以区分当前环境是Node还是浏览器
+- `postMessage`用于浏览器跨域通信，例如不同标签栏(window)之间，或者同一标签栏当前window与iframe之间的通信。
+- 

@@ -78,7 +78,7 @@ function Index() {
 
 此外，setState是异步更新(将多次setState存储在queue队列中，等待调度完成一起更新)，通常你需要在useEffect回调中才能拿到最新的state值。
 
-然而，如果你在更新函数中基于先前的 state 来计算新的 state（例如，通过闭包捕获的 state），你可能需要使用函数的形式来确保你得到的是最新的 state 值。
+然而，如果你在更新函数中基于先前的 state 来计算新的 state（例如，通过闭包捕获的 state），你可能需要**使用函数的形式来确保你得到的是最新的 state 值**。
 
 
 ```jsx
