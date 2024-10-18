@@ -46,6 +46,249 @@ Vue在运行时和预编译之间做了非常好的权衡和取舍，它保留�
 - 响应式系统自动收集计算属性和响应式数据依赖，无需手动声明。
 - 不需要手动缓存来避免性能问题，可确保绝大部分情况下仅执行必要的更新
 
+## 前端SPA路由实现原理
+
+### history路由
+
+在 HTML5 之前，浏览器就已经有了 history 对象。但在早期的 history 中只能用于**多页面**的跳转。只支持以下API:
+```js
+history.go(-1);       // 后退一页
+history.go(2);        // 前进两页
+history.forward();     // 前进一页
+history.back();      // 后退一页
+
+```
+在 HTML5 的规范中，history 新增了以下几个 API：
+```js
+history.pushState();         // 在保留现有历史记录的同时，将指定 url 加入到历史记录中
+history.replaceState();      // 将历史记录中的当前页面历史替换为指定 url
+history.state                // 返回当前的历史条目数据
+```
+
+history.pushState() 和 history.replaceState() 可以改变 url 的同时，不会刷新页面。并且可以通过`window.onpopstate`来监听两种方法的触发从而配合使用。
+
+但是history 的改变并不会触发任何事件，所以我们无法直接监听 history 的改变而做出相应的操作。
+
+所以，我们需要换个思路，我们可以罗列出所有可能触发 history 改变的情况，并且将这些方式一一进行拦截，变相地监听 history 的改变。
+对于单页应用的 history 模式而言，url 的改变只能由下面四种方式引起：
+
+- 点击浏览器的前进或后退按钮
+- 点击 a 标签
+- 在 JS 代码中触发 history.pushState 函数
+- 在 JS 代码中触发 history.replaceState 函数
+
+:::code-group 
+```js [实现]
+class HistoryRouter{
+    constructor(){
+        //用于存储不同path值对应的回调函数
+        this.routers = {};
+        this.listenPopState();
+        this.listenLink();
+    }
+    //监听popstate
+    listenPopState(){
+        window.addEventListener('popstate',(e)=>{
+            let state = e.state || {},
+                path = state.path || '';
+            this.dealPathHandler(path)
+        },false)
+    }
+    // 全局阻止A链接的默认事件，获取A链接的href属性，并调用 history.pushState 方法
+    listenLink(){
+        window.addEventListener('click',(e)=>{
+            let dom = e.target;
+            if(dom.tagName.toUpperCase() === 'A' && dom.getAttribute('href')){
+                e.preventDefault()
+                this.assign(dom.getAttribute('href'));
+            }
+        },false)
+    }
+    //用于首次进入页面时调用
+    load(){
+        let path = location.pathname;
+        this.dealPathHandler(path)
+    }
+    //用于注册每个视图
+    register(path,callback = function(){}){
+        this.routers[path] = callback;
+    }
+    //用于注册首页
+    registerIndex(callback = function(){}){
+        this.routers['/'] = callback;
+    }
+    //用于处理视图未找到的情况
+    registerNotFound(callback = function(){}){
+        this.routers['404'] = callback;
+    }
+    //用于处理异常情况
+    registerError(callback = function(){}){
+        this.routers['error'] = callback;
+    }
+    //跳转到path
+    assign(path){
+        history.pushState({path},null,path);
+        this.dealPathHandler(path)
+    }
+    //替换为path
+    replace(path){
+        history.replaceState({path},null,path);
+        this.dealPathHandler(path)
+    }
+    //通用处理 path 调用回调函数
+    dealPathHandler(path){
+        let handler;
+        //没有对应path
+        if(!this.routers.hasOwnProperty(path)){
+            handler = this.routers['404'] || function(){};
+        }
+        //有对应path
+        else{
+            handler = this.routers[path];
+        }
+        try{
+            handler.call(this)
+        }catch(e){
+            console.error(e);
+            (this.routers['error'] || function(){}).call(this,e);
+        }
+    }
+}
+
+```
+```js [调用]
+<body>
+    <div id="nav">
+        <a href="/page1">page1</a>
+        <a href="/page2">page2</a>
+        <a href="/page3">page3</a>
+        <a href="/page4">page4</a>
+        <a href="/page5">page5</a>
+        <button id="btn">page2</button>
+    </div>
+    <div id="container">
+
+    </div>
+</body>
+
+
+let router = new HistoryRouter();
+let container = document.getElementById('container');
+
+//注册首页回调函数
+router.registerIndex(() => container.innerHTML = '我是首页');
+
+//注册其他视图回到函数
+router.register('/page1', () => container.innerHTML = '我是page1');
+router.register('/page2', () => container.innerHTML = '我是page2');
+router.register('/page3', () => container.innerHTML = '我是page3');
+router.register('/page4', () => {
+    throw new Error('抛出一个异常')
+});
+
+document.getElementById('btn').onclick = () => router.assign('/page2')
+
+
+//注册未找到对应path值时的回调
+router.registerNotFound(() => container.innerHTML = '页面未找到');
+//注册出现异常时的回调
+router.registerError((e) => container.innerHTML = '页面异常，错误消息：<br>' + e.message);
+//加载页面
+router.load();
+
+```
+:::
+
+### hash路由
+url hash 值的变化不会导致浏览器像服务器发送请求，而且 hash 的改变会触发 hashchange 事件，浏览器的前进后退也能对其进行控制，所以在 H5 的 history 模式出现之前，基本都是使用 hash 模式来实现前端路由。
+
+:::code-group 
+
+```js [实现]
+class HashRouter{
+    constructor(){
+        //用于存储不同hash值对应的回调函数
+        this.routers = {};
+        window.addEventListener('hashchange',this.load.bind(this),false)
+    }
+    //用于注册每个视图
+    register(hash,callback = function(){}){
+        this.routers[hash] = callback;
+    }
+    //用于注册首页
+    registerIndex(callback = function(){}){
+        this.routers['index'] = callback;
+    }
+    //用于处理视图未找到的情况
+    registerNotFound(callback = function(){}){
+        this.routers['404'] = callback;
+    }
+    //用于处理异常情况
+    registerError(callback = function(){}){
+        this.routers['error'] = callback;
+    }
+    //用于调用不同视图的回调函数
+    load(){
+        let hash = location.hash.slice(1),
+            handler;
+        //没有hash 默认为首页
+        if(!hash){
+            handler = this.routers.index;
+        }
+        //未找到对应hash值
+        else if(!this.routers.hasOwnProperty(hash)){
+            handler = this.routers['404'] || function(){};
+        }
+        else{
+            handler = this.routers[hash]
+        }
+        //执行注册的回调函数
+        try{
+            handler.apply(this);
+        }catch(e){
+            console.error(e);
+            (this.routers['error'] || function(){}).call(this,e);
+        }
+    }
+}
+
+
+```
+```js [调用]
+<body>
+    <div id="nav">
+        <a href="#/page1">page1</a>
+        <a href="#/page2">page2</a>
+        <a href="#/page3">page3</a>
+        <a href="#/page4">page4</a>
+        <a href="#/page5">page5</a>
+    </div>
+    <div id="container"></div>
+</body>
+
+
+
+let router = new HashRouter();
+let container = document.getElementById('container');
+
+//注册首页回调函数
+router.registerIndex(()=> container.innerHTML = '我是首页');
+
+//注册其他视图回到函数
+router.register('/page1',()=> container.innerHTML = '我是page1');
+router.register('/page2',()=> container.innerHTML = '我是page2');
+router.register('/page3',()=> container.innerHTML = '我是page3');
+router.register('/page4',()=> {throw new Error('抛出一个异常')});
+
+//加载视图
+router.load();
+//注册未找到对应hash值时的回调
+router.registerNotFound(()=>container.innerHTML = '页面未找到');
+//注册出现异常时的回调
+router.registerError((e)=>container.innerHTML = '页面异常，错误消息：<br>' + e.message);
+
+
+```
 ## 性能优化
 
 ### CSS
