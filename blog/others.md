@@ -17,6 +17,14 @@
 - 设置WebStorage值时，会默认执行`toString()`操作，需要注意类型检测。
 :::
 
+## iframe
+
+用于将**不同源**的页面嵌入到当前页面。iframe页面不可访问主页面DOM对象
+
+**应用场景**：广告嵌入，视频播放，第三方应用嵌入
+
+**缺点**：不利于SEO，增加页面请求，存在一定安全问题（如xss跨站脚本攻击等）
+
 ## Vue vs React
 
 #### 框架性质
@@ -322,7 +330,7 @@ router.registerError((e)=>container.innerHTML = '页面异常，错误消息：<
 - 动态列表渲染使用key
 
 
-# 其他
+## 其他
 
 - 减少http请求次数
 - 使用http2（解析快，多路复用，头部压缩）
@@ -367,7 +375,7 @@ router.registerError((e)=>container.innerHTML = '页面异常，错误消息：<
 
 ## 零碎
 
-
+- iframe可以将**不同源**的页面嵌入进来。主要应用于
 
 
 [Cookie]:/advance/cookie-session#cookie

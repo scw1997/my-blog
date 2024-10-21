@@ -344,7 +344,7 @@ function getUserData(
 
 :::
 
-### 方法重载
+### class方法重载
 
 ```ts
 class ArrayEN {
@@ -369,7 +369,7 @@ class ArrayEN {
 
 ```
 
-### 构造器重载
+### class构造器重载
 
 与方法重载语法类似，但是**不需要管理返回值**：
 ```ts
@@ -667,7 +667,7 @@ department.generateReports(); // [!code error] 错误: 方法在声明的抽象�
 
 ## 映射类型
 
-- 只读类型`Readonly`
+- **只读类型`Readonly`**
 
 ```ts
 type Readonly<T> = {
@@ -676,7 +676,7 @@ type Readonly<T> = {
 
 ```
 
-- 只读数组`ReadonlyArray`
+- **只读数组`ReadonlyArray`**
 ```ts
 interface ReadonlyArray<T> {
     /** Iterator of values in the array. */
@@ -716,33 +716,33 @@ personList[0].name = 'Lily'
 
 ```
 
-- 可选类型`Partial`
+- **可选类型`Partial`**
 ```ts
 type Partial<T> = {
     [P in keyof T]?: T[P];
 }
 ```
 
-- 必选类型`Required`
+- **必选类型`Required`**
 ```ts
 type Required<T> = {
   [P in keyof T]-?: T[P];
 }
 ```
 
-- 提取属性`Pick`
+- **提取属性`Pick`**
 ```ts
 type Pick<T, K extends keyof T> = {
   [P in K]: T[P];
 }
 ```
 
-- 排除属性`Omit`
+- **排除属性`Omit`**
 ```ts
 type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>
 ```
 
-- 摘取类型`Extract`
+- **摘取类型`Extract`**
 ```ts
 type Extract<T, U> = T extends U ? T : never;
 ```
@@ -753,7 +753,7 @@ type T01 = Extract<"a" | "b" | "c" | "d", "a" | "c" | "f">;  // "a" | "c"
 type T02 = Extract<string | number | (() => void), Function>;  // () => void
 
 ```
-- 排除类型`Exclude`
+- **排除类型`Exclude`**
 ```ts
 type Exclude<T, U> = T extends U ? never : T
 ```
@@ -764,14 +764,14 @@ type T00 = Exclude<"a" | "b" | "c" | "d", "a" | "c" | "f">;  // "b" | "d"
 type T01 = Exclude<string | number | (() => void), Function>;  // string | number
 
 ```
-- 属性映射`Record`
+- **属性映射`Record`**
 ```ts
 type Record<K extends string | number | symbol, T> = {
   [P in K]: T;
 }
 ```
 
-- 不可为空类型`NonNullable`
+- **不可为空类型`NonNullable`**
 ```ts
 type NonNullable<T> = T extends null | undefined ? never : T
 ```
@@ -787,7 +787,7 @@ type T02 = NonNullable<(() => string) | string[] | null | undefined>;  // (() =>
 type T03 = NonNullable<{name?: string, age: number} | string[] | null | undefined>;  // {name?: string, age: number} | string[]
 
 ```
-- 函数参数类型`Parameters`
+- **函数参数类型`Parameters`**
 ```ts
 type Parameters<T extends (...args: any) => any> = T extends (...args: infer P) => any ? P : never;
 ```
@@ -802,7 +802,7 @@ type FunctionParamsType = Parameters<FunctionType>  // [name: string, age: numbe
 const params:  FunctionParamsType = ['Jack', 20]
 
 ```
-- 函数返回值类型`ReturnType`
+- **函数返回值类型`ReturnType`**
 ```ts
 type ReturnType<T extends (...args: any) => any> = T extends (...args: any) => infer R ? R : any;
 ```

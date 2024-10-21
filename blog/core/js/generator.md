@@ -407,17 +407,6 @@ for(const item of obj){
 }
 ```
 
-```js
-const func = async()=>{
-    console.log('func')
-  return 'a'
-}
-const a= [1,2,3].map(async()=>{
-    await func()
-    console.log('1')
-})
-```
-
 **（2）实现并发控制**
 
 Generator函数可以暂停执行，这使得它在并发控制中具有一定的应用价值。通过合理地安排Generator函数的执行顺序和暂停时机，我们可以实现对并发任务的有效管理和调度。
