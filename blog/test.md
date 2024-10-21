@@ -31,7 +31,7 @@
 - hooks 解决了class组件的什么问题，hoc的应用场景
 - useLayoutEffect和useEffect的区别和应用场景
 - diff算法的执行策略，key机制
-- react架构(fiber)执行机制
+- react旧版，新版架构fiber执行机制
 - react-router的基本实现原理
 
 ##  Vue相关
