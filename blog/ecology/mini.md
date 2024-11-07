@@ -106,7 +106,7 @@ Component({
     },
     ready() {
       console.log("ready 组件被附加到页面的节点树上了");
-    },
+``    },
     attached() {
       console.log("attached 组件被显示出来了");
     },
@@ -163,7 +163,7 @@ setData大致过程：
 - 继承样式，如 font 、 color ，会从组件外继承到组件内。
 - 除继承样式外， app.wxss 中的样式、组件所在页面的的样式对自定义组件无效（除非更改组件样式隔离选项）。
 :::
-默认情况下，**自定义组件的样式只受到自定义组件 wxss 的影响**。除非指定特殊的样式隔离选项 `styleIsolation`：
+默认情况下，**自定义组件的样式只受到自定义组件 wxss 的影响**。除非在当前组件js文件的options中指定特殊的样式隔离选项 `styleIsolation`：
 
 :::info styleIsolation选项值
 - **isolated**: 表示启用样式隔离，在自定义组件内外，使用 class 指定的样式将不会相互影响（一般情况下的默认值）；
@@ -202,11 +202,21 @@ setData大致过程：
 - 避免在 onHide/onUnload 执行耗时操作，如同步接口调用、setData 等
 - 事件监听的及时解绑和定时器的及时清理
 
-## UniApp
+## Uniapp
 
 - uniapp不支持vue中的`component`动态组件标签,只能使用条件渲染.
 - uniapp不支持vue中的h函数,defineComponent等渲染方法
-- 
+- uniapp如果遇到自定义单文件组件(非页面)文件中引用第三方组件并且需要覆盖第三方组件样式,除了需要在style中使用`:deep`,还需要配置`styleIsolation`:
+```vue
+<script setup lang="ts">
+defineOptions({
+  options: {
+    styleIsolation: 'shared'
+  }
+});
+</script>
+```
+
 ## 其他
 
 - wxss中，`750rpx`表示屏幕宽度。
