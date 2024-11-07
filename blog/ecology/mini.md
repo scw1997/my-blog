@@ -190,6 +190,9 @@ setData大致过程：
 - 避免在 onHide/onUnload 执行耗时操作，如同步接口调用、setData 等
 - 事件监听的及时解绑和定时器的及时清理
 
+## UniApp
+
+- uniapp不支持vue中的`component`动态组件标签
 ## 其他
 
 - wxss中，`750rpx`表示屏幕宽度。
