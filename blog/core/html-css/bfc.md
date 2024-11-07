@@ -12,7 +12,7 @@ BFC(Block formatting context)直译为"块级格式化上下文"。
 
 - BFC内部的Box会在垂直方向，一个接一个地放置。
 
-- Box垂直方向的距离由margin决定。属于同一个BFC内部的两个相邻Box的margin会发生重叠，不同BFC之间则不会发生margin重叠。
+- Box垂直方向的距离由margin决定。属于同一个BFC内部的两个相邻Box会发生[margin合并](#margin合并)，不同BFC之间则不会发生margin合并。
 
 - 每个元素的margin box的左边， 与包含块border box的左边相接触(对于从左往右的格式化，否则相反)。即使存在浮动也是如此。
 

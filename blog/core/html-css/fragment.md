@@ -172,7 +172,7 @@
 
 > 引用链接：https://www.zhangxinxu.com/study/201903/css-idea/behavior-stretch.php?aside=0
 
-## flex
+## flex属性
 
 flex默认值为flex:0 1 auto（**只许缩小，不许放大,默认为内容大小**）
 
@@ -187,7 +187,7 @@ flex:auto等价于flex:1 1 auto（**能小就小，能大就大，弹性自适�
 
 - flex item即使被指定可收缩，但其会存在一个`隐性最小宽度`，换句话说它不会无限收缩。可通过设置**min-width**属性来覆盖控制这个最小宽度。同理，我们也可以通过设置**max-width**来控制flex item的放大上限。
 
-## vertical-align
+## vertical-align属性
 
 
 
@@ -204,7 +204,7 @@ x-height 指的就是小写字母 x 的高度
 
 - 当vertical-align属性值为百分比值时，其相对的是当前元素line-height的百分比。
 
-## line-height
+## line-height属性
 
 - 对于**非替换元素（即不包括input,img,select,textarea元素）的纯内联元素**，其可视高度完全由 line-height 决定
 
@@ -344,7 +344,7 @@ x-height 指的就是小写字母 x 的高度
 }
 ```
 
-## 文本溢出显示省略号：
+## 文本溢出显示省略号
 
 - 单行文本
 ```css
@@ -366,6 +366,16 @@ x-height 指的就是小写字母 x 的高度
     overflow: hidden;
 }
 ```
+## 去除元素滚动条样式
+```css
+.no-scrollbar {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;  /* Internet Explorer 10+ */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, and Opera */
+}
+```
 
 ## 换行属性
 
@@ -379,7 +389,7 @@ x-height 指的就是小写字母 x 的高度
 
   文本内容若包含换行符（\n或\r），则在换行符位置换行。此外，文本默认超出盒子宽度也不换行，也可用此属性
 
-## background
+## background属性
 
 ### background-size
 
@@ -398,7 +408,7 @@ x-height 指的就是小写字母 x 的高度
 ### background-clip
 设置背景图片或背景颜色的显示范围
 
-## z-index
+## z-index属性
 
 `当元素z-index 不是 auto 的时候（默认是auto），会创建层叠上下文`。
 
@@ -446,13 +456,13 @@ x-height 指的就是小写字母 x 的高度
     position: fixed !important;
 }
 ```
-## position
+## position属性
 
-### static
+#### static
 
 position属性的默认值。此时 top、right、bottom、left 属性无效。
 
-### relative
+#### relative
 
 基于元素原本的位置进行定位移动。
 
@@ -461,7 +471,7 @@ position属性的默认值。此时 top、right、bottom、left 属性无效。
 - 定位后的元素位置不影响周围其他元素的布局
 - top和bottom属性同时存在时，只有top生效；left和right属性同时存在时，只有left生效
 
-### absolute
+#### absolute
 
 通过指定元素相对于最近的非 static 定位祖先元素的偏移，来确定元素位置。
 
@@ -481,7 +491,7 @@ position属性的默认值。此时 top、right、bottom、left 属性无效。
 :::
 > 
 
-### fixed
+#### fixed
 
 基于页面根元素html标签的位置进行定位。
 
@@ -496,12 +506,13 @@ position属性的默认值。此时 top、right、bottom、left 属性无效。
 
 :::
 
-### sticky
+#### sticky
 
 默认情况下，当前元素的所处位置能够完全看到它时，效果相当于position:relative。
 
 当页面滚动超过当前元素渲染区域时并且当前元素距离其父元素的距离达到已设置位置要求时(比如top：100px)，这时的效果相当于position:fixed（脱离文档流）。
 
+> 总结:想让某个元素正常情况下位置不变,当页面滚动后即将看不见该元素后想让它
 
 **生效前提**：
 
