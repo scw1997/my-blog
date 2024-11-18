@@ -106,7 +106,7 @@ Component({
     },
     ready() {
       console.log("ready 组件被附加到页面的节点树上了");
-    },
+``    },
     attached() {
       console.log("attached 组件被显示出来了");
     },
@@ -152,12 +152,24 @@ setData大致过程：
 - setData 应只传入发生变化的字段；
 :::
 
-## wxss vs css
+## wxss 
 
-- wxss背景图片只能引入外链，不能使用本地图片
-- wxss仅支持部分CSS选择器，包括.class、#id、element、并集选择器、后代选择器、::after和::before等伪类选择器，**不支持属性/相邻选择器**。
-- wxss尺寸单位为rpx（虽然也支持px）, rpx是响应式像素,可以根据屏幕宽度进行自适应。
+组件对应 wxss 文件的样式，只对组件wxml内的节点生效。编写组件样式时，需要注意以下几点：
 
+:::warning 注意
+- 组件和引用组件的页面不能使用id选择器（#a）、属性选择器（[a]）和标签名选择器，请改用class选择器。
+- 组件和引用组件的页面中使用后代选择器（.a .b）在一些极端情况下会有非预期的表现，如遇，请避免使用。
+- 子元素选择器（.a>.b）只能用于 view 组件与其子节点之间，用于其他组件可能导致非预期的情况。
+- 继承样式，如 font 、 color ，会从组件外继承到组件内。
+- 除继承样式外， app.wxss 中的样式、组件所在页面的的样式对自定义组件无效（除非更改组件样式隔离选项）。
+:::
+默认情况下，**自定义组件的样式只受到自定义组件 wxss 的影响**。除非在当前组件js文件的options中指定特殊的样式隔离选项 `styleIsolation`：
+
+:::info styleIsolation选项值
+- **isolated**: 表示启用样式隔离，在自定义组件内外，使用 class 指定的样式将不会相互影响（一般情况下的默认值）；
+- **apply-shared**: 表示页面 wxss 样式将影响到自定义组件，但自定义组件 wxss 中指定的样式不会影响页面；
+- **shared**:表示页面 wxss 样式将影响到自定义组件，自定义组件 wxss 中指定的样式也会影响页面和其他设置了 apply-shared 或 shared 的自定义组件。（这个选项在插件中不可用。）
+:::
 ## 页面跳转
 
 - **wx.navigateTo()** : 保留当前页面，跳转到应用内的某个页面（类似web端的push）。但是不能跳到 tabbar 页面
@@ -189,6 +201,21 @@ setData大致过程：
 - 控制在 Page 构造时传入的自定义数据量
 - 避免在 onHide/onUnload 执行耗时操作，如同步接口调用、setData 等
 - 事件监听的及时解绑和定时器的及时清理
+
+## Uniapp
+
+- uniapp不支持vue中的`component`动态组件标签,只能使用条件渲染.
+- uniapp不支持vue中的h函数,defineComponent等渲染方法
+- uniapp如果遇到自定义单文件组件(非页面)文件中引用第三方组件并且需要覆盖第三方组件样式,除了需要在style中使用`:deep`,还需要配置`styleIsolation`:
+```vue
+<script setup lang="ts">
+defineOptions({
+  options: {
+    styleIsolation: 'shared'
+  }
+});
+</script>
+```
 
 ## 其他
 
