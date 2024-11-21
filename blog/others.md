@@ -373,9 +373,6 @@ router.registerError((e)=>container.innerHTML = '页面异常，错误消息：<
 
 
 
-## 零碎
-
-- iframe可以将**不同源**的页面嵌入进来。主要应用于
 
 
 [Cookie]:/advance/cookie-session#cookie

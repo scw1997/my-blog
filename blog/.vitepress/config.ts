@@ -16,24 +16,24 @@ export default defineConfig({
   head:   [['link', { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/my-blog/favicon.ico' }]],
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
-    nav:[
-      {
-        text:'React',
-        link:'/cc'
-      },
-      {
-        text:'Vue',
-        link:'/cc'
-      },
-      {
-        text:'JavaScript',
-        link:'/cc'
-      },
-      {
-        text:'TypeScript',
-        link:'/cc'
-      },
-    ],
+    // nav:[
+    //   {
+    //     text:'React',
+    //     link:'/cc'
+    //   },
+    //   {
+    //     text:'Vue',
+    //     link:'/cc'
+    //   },
+    //   {
+    //     text:'JavaScript',
+    //     link:'/cc'
+    //   },
+    //   {
+    //     text:'TypeScript',
+    //     link:'/cc'
+    //   },
+    // ],
 
     sidebar:  routes,
     search: {
