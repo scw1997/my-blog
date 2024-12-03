@@ -286,6 +286,7 @@ HTTPS 是超文本传输安全协议，即`HTTP + SSL/TLS`。
 - 连接方式不同，HTTP三次握手，HTTPS中会在三次握手基础上新增TLS四次握手，详见[这里](/advance/browser-render.html#网络请求)。
 - HTTP在OSI网络模型中是在`应用层`，而HTTPS的TLS是在`传输层`。
 - HTTP是`无状态`的，HTTPS是`有状态`的（涉及身份验证）。
+- HTTP网页无法访问HTTPS资源，反之可以（但有安全提示）。
 
 :::tip 既然HTTPS这么安全可靠为什么不一直用HTTPS？
 
