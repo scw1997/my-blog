@@ -1064,6 +1064,7 @@ Pinia 通过在创建 store 时指定 name 来区分不同的 store，不再需�
   </template>
   
   ```
-- 花括号`{{}}`里的内容是会执行`JSON.stringify()`转换来输出渲染结果
+- 模板语法花括号<span>&lbrace;&lbrace;&rbrace;&rbrace;</span>里的内容是会执行`JSON.stringify()`转换来输出渲染结果
 - 计算属性（computed）应该是**只读**的，不要尝试修改计算属性的返回值，应该由依赖源的变化触发它的改变
 - 例如`defineProps`,`defineEmits`这些api都称为**宏**，宏是一种特殊的代码，只能在setup顶层中使用宏，在编译时会将这些特殊的代码转换为浏览器能够直接运行的指定代码，宏不需要手动从vue中import（编译时自动处理转换）
+- prop的key如果是短横线如`custom-class`格式，则在组件中通过小驼峰如`props.customClass`来获取
