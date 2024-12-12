@@ -4,6 +4,7 @@ const routes =  [
         text:'简介',
         link:'/'
     },
+
     {
         text:'核心',
         items:[
