@@ -216,7 +216,8 @@ defineOptions({
 });
 </script>
 ```
-- uniapp页面里如果引用了外部通过js文件中通过reactive定义的响应式数据并且后续修改了它，则点击开发者工具的刷新页面按钮不会重置该数据，依然是修改后的。重置需要重新编译
+- uniapp页面里如果引用了外部通过js文件中通过**reactive**定义的响应式数据并且后续修改了它，则点击开发者工具的刷新页面按钮不会重置该数据，依然是修改后的。重置需要重新编译。
+- uniapp中页面挂载时，onMounted生命周期会在onShow之后，onReady之前触发。页面卸载时，onUnmounted会在onUnload之后触发
 ## 其他
 
 - 小程序中默认不支持cookie，可以通过第三方库`weapp-cookie`实现
