@@ -188,11 +188,14 @@ const routes =  [
         text: '其他',
         link:'/others'
     },
-
-        {
-            text: '测试题',
-            link:'/test'
-        }
+    {
+        text: '常用工具类/函数',
+        link:'/tools'
+    },
+    {
+        text: '测试题',
+        link:'/test'
+    }
 
 ]
 
