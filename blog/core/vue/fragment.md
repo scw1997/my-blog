@@ -420,8 +420,8 @@ export default {
 #### 事件修饰符
 
 - @click.prevent：阻止默认行为
-- @click.stop：阻止冒泡
-- @click.self：只触发当前元素自身的事件
+- @click.stop：阻止事件冒泡到上级元素
+- @click.self：只触发当前元素自身的事件，后代元素事件冒泡到当前元素的事件则不触发
 - @click.once：只触发一次
 - @keydown.enter/delete/tab：按键相关
 - @click.left/right：鼠标相关
