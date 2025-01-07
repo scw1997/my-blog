@@ -19,8 +19,6 @@
 
 ## iframe
 
-用于将**不同源**的页面嵌入到当前页面。iframe页面不可访问主页面DOM对象
-
 **应用场景**
 
 - 广告嵌入
@@ -32,7 +30,8 @@
 - 不利于SEO
 - 增加页面请求
 - 存在一定安全问题（如xss跨站脚本攻击等）
-- 不可操作不同源iframe内部DOM（可通过postMessage解决）
+- iframe页面不可访问主页面DOM对象
+- 主页面不可访问不同源的iframe内部DOM（可通过postMessage解决）
 
 ## Vue vs React
 
