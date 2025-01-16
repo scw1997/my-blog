@@ -4,11 +4,11 @@
 
 ### ref
 
-- 接收一个类型为**基本类型，引用类型或DOM Ref引用**的参数，返回一个响应式的Ref对象。此Ref对象只包含一个指向其内部值的value属性
-- 若Ref传入值为基本类型，则.value指向传入值值本身。若为非基本类型，则.value指向的值为传入值通过reactive转换成的响应式Proxy对象。
-- 若传入值为一个对象且在顶层解构使用该ref，其属性值会失去响应性。所以必须通过例如**ref.value.xx**等方式来获取或者设置属性最新值
-- 在template中使用时若最终渲染值类型为Ref对象，则会自动解包（无需调用.value）
-- 若传入一个对象，watch默认对ref做浅层监听（可通过设置deep:true开启深层监听），这意味着对象内部属性被修改后默认不会触发watch回调
+- 接收一个类型为**基本类型，引用类型或DOM Ref引用**的参数，返回一个响应式的Ref对象。此Ref对象只包含一个指向其内部值的value属性。
+- 若Ref传入值为基本类型，则.value指向传入值值本身。若为非基本类型，则.value指向的值为传入值通过reactive转换成的响应式Proxy对象且该对象具有`深层响应性`。
+- 若传入值为一个对象且在顶层解构使用该ref，其属性值会失去响应性。所以必须通过例如**ref.value.xx**等方式来获取或者设置属性最新值。
+- 在template中使用时若最终渲染值类型为Ref对象，则会自动解包（无需调用.value）。
+- 若传入一个对象，watch默认对ref做`浅层监听`（可通过设置deep:true开启深层监听），这意味着对象内部属性被修改后默认不会触发watch回调。
 
 ```vue
 <script setup lang="ts">
@@ -33,9 +33,9 @@ watch(person, () => {
 
 - 接收一个类型为**对象，数组，Map，Set**之一的参数，返回一个对应传入对象的响应式的Proxy对象
 - 返回的proxy对象与传入对象是不对等的，传入对象被修改，proxy对象也会同步更新，反之也一样。
-- reactive会递归地将对象的所有属性都转换为响应式数据
-- 若reactive返回值在顶层解构使用，其属性值会失去响应性。所以必须通过例如**obj.xx**等方式来获取或设置最新值
-- watch默认对reactive做深层监听，这意味着对象内部属性被修改后默认会触发watch回调
+- reactive会递归地将对象的所有属性都转换为响应式数据（深层响应性）。
+- 若reactive返回值在顶层解构使用，其属性值会失去响应性。所以必须通过例如**obj.xx**等方式来获取或设置最新值。
+- watch默认对reactive做`深层监听`，这意味着对象内部属性被修改后默认会触发watch回调。
 
 ```vue
 <script setup lang="ts">
@@ -55,6 +55,13 @@ watch(person, () => {
 </template>
 
 ```
+:::info 解疑
+
+**不管是ref还是reactive都具有深层响应性，可为什么解构以后失去响应性呢？**
+
+因为解构以后的属性是`创建了新的变量引用`，新变量只是复制了响应式对象中相应属性的值，与原始的响应式对象的引用失去了联系。
+
+:::
 
 
 ## KeepAlive
@@ -725,30 +732,39 @@ const inputValue2 = ref();
 
 ## watch & watchEffect
 
+二者都用于**监听响应式数据的变化**
+
 #### watch
 
-watch用于监听响应式数据的变化，但是默认属于懒执行（初始创建自身时不会执行，后续数据变化才会执行回调）。
+- 默认属于`懒执行`（初始创建自身时不会执行，后续数据变化才会执行回调）。
 
-可以通过设置`{immediate:true}`选项来实现初始渲染会执行回调，后续变化依然会执行回调.
+- 可以通过设置`{immediate:true}`选项来实现初始渲染会执行回调，后续变化依然会执行回调.
 
-watch可以设置一个数组来监听多个响应式数据
+- 可以设置一个数组来监听多个响应式数据。
 
 :::code-group 
 ```vue [基本用法]
 <script setup>
 import {reactive, ref, watch} from 'vue';
 
-const a = ref(1)
+const refVar = ref(1)
+const refObj = ref({a:1})
 
-const b= reactive({name:'scw'})
+const reactiveObj= reactive({name:'scw'})
 
-watch(a, (newValue, oldValue) => {
+// 监听ref变量
+watch(refVar, (newValue, oldValue) => {
   console.log(`a changed from ${oldValue} to ${newValue}`);
 });
 
+//监听对象类型的ref变量的属性值变化，需要设置{deep:true}进行深层监听
+watch(refObj, (newValue, oldValue) => {
+  console.log(`a changed from ${oldValue} to ${newValue}`);
+},{deep:true});
+
 // 这里监听reactive对象b的name属性时，必须写成()=>b.name，而不是b.name
 // 因为watch监听的数据源（即第一个参数）类型必须为getter/effect function，ref，reactive或者一个其元素为以上类型的数组
-watch(()=>b.name, (newValue, oldValue) => {
+watch(()=>reactiveObj.name, (newValue, oldValue) => {
   console.log(`b.name changed from ${oldValue} to ${newValue}`);
 });
 
@@ -797,9 +813,9 @@ watch([a,()=>b.name],([newA,newBName],[oldA,oldBName])=>{
 
 #### watchEffect
 
-watchEffect同样是监听响应式数据，但会默认创建自身时立即执行，并且无需手动传递监听数据源，会自动感知回调代码中的数据依赖，监听其变化。
+- 默认创建自身时`立即执行`，并且无需手动传递监听数据源，会自动感知回调代码中的数据依赖，监听其变化。
 
-缺点是无法在回调中获取相应数据依赖的旧值
+- 缺点是无法在回调中获取相应数据依赖的旧值。
 
 ```vue
 <script setup>
@@ -828,11 +844,9 @@ watchEffect(()=>{
 </template>
 ```
 :::warning 注意
-默认情况下，watchEffect将在`组件渲染之前执行`。
+默认情况下，watchEffect将在`组件渲染之前执行`。 设置` flush: 'post'` 将会使侦听器延迟到`组件渲染之后再执行`。
 
-设置` flush: 'post'` 将会使侦听器延迟到`组件渲染之后再执行`。
-
-在某些特殊情况下 (例如要使缓存失效)，可能有必要在`响应式依赖发生改变时立即触发侦听器`。这可以通过设置` flush: 'sync'` 来实现。
+在某些特殊情况下 (例如要使缓存失效)，可能有必要在`响应式依赖发生改变时立即触发侦听器（即侦听器和渲染同步触发）`，这可以通过设置` flush: 'sync'` 来实现。
 :::
 
 ## ref
