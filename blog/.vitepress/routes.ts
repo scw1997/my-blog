@@ -115,7 +115,7 @@ const routes =  [
                         link:'/core/vue/vue-principle'
                     },
                     {
-                        text:'Vue零碎',
+                        text:'Vue 零碎',
                         link:'/core/vue/fragment'
                     },
                 ]

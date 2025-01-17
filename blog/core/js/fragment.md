@@ -163,7 +163,7 @@ div.dataset.appId = '23456'
 - 调用resolve或reject并不会终结 Promise 的参数函数的执行,所以一般需要加上return。
 - 如果没有指定catch回调函数（即没有设置catch捕获错误），那么内部发生的错误不会传递到外层代码，即不会被外部的try/catch捕获到。浏览器依然会报错，但不会终止运行。
 - Promise相关api
-  :::tip
+  :::tip 总结
   - Promise.all(promiseArray)：只要有一个reject则整体reject；所有都resolve才整体resolve;
   - Promise.allSettled(promiseArray)：所有promise实例状态确定了后(resolve或reject)触发，且最终整体状态固定是resolve。
   - Promise.race(promiseArray)：第一个resolve或reject后，就会整体resolve或reject;

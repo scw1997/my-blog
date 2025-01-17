@@ -58,7 +58,7 @@ UI的750px设计稿中有1px的边框线。当我们采用等比缩放的适配�
 
 一般移动设备的浏览器都默认设置了一个 viewport 元标签，定义一个`虚拟的布局视口（layout viewport）`，用于解决早期的页面在手机上显示的问题。 iOS, Android 一般默认都将这个虚拟的布局视口分辨率设置为CSS像素的 `980px`，所以 PC 上的网页基本能在手机上呈现，只不过元素看上去很小，所以通常PC的网页在移动设备都是通过手动缩放来控制合适的页面显示大小。
 
-:::tip
+:::tip 技巧
 通常来讲，布局视口的尺寸与页面根元素html标签的CSS像素大小是一致的。所以js一般可通过`document.documentElement.clientWidth/clientHeight`来获取。（这个值不会因为html元素本身被设置了width或内部元素宽度超出当前视口宽度而变化）
 :::
 
@@ -127,7 +127,7 @@ user-scalable |	yes / no |	定义是否允许用户手动缩放页面，默认�
 
 `rem和vw/vh二者往往会组合使用`，下面是我个人推荐的一套基于`webpack + vw + rem`而设计的自适应适配方案：
 
-:::tip 
+:::tip 技巧 
 使用`postcss-plugin-px2rem`插件负责自动转换px为rem：
 ```js
 // postcss.config.js

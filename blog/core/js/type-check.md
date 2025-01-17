@@ -13,7 +13,7 @@
 - object
 - symbol
 
-:::info 
+:::info 细节
 - undefined类型只有一个值`undefined`，未赋值的变量值默认都是undefined.
 - object又称为`复杂类型`，其他类型统称为`基本类型`.
 :::
@@ -266,7 +266,7 @@ p2.constructor === Array //true,
 
 ### == 和 ===
 
-:::warning
+:::warning 注意
 `==` 允许在相等比较时转换类型，而 `===` 不允许
 :::
 我们最常用的`==`比较场景应该就是字符串和数字的比较。这里在比较时会把字符串转为数字.

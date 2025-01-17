@@ -116,7 +116,7 @@ CORS(*Cross-origin resource sharing*，跨域资源共享)是一个 W3C 标准�
 
 **（1）简单请求**
 
-:::tip  
+:::tip 定义  
 1：请求方法是下列之一：
 
 - GET

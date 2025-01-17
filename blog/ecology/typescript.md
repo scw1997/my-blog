@@ -621,7 +621,7 @@ console.log(p.privateProperty); // [!code error] 报错！无权访问
 ```
 :::
 
-:::warning
+:::warning 注意
 `private，protected`等关键字只是提供编译时的类型检查，如果忽略报错或者跳过类型检查，则不影响编译结果（即这些关键词失效）。
 :::
 

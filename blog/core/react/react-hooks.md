@@ -117,7 +117,7 @@ function Counter() {
 
 React 通过useEffect来管理副作用，其执行原理大致如下：
 
-:::info
+:::info 执行原理
 - 调度副作用：
 
   当你在组件内部调用useEffect时，你实际上是`将一个副作用函数及其依赖项数组排队等待执行`。这个函数并不会立即执行，而是会被React收集起来，等待合适的时机执行。
@@ -171,7 +171,7 @@ useEffect(() => {
 
 useEffect 是`异步非阻塞调用`，大致流程如下：
 
-:::info
+:::info 流程
 1. 触发渲染函数执行（改变状态，或者父组件重新渲染）
 2. React调用组件的渲染函数
 3. 屏幕中重绘完成（Renderer commit阶段结束）
@@ -180,7 +180,7 @@ useEffect 是`异步非阻塞调用`，大致流程如下：
 
 useLayoutEffect 是`同步阻塞调用`，大致流程如下：
 
-:::info
+:::info 流程
 1. 触发渲染函数执行（改变状态，或者父组件重新渲染）
 2. React调用组件的渲染函数
 3. DOM 变更后（Renderer render阶段结束），执行useLayoutEffect，并且React等待它执行完成（即Renderer commit阶段的Layout子阶段同步执行）
@@ -730,7 +730,7 @@ function App() {
 
 useId的出现背景：
 
-:::tip  
+:::tip 应用场景  
 当你看到一个服务端渲染的应用，它的渲染过程会是这样：服务端会先生成 HTML，然后将这个 HTML 发送到客户端，在客户端，React 会进行一个叫做 hydration 的过程，即将服务器端生成的 HTML 和客户端的 DOM 进行匹配，并生成最终的 HTML。
 
 而在这个过程中，我们有时候需要给 DOM 生成唯一的 ID。例如：我们需要通过 JavaScript 或 CSS 选择器来访问 DOM 的时候；或者某些HTML属性（如 aria-labelledby）需要使用唯一的 ID 来关联元素。

@@ -29,6 +29,60 @@ watch(person, () => {
 
 ```
 
+此外ref还可作为`dom引用`：
+
+:::code-group
+```vue [基本用法]
+<!--ref直接赋值-->
+
+<script setup>
+import {ref} from 'vue';
+const inputRef = ref()
+</script>
+
+<template>
+    <div>
+        <input ref="inputRef" />
+    </div>
+</template>
+
+```
+```vue [函数形式]
+<script setup>
+
+</script>
+
+<template>
+  <div>
+    <input
+            :ref="
+                (ele) => {
+                    //返回当前dom引用
+                }
+            "
+    />
+  </div>
+</template>
+```
+
+```vue [ref列表]
+<script setup>
+import { ref } from 'vue';
+const refList = ref([]);
+</script>
+
+<template>
+    <div>
+        <div v-for="item in list" ref="refList"></div>
+    </div>
+</template>
+
+```
+:::
+:::warning 注意
+- 对于使用了`script setup`的子组件，父组件通过ref不能获取其内部的任何状态和方法，如果需要则需在子组件中使用`defineExpose`设置需要暴露的状态和方法
+:::
+
 ### reactive
 
 - 接收一个类型为**对象，数组，Map，Set**之一的参数，返回一个对应传入对象的响应式的Proxy对象
@@ -55,7 +109,7 @@ watch(person, () => {
 </template>
 
 ```
-:::info 解疑
+:::warning 解疑
 
 **不管是ref还是reactive都具有深层响应性，可为什么解构以后失去响应性呢？**
 
@@ -229,7 +283,7 @@ export default {
 - `onActivated`：若组件实例是KeepAlive缓存树的一部分，当组件被插入到 DOM 中时调用。
 - `onDeactivated`：若组件实例是KeepAlive缓存树的一部分，当组件从 DOM 中被移除时调用。
 
-:::warning
+:::warning 注意
 - 不要在 `onUpdated` 钩子中更改组件的状态，这可能会导致无限的更新循环
 - Vue3中的setup函数替代了Vue2中的`beforeCreate`和`created`生命周期钩子，所有的初始化逻辑（例如一些初始化属性值）都可以在setup函数中编写。
 - Vue3中的`onBeforeUnmount/onUnmounted`相当于Vue2中的`beforeDestroy`和`destroyed`生命周期钩子。
@@ -849,63 +903,8 @@ watchEffect(()=>{
 在某些特殊情况下 (例如要使缓存失效)，可能有必要在`响应式依赖发生改变时立即触发侦听器（即侦听器和渲染同步触发）`，这可以通过设置` flush: 'sync'` 来实现。
 :::
 
-## ref
 
-ref作为dom引用时的几种场景：
-
-:::code-group
-```vue [基本用法]
-<!--ref直接赋值-->
-
-<script setup>
-import {ref} from 'vue';
-const inputRef = ref()
-</script>
-
-<template>
-    <div>
-        <input ref="inputRef" />
-    </div>
-</template>
-
-```
-```vue [函数形式]
-<script setup>
-
-</script>
-
-<template>
-  <div>
-    <input
-            :ref="
-                (ele) => {
-                    //返回当前dom引用
-                }
-            "
-    />
-  </div>
-</template>
-```
-
-```vue [ref列表]
-<script setup>
-import { ref } from 'vue';
-const refList = ref([]);
-</script>
-
-<template>
-    <div>
-        <div v-for="item in list" ref="refList"></div>
-    </div>
-</template>
-
-```
-:::
-:::warning 注意
-- 对于使用了`script setup`的组件，通过ref不能获取其内部的任何数据和方法，如果需要则使用`defineExpose`
-:::
-
-## 状态管理工具
+## 状态管理
 
 #### vuex
 
@@ -916,7 +915,7 @@ Vuex采用集中式的架构，通过一个store对象来管理所有的状态�
 此外还有getter作为计算属性用。modules用于切割store为多模块
 #### pinia
 
-采用去中心化的架构，每个组件可以拥有自己的store实例，包括getters和actions。这种设计使得Pinia在小型或中型应用中更加灵活和易用，同时也便于维护和扩展。
+pinia采用去中心化的架构，每个组件可以拥有自己的store实例，包括getters和actions。这种设计使得Pinia在小型或中型应用中更加灵活和易用，同时也便于维护和扩展。
 
 Pinia 通过在创建 store 时指定 name 来区分不同的 store，不再需要类型Vuex的module，并且对Ts的支持较好。
 
@@ -998,7 +997,7 @@ Pinia 通过在创建 store 时指定 name 来区分不同的 store，不再需�
 - `Vue.createApp()`允许你在同一个页面中创建**多个**共存的 Vue 应用，而且每个应用都拥有自己的用于配置和全局资源的作用域。
 - `app.mount()`的返回值是`根组件实例`，而非应用实例。
 - `nextTick()` 可以在状态改变后立即使用，以等待 DOM 更新完成。
-   :::info
+   :::info 原理
    nextTick 其本质是对 JavaScript 执行原理 EventLoop 的一种应用。
 
    nextTick 的核心是利用了如 Promise 、MutationObserver、setImmediate、setTimeout的原生 JavaScript 方法来模拟对应的微/宏任务的实现，本质是为了利用 JavaScript 的这些异步回调任务队列来实现 Vue 框架中自己的异步回调队列。

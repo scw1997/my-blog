@@ -215,7 +215,7 @@ export default () => {
 
 
 
-:::tip
+:::tip 总结
 cloneElement和createElement都返回jsx对象，最主要区别在于**第一个参数的类型**
 :::
 ## 其他
