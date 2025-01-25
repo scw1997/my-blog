@@ -62,6 +62,10 @@ Webpack 最核心的功能，是将各种类型的资源，包括图片、css、
 标记功能需要配置 `optimization.usedExports = true` 开启
 :::
 
+### 模块联邦（Module Federation）
+
+阅读文章：[https://juejin.cn/post/7210746685802512443?searchId=2025012520192704EA94AA49A2D3A093AC](https://juejin.cn/post/7210746685802512443?searchId=2025012520192704EA94AA49A2D3A093AC)
+
 ### 性能优化
 
 常见的优化方法总结：
