@@ -4,7 +4,7 @@ import routes from "./routes.js";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-  title: "fanlaBoy前端随记册",
+  title: "fanlaBoy随记册",
   base:'/my-blog/',
   lang:'zh-cn',
   markdown: {

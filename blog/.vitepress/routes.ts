@@ -185,6 +185,21 @@ const routes =  [
         ],
     },
     {
+        text: '后端',
+        items:[
+            {
+                text:'Java',
+                collapsed: true,
+                items: [
+                    {
+                        text:'Java基础',
+                        link: '/java/java-basic'
+                    }
+                ]
+            }
+        ]
+    },
+    {
         text: '其他',
         link:'/others'
     },
