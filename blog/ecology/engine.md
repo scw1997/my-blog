@@ -64,7 +64,44 @@ Webpack 最核心的功能，是将各种类型的资源，包括图片、css、
 
 ### 模块联邦（Module Federation）
 
-阅读文章：[https://juejin.cn/post/7210746685802512443?searchId=2025012520192704EA94AA49A2D3A093AC](https://juejin.cn/post/7210746685802512443?searchId=2025012520192704EA94AA49A2D3A093AC)
+Webpack模块联邦（Webpack Module Federation）是 Webpack 5 中引入的一项新功能，**它允许不同的 Webpack构建 之间共享代码并动态加载依赖项**。
+
+#### 核心概念：
+
+`Container`
+
+一个使用 ModuleFederationPlugin 构建的应用就是一个 Container，它可以加载其他的 Container，也可以被其他的 Container 加载。
+
+`Host & Remote`
+
+从消费者和生产者的角度看 Container，Container 可以分为 Host 和 Remote。
+
+**Host**： 作为消费者，他可以动态加载并运行其他 Remote 的代码。
+
+**Remote**： 作为提供方，他可以暴露出一些属性、方法或组件供 Host 使用。
+
+> 注意：Container 既可以作为 Host 也可以作为 Remote。
+
+`Shared`
+
+shared 表示共享依赖，一个应用可以将自己的依赖共享出去，比如 react、react-dom、mobx等，其他的应用可以直接使用共享作用域中的依赖从而减少应用的体积。
+
+
+#### 优点
+- 支持项目中直接导出某模块并单独打包。
+- 相比过去， externals 无法多版本共存，dll 无法共享模块，模块联邦都可以解决。
+- 支持运行时动态加载。
+
+#### 缺点
+
+- 不适用于封闭性，安全性高的项目。
+- 拆分粒度需要权衡，因为被共享的模块不可做tree-shaking。
+- 运行时共享带来的版本控制和typing问题。
+
+
+
+
+> 更多详情相关链接：[https://juejin.cn/post/7210746685802512443?searchId=2025012520192704EA94AA49A2D3A093AC](https://juejin.cn/post/7210746685802512443?searchId=2025012520192704EA94AA49A2D3A093AC)
 
 ### 性能优化
 
@@ -147,6 +184,23 @@ import(/* webpackPreload: true */ './test.png').then();
 Vite 目前的插件 API 与使用 esbuild 作为打包器并不兼容。一些针对构建 应用 的重要功能仍然还在持续开发中,特别是代码分割和 CSS 处理方面。
 :::
 
+## Monorepo
+
+Monorepo 是一种项目代码管理方式，指**单个仓库中管理多个项目**。
+
+`优点`：代码复用，提升多人协作效率（代码/文档共享，减少沟通成本），版本集中管理，项目问题快速定位
+
+`缺点`：在使用npm时会存在`幽灵依赖`问题，可通过**pnpm**解决该问题。
+
+:::info 幽灵依赖
+
+npm安装项目依赖时，所有依赖的第三方包都会被提升到node_modules根目录，所以即时某个包没有在项目的package.json中显式声明，依然可以被引用。
+
+这样就会存在隐患。因为如果这个包未来不再被项目中某个依赖使用，就不会被安装和提升，那么项目中引用该包就会失败报错。
+
+:::
+
+> Monorepo基本搭建： https://juejin.cn/post/7404777192704868362
 ## 其他
 
 - 搭建专属npm镜像服务器：[https://cloud.tencent.com/developer/article/1722254](https://cloud.tencent.com/developer/article/1722254)

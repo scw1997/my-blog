@@ -713,4 +713,3 @@ fn2() //3
 - `Object.assign`和对象扩展运算符`[...obj，obj1]`除了使用语法的区别，拷贝对象的实际效果没有什么区别(除了Object.assign会触发setter，而扩展运算符不会)。扩展运算符语法更简洁,都是`浅拷贝原对象中可枚举的直接包含属性`。
 - 通过`globalThis`可以区分当前环境是Node还是浏览器
 - `postMessage`用于浏览器跨域通信，例如不同标签栏(window)之间，或者同一标签栏当前window与iframe之间的通信。
-- 

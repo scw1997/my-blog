@@ -305,7 +305,7 @@ router.registerError((e)=>container.innerHTML = '页面异常，错误消息：<
 
 
 ```
-## 性能优化
+## 前端性能优化
 
 ### CSS
 
@@ -338,7 +338,7 @@ router.registerError((e)=>container.innerHTML = '页面异常，错误消息：<
 - 动态列表渲染使用key
 
 
-## 其他
+### 其他
 
 - 减少http请求次数
 - 使用http2（解析快，多路复用，头部压缩）
