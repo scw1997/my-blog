@@ -67,7 +67,7 @@ const jsx = React.createElement(type, props, ...children);
 
 createElement 用于在 React 中动态地创建一个新的元素，并`返回一个 React元素对象（jsx）`。
 
-其中type参数可以为`元素标签字符串`（如'div','p','span')或者`React组件`（class或函数）
+其中type参数可以为`元素标签字符串`（如'div','p','span')或者`React组件`（class或函数）。
 
 ```jsx
 import React from 'react';
@@ -119,7 +119,7 @@ const jsx = React.cloneElement(jsx, props, ...children);
 
 cloneElement 用于复制一个已有的元素并覆盖或添加一些新的props属性。并`返回一个 React元素对象（jsx）`。
 
-其中jsx参数可以为一段jsx元素代码，也可以为单独某个React组件的jsx调用代码
+其中jsx参数可以为一段jsx元素代码，也可以为单独某个React组件的jsx调用代码。
 
 ```jsx
 import React from 'react';
@@ -169,7 +169,7 @@ export default () => {
 
 
 :::tip 总结
-cloneElement和createElement都返回jsx对象，最主要区别在于**第一个参数的类型**
+cloneElement和createElement都返回jsx对象，最主要区别在于**第一个参数的类型**。
 :::
 ## 其他
 

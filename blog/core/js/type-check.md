@@ -14,7 +14,7 @@
 - symbol
 
 :::info 细节
-- undefined类型只有一个值`undefined`，未赋值的变量值默认都是undefined.
+- undefined类型只有一个值`undefined`，未赋值的变量值默认都是undefined。
 - object又称为`复杂类型`，其他类型统称为`基本类型`.
 :::
 ### 值和引用
@@ -51,7 +51,7 @@ console.log(b); //[3,4,5]
 
 基本类型(string,number等)的值本身不具有属性和方法(如length和toString())，通过对应的构造函数,如`new String()`,`new Number()`进行了对象封装处理才使其拥有了属性和方法。
 
-有意思的是，我们不需要通过手动进行对象封装而只需要字面量直接赋值(如let  a ="字符串") 就可访问其对应的属性和方法。这是因为在访问属性和万法时，JS引擎进行了对象封装的自动处理，访问完毕后又从封装对象还原成基本类型.
+有意思的是，我们不需要通过手动进行对象封装而只需要字面量直接赋值(如let  a ="字符串") 就可访问其对应的属性和方法。这是因为在访问属性和万法时，JS引擎进行了对象封装的自动处理，访问完毕后又从封装对象还原成基本类型。
 
 ## 类型检测
 
@@ -84,18 +84,18 @@ typeof function(){}  //"function"
 ```
 注意点：
 
-- 对于数学运算异常返回的`NaN`，对其执行typeof依然返回`number`
-- null是基本类型中的唯一一个"假值”，typeof对它的返回值为`object`
-- 对函数执行typeof其返回值为`function`，function是object的一个子类型
+- 对于数学运算异常返回的`NaN`，对其执行typeof依然返回`number`。
+- null是基本类型中的唯一一个"假值”，typeof对它的返回值为`object`。
+- 对函数执行typeof其返回值为`function`，function是object的一个子类型。
 
 **缺点**:
 
-- 无法进一步检测具体的object类型(比如数组)
+- 无法进一步检测具体的object类型(比如数组)。
 
 ### instanceof
-针对引用赋值方式的数据类型，用typeof检测统一都会返回"object"(除了函数)。可通过instanceof来获取具体的object举型
+针对引用赋值方式的数据类型，用typeof检测统一都会返回"object"(除了函数)。可通过instanceof来获取具体的object举型。
 
-instanceof运算符用于检测指定构造函数的prototype属性所指向的对象是否出现在某个实例对象的原型链上
+instanceof运算符用于检测指定构造函数的prototype属性所指向的对象是否出现在某个实例对象的原型链上：
 ```js
 //非基本类型
 ([1,2]) instanceof Object; //true
@@ -127,9 +127,9 @@ p1 instanceof Person //true
 ```
 **缺点**:
 
-- 不可通过instanceof Object去检测具体的object类型（比如`数组，函数，封装对象值`）。因为所有的构造函数都继承自Object.prototype。所以总是返回`true`
-- 通过`字面量形式`创建的基本类型值（如const a = "string"）不可用于instanceof检测，其本身并不是对象类型的实例。可通过手动封装对象(如const a = new String("string"))来解决这一问题
-- 无法检测`symbol,null和undefined`，因为这些类型的值没有与之对应的构造函数
+- 不可通过instanceof Object去检测具体的object类型（比如`数组，函数，封装对象值`）。因为所有的构造函数都继承自Object.prototype。所以总是返回`true`。
+- 通过`字面量形式`创建的基本类型值（如const a = "string"）不可用于instanceof检测，其本身并不是对象类型的实例。可通过手动封装对象(如const a = new String("string"))来解决这一问题。
+- 无法检测`symbol,null和undefined`，因为这些类型的值没有与之对应的构造函数。
 
 ### Object.prototype.toString.call(推荐)
 ```js
@@ -213,24 +213,24 @@ p2.constructor === Array //true,
 ```
 **缺点**:
 
-- 可靠性低，constructor指向可被随意修改
-- 无法检测symbol，null和undefined,因为没有与之对应的构造函数
+- 可靠性低，constructor指向可被随意修改。
+- 无法检测symbol，null和undefined,因为没有与之对应的构造函数。
 
 ### 其他检测
 
 - `Number.isInteger()`
 
-   ES6新增，判断一个值是否为整数，只有number类型的整数才会返回true
+   ES6新增，判断一个值是否为整数，只有number类型的整数才会返回true。
 
 - `Number.isNaN()`
 
-  E56新增，判斯一个值是否为NaN，只有值为NaN才会返回true(代替window.isNan)
+  E56新增，判斯一个值是否为NaN，只有值为NaN才会返回true(代替window.isNan)。
 
 -  `Number.isFinite()`
-   ES6新增，判断一个数值是否为有限的，只有值为数字才会返回true(代替window.isFinite)
+   ES6新增，判断一个数值是否为有限的，只有值为数字才会返回true(代替window.isFinite)。
 
 - `Array.isArray()`
-  判断一个值是否为数组
+  判断一个值是否为数组。
 
 
 ## 类型转换
@@ -249,7 +249,7 @@ p2.constructor === Array //true,
 
 对于变量之间做`+`运算，它的隐式转换规则与+前后变量的数据类型有关，规则比较复杂，详细规则可以自行查询。
 
-对于变量之间微`-，*以及/`运算，那么对于非number类型的变量会预先进行对应类型的Number()转换，然后和其他number类型变量进行数字运算
+对于变量之间微`-，*以及/`运算，那么对于非number类型的变量会预先进行对应类型的Number()转换，然后和其他number类型变量进行数字运算。
  ```js
  "a" / 5;  //NaN
 ([]) / 5; //0
@@ -260,16 +260,16 @@ p2.constructor === Array //true,
 ```
 - **API隐式转换**
 
-一些JS API在操作时也会发生不易发现的隐式转换，如`window.isNaN`和`window.isFinite`在操作前会将目标值转换成number类型
+一些JS API在操作时也会发生不易发现的隐式转换，如`window.isNaN`和`window.isFinite`在操作前会将目标值转换成number类型。
 
 ## 值比较
 
 ### == 和 ===
 
 :::warning 注意
-`==` 允许在相等比较时转换类型，而 `===` 不允许
+`==` 允许在相等比较时转换类型，而 `===` 不允许。
 :::
-我们最常用的`==`比较场景应该就是字符串和数字的比较。这里在比较时会把字符串转为数字.
+我们最常用的`==`比较场景应该就是字符串和数字的比较。这里在比较时会把字符串转为数字。
 
 关于==比较在隐式转换时的一些具体规则细节这里不再具体介绍，可自行查询。
 

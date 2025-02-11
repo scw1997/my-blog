@@ -106,8 +106,8 @@ function Counter() {
 :::warning 其他注意事项
 - React是根据每个useState`定义时的顺序`来确定你在更新State值时更新的是哪个state。这一点同hook的调用顺序原理一致。
 - 与class的setState不同,useState更新state时是通过`Object.is`来比较新/旧state，并且`直接用新state替换旧state`。如果新旧state相等，则不会更新渲染。而class是进行新旧state合并。
-- initState只会在第一次渲染时取值，后续渲染会忽略
-- useState`不能直接用于存储函数或函数组件`，它会调用该函数并且将函数的返回值作为最终state值进行存储或更新。所以你可以使用`const [func,setFunc] = useState(()=>initFunc)`这种写法
+- initState只会在第一次渲染时取值，后续渲染会忽略。
+- useState`不能直接用于存储函数或函数组件`，它会调用该函数并且将函数的返回值作为最终state值进行存储或更新。所以你可以使用`const [func,setFunc] = useState(()=>initFunc)`这种写法。
 :::
 ## useEffect
 
@@ -675,7 +675,7 @@ const handleAddTodo = useCallback((text) => {
 
 在class组件中，通过ref可以访问DOM 节点或组件实例，通过组件实例可以拿到子组件内部的状态和方法。
 
-在函数组件中，默认是没有组件实例的,ref是不可用的。需要通过`forwardRef`来定义组件的DOM引用
+在函数组件中，默认是没有组件实例的,ref是不可用的。需要通过`forwardRef`来定义组件的DOM引用。
 
 通过`useImperativeHandle`并配合`forwardRef`可以自定义我们想要暴露给父组件的实例方法或属性。
 

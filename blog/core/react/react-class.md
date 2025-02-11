@@ -58,7 +58,7 @@
 
 ## setState的同步/异步
 
-setState是否同步/异步由React版本和当前所调用的事件方法类型决定
+setState是否同步/异步由React版本和当前所调用的事件方法类型决定。
 
 ### React 18之前
 
@@ -212,7 +212,7 @@ export default class extends React.PureComponent {
 ```
 :::
 
-- 在js原生事件处理函数（如addEventListener，setTimeout和setInterval等回调）中，setState的执行是同步的，这意味着你可以立即拿到最新的state值。并且多次调用setState，也会按顺序多次进行累加：
+- 在js原生事件处理函数（如addEventListener，setTimeout和setInterval等回调）中，setState的执行是同步的，这意味着你可以立即拿到最新的state值。并且多次调用setState，也会按顺序多次进行累加。
 
 
 - 在react合成事件处理函数/生命周期中：setState的执行是异步的。多次调用setState会进行一次性批量合并更新。
@@ -386,7 +386,7 @@ export default class extends React.PureComponent {
 
 React 18中新增了`自动批处理`功能，指当 React 在一个单独的重渲染事件中批量处理多个状态更新以此实现优化性能。
 
-这意味着，`无论是原生还是合成事件，都会在同一批次内执行异步更新，但进入不同的批次后再获取就是上个批次的最终更新值`
+这意味着，`无论是原生还是合成事件，都会在同一批次内执行异步更新，但进入不同的批次后再获取就是上个批次的最终更新值`。
 
 ### 不想自动批处理
 
@@ -497,4 +497,4 @@ export default class extends React.PureComponent {
 
 ## 其他
 
-- setState必然会触发render函数进行更新渲染，无论这个更新的state有没有在render中用到
+- setState必然会触发render函数进行更新渲染，无论这个更新的state有没有在render中用到。

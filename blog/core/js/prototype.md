@@ -35,8 +35,8 @@ Object.prototype._proto_ === null
 ```
 
 :::tip 结论
-- 每个构造函数的prototype指向的对象都是不同的，独一无二的
-- 构造函数的`prototype`属性和对象实例的`_proto`_指向统一的原型对象(但是注意实例与构造函数的原型有直接的关系，与构造函数本身没有)
+- 每个构造函数的prototype指向的对象都是不同的，独一无二的。
+- 构造函数的`prototype`属性和对象实例的`_proto`_指向统一的原型对象(但是注意实例与构造函数的原型有直接的关系，与构造函数本身没有)。
 - 所有对象的原型链顶端都指向`Object.prototype`这个对象，而后者的原型对象指向了`null`。
 - 任意构造函数的prototype(或者说任意对象实例的_proto_)都是Object的一个对象实例。
 :::
@@ -44,19 +44,19 @@ Object.prototype._proto_ === null
 ## 对象属性获取
 设obj为某一个对象实例，执行`console.log(obj.foo)`，发生了什么:
 
-获取(或者说引用)对象实例的某个属性时，会先检查该对象实例本身是否直接包含该属性，如果有就使用它(即get操作);没有则会通历其原型链，如果最终仍然找不到，则返回undefined
+获取(或者说引用)对象实例的某个属性时，会先检查该对象实例本身是否直接包含该属性，如果有就使用它(即get操作);没有则会通历其原型链，如果最终仍然找不到，则返回undefined。
 
 ## 对象属性设置
 
 设obj为某一个对象实例，执行`obj.foo = 'bar'`，发生了什么?
 
-- 如果obj对象中直接包含了名为foo的属性，则会修改已有的直接属性值
+- 如果obj对象中直接包含了名为foo的属性，则会修改已有的直接属性值。
 
-- 如果obj对象没有直接包含名为foo的属性，就会历其原型链，如果仍然找不到名为foo的属性，则foo会被添加到obj的直接包含属性中
+- 如果obj对象没有直接包含名为foo的属性，就会历其原型链，如果仍然找不到名为foo的属性，则foo会被添加到obj的直接包含属性中。
 
-- 接上一条，如果遍历其原型链时存在对应的foo属性，并且该属性可写(`writable:true`)，则foo会被添加到obj的直接包含属性中。即此时原型链上对应的属性被屏蔽
-- 接上一条，如果遍历其原型链时存在对应的foo属性，并且该属性只读(`writable:false`)，则不会修改该属性或者创建该对象实例的直接属性，总之什么都不会发生(在非严格模式下会抛出错误)
-- 接上一条，如果遍历其原型链时存在对应的foo属性，并且该属性是一个`setter`，那就一定会调用这个setter。此时不会添加为obj的直接包含属性
+- 接上一条，如果遍历其原型链时存在对应的foo属性，并且该属性可写(`writable:true`)，则foo会被添加到obj的直接包含属性中。即此时原型链上对应的属性被屏蔽。
+- 接上一条，如果遍历其原型链时存在对应的foo属性，并且该属性只读(`writable:false`)，则不会修改该属性或者创建该对象实例的直接属性，总之什么都不会发生(在非严格模式下会抛出错误)。
+- 接上一条，如果遍历其原型链时存在对应的foo属性，并且该属性是一个`setter`，那就一定会调用这个setter。此时不会添加为obj的直接包含属性。
 
 ## 迷惑的constructor属性
 
@@ -72,7 +72,7 @@ Object.prototype._proto_ === null
 ```
 上面代码中，我们发现构造函数的prototype默认有一个constructor属性，而创建的对象实例默认也有一个constructor属性。它们都统一的指向了构造函数本身，这“似乎”表明这个属性指向“创建这个对象的函数”或者“对象实例由...创建”
 
-**实际上，对象实例本身并没有constructor 属性，而且这个属性井不表示由...构造”**
+**实际上，对象实例本身并没有constructor 属性，而且这个属性井不表示由...构造。**
 
 首先我们需要消除一个容易存在的误区：
 
@@ -82,8 +82,8 @@ Object.prototype._proto_ === null
 根据上面的例子，我们来揭开constructor属性的真面目:
 
 - Person.prototype的constructor属性只是Person函数在声明时的默认属性，它默认指向Person本身。
-- 当通过new Person生成的对象实例所能访问的constructor属性其实是依据原型链访问到了Person.prototype.constructor.
-- 如果我们修改了Person.prototype的指向，其对应的constructor不会保留原有的值，即不再是Person.
+- 当通过new Person生成的对象实例所能访问的constructor属性其实是依据原型链访问到了Person.prototype.constructor。 
+- 如果我们修改了Person.prototype的指向，其对应的constructor不会保留原有的值，即不再是Person。
 
 见下方示例:
 
@@ -109,7 +109,7 @@ p2.constructor === Array//true
 **代码解析:**
 
 - 先通过new Person()创建一个对象实例，访问`p1.constructor`，其本身设有该属性，所以按照原型链访问到`Person.prototype`（即`p1.__proto__`），由于Person在声明时使得`Person.prototype`默认有了该属性，所以访问到了。其值指向了Person。
-- 接着我们修改`Person.prototype`为一个Array构造函数的象实例，然后再通讨new Person生成一个对象实例p2。此时访问`p2.constructor`。同理，p2本身无该属性，然后顺着原型链访问到了`Person.prototype`，此时它已被修改，使得原有的constructor值已丢失。所以会继续按照原型链访问`Person.prototype.__proto__`，即`new Array().__proto__`，也就是`Array.prototype`。而与Person同理，`Array.prototype.constructor`默认指向的是构造函数Array。所以访问p2.constructor就指向了Array
+- 接着我们修改`Person.prototype`为一个Array构造函数的象实例，然后再通讨new Person生成一个对象实例p2。此时访问`p2.constructor`。同理，p2本身无该属性，然后顺着原型链访问到了`Person.prototype`，此时它已被修改，使得原有的constructor值已丢失。所以会继续按照原型链访问`Person.prototype.__proto__`，即`new Array().__proto__`，也就是`Array.prototype`。而与Person同理，`Array.prototype.constructor`默认指向的是构造函数Array，所以访问p2.constructor就指向了Array。
 
 
 **如果constructor属性表示由...构造，那么Person的对象实例的constructor属性应该永远指向Person，显然实际并不是这样的。**

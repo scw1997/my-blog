@@ -185,10 +185,10 @@ interface Interface4 extends Interface1 {   // [!code error]
 :::
 
 ### 不同点
-- type可以定义**基本类型的别名**，interface不行。如 `type myString = string`
-- type可以声明**联合类型**，interface不行。如 `type unionType = myType1 | myType2`
-- type可以声明**元组类型**，interface不行。如 `type Type1 = [myType1, myType2]`
-- type可以通过**typeof**操作符来定义，interface不行。如 `type myType = typeof someObj`
+- type可以定义**基本类型的别名**，interface不行。如 `type myString = string`。
+- type可以声明**联合类型**，interface不行。如 `type unionType = myType1 | myType2`。
+- type可以声明**元组类型**，interface不行。如 `type Type1 = [myType1, myType2]`。
+- type可以通过**typeof**操作符来定义，interface不行。如 `type myType = typeof someObj`。
 - interface可以`声明合并`，type不行：
 :::code-group
 ```ts [interface]
@@ -290,8 +290,8 @@ const any3:any = true
 TS中的函数重载可以让一个函数可以实现**传不同的参数类型且返回对应的数据类型**。
 
 ### 重载签名 & 实现签名
-函数重载由`重载签名`和`实现签名`两部分组成
 
+函数重载由`重载签名`和`实现签名`两部分组成。
 
 示例：实现一个获取用户数据的函数。传参为用户id时，返回这个用户的数据；传参为多个用户id组成的数组，则返回多个用户数据组成的数组。传参为空则返回null
 
@@ -468,7 +468,7 @@ type Log<T=number,U=string> = {
 }
 ```
 
-注意：对于有多个泛型参数的函数类型，**当第一个参数指定了默认类型，后续参数必须指定默认类型**，否则报错
+注意：对于有多个泛型参数的函数类型，**当第一个参数指定了默认类型，后续参数必须指定默认类型**，否则报错。
 ```ts
 // 错误写法
 type Log<T=number,U> = {  // [!code error]
@@ -557,9 +557,9 @@ class Greeter<T> {
 ### 方法/属性可见性
 
 - **public**（默认）：可在class的内部和外部被访问。
-- **protected**：只能在当前类或子类的内部属性或方法中访问，不可通过当前类的实例或子类的实例访问
-- **private**：只能在当前类的内部属性或方法中访问，不可通过new实例或子类访问
-- **abstract** :abstract只能存在于abstract类（抽象类）中，可与上面三种类型搭配使用
+- **protected**：只能在当前类或子类的内部属性或方法中访问，不可通过当前类的实例或子类的实例访问。
+- **private**：只能在当前类的内部属性或方法中访问，不可通过new实例或子类访问。
+- **abstract** :abstract只能存在于abstract类（抽象类）中，可与上面三种类型搭配使用。
 
 :::code-group
 ```ts [public]
@@ -818,7 +818,7 @@ type FunctionReturnType = ReturnType<FunctionType>  // boolean | string
 
 ## as const
 
-as count是对字面值的断言,断言后变量只能为当前值，无法做任何的修改
+as count是对字面值的断言,断言后变量只能为当前值，无法做任何的修改。
 
 - **针对基本类型变量,as const 和const的作用相同**
 
@@ -830,7 +830,7 @@ a = 'world'; // [!code error] 错误
 b = 'world'; // [!code error] 错误
 ```
 
-- **针对array,object等引用类型,as const 无法进行任何改动.但const可以修改对象内部数据的指针**
+- **针对array,object等引用类型,as const 无法进行任何改动.但const可以修改对象内部数据的指针。**
 
 ```ts
 // 数组
@@ -856,7 +856,7 @@ obj1.name = 'lisi'; // [!code error] 错误，无法修改字段
 obj2.name = 'lisi'; // 通过
 ```
 
-- **as const断言会在类型推断时得知具体值和类型，同时能推断出length等属性.但const无此效果**
+- **as const断言会在类型推断时得知具体值和类型，同时能推断出length等属性.但const无此效果。**
 
 ```ts
 const args = [10, 20] as const; // 断言args为[10, 20]
@@ -887,8 +887,8 @@ const angle = Math.atan2(...args); // [!code error] A spread argument must eithe
 在ts中,extends关键字具有以下三种功能
 
 ### 继承
-- **类继承类**：从父类继承所有的属性和方法实现一个新类。新类支持属性/方法的重写和新增
-- **接口继承接口**：从父接口继承所有的属性和方法实现一个新接口，新接口只能新增属性或方法
+- **类继承类**：从父类继承所有的属性和方法实现一个新类。新类支持属性/方法的重写和新增。
+- **接口继承接口**：从父接口继承所有的属性和方法实现一个新接口，新接口只能新增属性或方法。
 - **接口继承类**：从父类继承所有的属性和方法（不含静态方法/属性）实现一个新接口。新接口只能新增属性或方法。
 
 > 注意：extends不支持`类继承接口`
@@ -1099,7 +1099,7 @@ type TypeRes = Type3<Type1> //false
 
 使用extends可以对泛型进行约束，让泛型表示满足一定条件的类型。
 
-泛型约束中的extends同样是表示**前者类型必须可以分配给后者类型**
+泛型约束中的extends同样是表示**前者类型必须可以分配给后者类型**。
 
 ```ts
 interface ISheep{
@@ -1255,7 +1255,7 @@ type Test = TestNameSpace.TestFunc;
 :::
 
 :::warning 注意
-随着ES Module已经支持Ts类型的模块化后，已经不需要使用namespace进行类型导出
+随着ES Module已经支持Ts类型的模块化后，已经不需要使用namespace进行类型导出。
 :::
 
 `module`关键字也同样被ES Module取代，不过在**全局模块类型声明**方面仍有一定的作用：
@@ -1323,6 +1323,6 @@ import icon from './icon.png'
     
     ```
 
-- type声明的类型别名也是一个**块级作用域**
-- **void**类型是函数没有显式返回任何值时（例如console.log返回值或者undefined）的返回类型
-- **never**类型是函数根本不返回，比如函数内部抛出异常，或者永久循环
+- type声明的类型别名也是一个**块级作用域**。
+- **void**类型是函数没有显式返回任何值时（例如console.log返回值或者undefined）的返回类型。
+- **never**类型是函数根本不返回，比如函数内部抛出异常，或者永久循环。

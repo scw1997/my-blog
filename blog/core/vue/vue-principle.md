@@ -470,7 +470,7 @@ const inputValue2 = ref();
 ### 原生标签的v-model
 
 :::info 原理
-原生input上面使用v-model编译后不会生成modelValue属性，只会生成`onUpdate:modelValue`回调函数和`vModelText`自定义指令。（@update:modelValue事件其实等价于onUpdate:modelValue回调函数）
+原生input上面使用v-model编译后不会生成modelValue属性，只会生成`onUpdate:modelValue`回调函数和`vModelText`自定义指令。（@update:modelValue事件其实等价于onUpdate:modelValue回调函数）。
 
 在原生input上面使用v-model，是由编译后自动生成的vModelText自定义指令在mounted和beforeUpdate钩子函数中去将v-model绑定的变量值更新到原生input输入框的value属性，以保证v-model绑定的变量值和input输入框中的值始终一致。
 

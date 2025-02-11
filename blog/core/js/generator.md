@@ -5,12 +5,12 @@
 
 迭代器Iterator是ES6提出的一种接口机制。
 
-它的目的主要在于为所有部署了Iterator接口的数据结构提供统一的访问机制，即按一定次序执行遍历操作。并且ES6也提出了针对Iterator遍历操作的专属遍历命令的标准，即`for of循环`
+它的目的主要在于为所有部署了Iterator接口的数据结构提供统一的访问机制，即按一定次序执行遍历操作。并且ES6也提出了针对Iterator遍历操作的专属遍历命令的标准，即`for of循环`。
 
 
 ### 内置Iterator接口
 :::tip 定义
-一个数据结构只要具有`Symbol.iterator`属性，就可以认为是`可迭代的`(iterable)
+一个数据结构只要具有`Symbol.iterator`属性，就可以认为是`可迭代的`(iterable)。
 :::
 
 js中默认拥有Iterator接口的数据结构
@@ -145,9 +145,9 @@ for(const item of obj){
 }
 ```
 
-从上面可以看出,要实现一个Iterator接口还是稍微有些复杂麻烦的.
+从上面可以看出,要实现一个Iterator接口还是稍微有些复杂麻烦的。
 
-而使用下面介绍的Generator函数实现Iterator接口会更加简洁   
+而使用下面介绍的Generator函数实现Iterator接口会更加简洁。   
 
 ## Generator
 
@@ -199,16 +199,16 @@ console.log(res3) //{value:'finish',done:true}
 :::
 
 :::warning 注意
-- 当next调用返回值出现done为true的情况后,之后无论调用多少次next返回值都是`{value:undefined,done:true}`.
-- 如果不采用next去消费生成器的值，而是通过`for of`来遄历(本质也是在调用next)。则只会遍历出所有yield后面跟的值,`不包含return返回值`.
+- 当next调用返回值出现done为true的情况后,之后无论调用多少次next返回值都是`{value:undefined,done:true}`。
+- 如果不采用next去消费生成器的值，而是通过`for of`来遄历(本质也是在调用next)。则只会遍历出所有yield后面跟的值,`不包含return返回值`。
 :::
 
 
 Generator函数返回的`iterator对象`除了具有next方法,还有另外两个方法:
 
-- `throw`:用于在generator函数执行过程中主动抛出错误,后续next调用不会再执行
+- `throw`:用于在generator函数执行过程中主动抛出错误,后续next调用不会再执行。
 
-- `return`:用于直接提前结束generator函数的流程,后续next调用统一返回<span>{value:undefined,done:true}</span>
+- `return`:用于直接提前结束generator函数的流程,后续next调用统一返回<span>{value:undefined,done:true}</span>。
 
 ::: code-group
 
@@ -339,7 +339,7 @@ function* concat(iterator1, iterator2) {
 ```
 :::
 
-- `yield*`表达式后面跟的是一个`iterator对象`，表明我想依次yield该iterator对象的所有遍历值value
+- `yield*`表达式后面跟的是一个`iterator对象`，表明我想依次yield该iterator对象的所有遍历值value。
 
 
 - 任何数据结构只要有 Iterator 接口，就可以被`yield*`遍历。
@@ -349,7 +349,7 @@ function* concat(iterator1, iterator2) {
 
 **(1) 自定义Iterator迭代器**
 
-使用generator函数来实现迭代器比标准实现的写法更简洁，更容易理解
+使用generator函数来实现迭代器比标准实现的写法更简洁，更容易理解：
 
 :::code-group 
 
@@ -421,7 +421,7 @@ Generator函数可以暂停执行，这使得它在并发控制中具有一定�
 
 **（4）异步操作的同步化表达**
 
-异步操作的同步化，避免了回调地狱问题。同时Generator也作为`async/await`语法的polyfill(底层实现)
+异步操作的同步化，避免了回调地狱问题。同时Generator也作为`async/await`语法的polyfill(底层实现)。
 
 :::info 关于async/await是Generator的语法糖
 所谓Generator语法糖，表明的就是aysnc/await实现的就是generator实现的功能。但是async/await比generator要好用。因为generator执行yield设下的断点采用的方式就是不断的调用iterator方法，这是个`手动调用`的过程。针对generator的这个缺点，后面提出了co这个库函数来`自动执行next`，相比于之前的方案，这种方式确实有了进步，但是仍然麻烦。而async配合await得到的就是断点执行后的结果。因此async/await比generator使用更普遍。

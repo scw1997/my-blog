@@ -1,6 +1,6 @@
 # 伪类 & 伪元素
 
-介绍部分比较高频率使用的伪类 & 伪元素
+介绍部分比较高频率使用的伪类 & 伪元素。
 
 ## 伪类
 
@@ -25,31 +25,31 @@ html{
 
 ### :nth-child & :nth-last-child
 
-xxx:nth-child(n)：表示匹配**作为其父元素的第n个子元素**的xxx元素
+xxx:nth-child(n)：表示匹配**作为其父元素的第n个子元素**的xxx元素。
 
-xxx:nth-last-child(n)： 表示匹配**从后往前数的作为其父元素的第n个子元素**的xxx元素
+xxx:nth-last-child(n)： 表示匹配**从后往前数的作为其父元素的第n个子元素**的xxx元素。
 
 :::tip `nth-child(An+B)` 语法
 
 其中A，B，n均为不为负的整数，但A前面可以添加负号。
 
-nth-child(5n)匹配第5，10，15...个子元素
+nth-child(5n)匹配第5，10，15...个子元素。
 
-nth-child(3n+4)匹配第4，7，10...个子元素
+nth-child(3n+4)匹配第4，7，10...个子元素。
 
-nth-child(-n+3)匹配前3个子元素
+nth-child(-n+3)匹配前3个子元素。
 
-nth-last-child(-n+3)匹配最后3个子元素
+nth-last-child(-n+3)匹配最后3个子元素。
 
 :::
 
 ### :nth-of-type & :nth-last-of-type
 
-xxx:nth-of-type(n) 表示匹配**与xxx元素标签类型一致的子元素集合里**第n个子元素
+xxx:nth-of-type(n) 表示匹配**与xxx元素标签类型一致的子元素集合里**第n个子元素。
 
-xxx:nth-last-of-type(n) 表示与**xxx元素标签类型一致的子元素集合里**的从后往前数的第n个子元素
+xxx:nth-last-of-type(n) 表示与**xxx元素标签类型一致的子元素集合里**的从后往前数的第n个子元素。
 
-> `nth-of-type(An+B)` 语法与上面nth-child(An+B)语法类似
+> `nth-of-type(An+B)` 语法与上面nth-child(An+B)语法类似。
 
 此选择器主要适用于特定标签组合并且组合不断重复的场景，例如dl标签的子标签dt和dd的组合。
 
@@ -101,7 +101,7 @@ input:not(:disabled):not(:read-only){
 
 伪元素使用`双冒号`,如::before。
 
-- 优点：不占用 DOM 节点，减少 DOM 节点数。 让 CSS 帮助解决了一部分 JavaScript 问题，简化了开发。 避免增加毫无意义的页面元素。
+- 优点：不占用DOM节点，减少DOM节点数。 让CSS帮助解决了一部分JavaScript问题，简化了开发。 避免增加毫无意义的页面元素。
 
 - 缺点：不利于调试。
 
@@ -112,15 +112,15 @@ input:not(:disabled):not(:read-only){
 **特点**
 
 - 默认`display: inline`,不脱离文档流，占据实际元素空间。
-- 必须设置content属性，否则一切都是无用功；
-- 会继承原本元素的CSS属性（如原元素的颜色等）
+- 必须设置content属性，否则一切都是无用功。
+- 会继承原本元素的CSS属性（如原元素的颜色等）。
 
 ### 其他伪元素
 
-- ::first-line：匹配元素第一行，仅块元素
-- ::first-letter：匹配元素第一个字母，仅块元素
-- ::selection：匹配鼠标长按拖动选中的内容
-- ::placeholder：匹配input元素的placeholder内容的样式
+- `::first-line`：匹配元素第一行，仅块元素。
+- `::first-letter`：匹配元素第一个字母，仅块元素。
+- `::selection`：匹配鼠标长按拖动选中的内容。
+- `::placeholder`：匹配input元素的placeholder内容的样式。
 
 示例：
 

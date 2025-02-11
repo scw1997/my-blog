@@ -20,6 +20,6 @@
 - JDK/JRE/JVM关系
   |名词|介绍|
   |--|--|
-  |JDK|JDK是java开发工具包，包含了JVM虚拟机，核心类库和开发工具（java,javac等）。|
-  |JRE|JRE是java运行环境。包含了JVM，核心类库和运行工具。|
+  |JDK|JDK是java开发工具包，包含了JVM虚拟机，核心类库和开发工具（java,javac等）。用于编写代码+运行程序。|
+  |JRE|JRE是java运行环境。包含了JVM虚拟机，核心类库和运行工具。如果只需要运行class文件，则只需要JRE即可。|
   |JVM|JVM是虚拟机，为java程序真正运行的地方。|

@@ -80,12 +80,12 @@ const refList = ref([]);
 ```
 :::
 :::warning 注意
-- 对于使用了`script setup`的子组件，父组件通过ref不能获取其内部的任何状态和方法，如果需要则需在子组件中使用`defineExpose`设置需要暴露的状态和方法
+- 对于使用了`script setup`的子组件，父组件通过ref不能获取其内部的任何状态和方法，如果需要则需在子组件中使用`defineExpose`设置需要暴露的状态和方法。
 :::
 
 ### reactive
 
-- 接收一个类型为**对象，数组，Map，Set**之一的参数，返回一个对应传入对象的响应式的Proxy对象
+- 接收一个类型为**对象，数组，Map，Set**之一的参数，返回一个对应传入对象的响应式的Proxy对象。
 - 返回的proxy对象与传入对象是不对等的，传入对象被修改，proxy对象也会同步更新，反之也一样。
 - reactive会递归地将对象的所有属性都转换为响应式数据（深层响应性）。
 - 若reactive返回值在顶层解构使用，其属性值会失去响应性。所以必须通过例如**obj.xx**等方式来获取或设置最新值。
@@ -129,13 +129,13 @@ watch(person, () => {
 </KeepAlive>
 
 ```
-> 注意：KeepAlive标签内的子元素标签存在多个时，只会处理`第一个子元素`
+> 注意：KeepAlive标签内的子元素标签存在多个时，只会处理`第一个子元素`。
 
 组件参数：
 
-- include：可传字符串/正则表达式/数组，名称（即组件的`name`字段）匹配成功的组件会被缓存
-- exclude：可传字符串/正则表达式/数组，名称（即组件的`name`字段）匹配成功的组件不会被缓存
-- max：可传数字，限制缓存组件的最大数量，超过max则按照`LRU算法`进行置换
+- include：可传字符串/正则表达式/数组，名称（即组件的`name`字段）匹配成功的组件会被缓存。
+- exclude：可传字符串/正则表达式/数组，名称（即组件的`name`字段）匹配成功的组件不会被缓存。
+- max：可传数字，限制缓存组件的最大数量，超过max则按照`LRU算法`进行置换。
 
 
 
@@ -185,7 +185,7 @@ export default {
 ```
 
 :::warning 注意
-- KeepAlive只对`组件`有效，对虚拟DOM片段/普通html标签无效
+- KeepAlive只对`组件`有效，对虚拟DOM片段/普通html标签无效。
 - KeepAlive 先匹配被包含组件的 name 字段，如果 name 不可用，则匹配当前组件 components 配置中的注册名称。
 - keepAlive `不会在函数式组件`中正常工作，因为它们没有缓存实例。
 - 当匹配条件同时在 include 与 exclude 存在时，以 exclude 优先级最高。
@@ -273,18 +273,18 @@ export default {
 
 以下为Vue3生命周期：
 
-- `onBeforeMount`：组件被挂载之前被调用。此时还没有创建 DOM 节点，即将进行首次渲染
+- `onBeforeMount`：组件被挂载之前被调用。此时还没有创建 DOM 节点，即将进行首次渲染。
 - `onMounted`：组件挂载完成后执行，主要用于访问DOM相关。此时所有**同步**子组件都已经被挂载,自身的 DOM 树已经创建完成并插入了父容器中。
 - `onBeforeUpdate`：在组件即将因为响应式状态变更而更新其 DOM 树之前调用。
 - `onUpdated`：在组件因为响应式状态变更而更新其 DOM 树之后调用。
 - `onBeforeUnmount`：在组件实例被卸载之前调用。此时组件实例依然还保有全部的功能。
 - `onUnmounted`：组件实例被卸载之后调用。可用于清理一些副作用，例如计时器、DOM 事件监听器或者与服务器的连接。
-- `onErrorCaptured`：捕获了后代组件传递的错误时调用
+- `onErrorCaptured`：捕获了后代组件传递的错误时调用。
 - `onActivated`：若组件实例是KeepAlive缓存树的一部分，当组件被插入到 DOM 中时调用。
 - `onDeactivated`：若组件实例是KeepAlive缓存树的一部分，当组件从 DOM 中被移除时调用。
 
 :::warning 注意
-- 不要在 `onUpdated` 钩子中更改组件的状态，这可能会导致无限的更新循环
+- 不要在 `onUpdated` 钩子中更改组件的状态，这可能会导致无限的更新循环。
 - Vue3中的setup函数替代了Vue2中的`beforeCreate`和`created`生命周期钩子，所有的初始化逻辑（例如一些初始化属性值）都可以在setup函数中编写。
 - Vue3中的`onBeforeUnmount/onUnmounted`相当于Vue2中的`beforeDestroy`和`destroyed`生命周期钩子。
 :::
@@ -403,7 +403,7 @@ function increment() {
 
 - **自动生成**
 
-script setup只要在script开启setup语法糖模式，单文件组件会自动根据文件名生成对应的 name 选项 
+script setup只要在script开启setup语法糖模式，单文件组件会自动根据文件名生成对应的 name 选项。 
 
 - **额外开启一个script用来定义name**
 
@@ -470,29 +470,29 @@ export default {
 
 - **配合KeepAlive**
 
-配合KeepAlive组件的include 或 excludes属性可以缓存指定组件
+配合KeepAlive组件的include 或 excludes属性可以缓存指定组件。
 
 - **代码调试**
 
-在Vue有报错或者调试（如vue-devtools）的时候可以看到组件的name
+在Vue有报错或者调试（如vue-devtools）的时候可以看到组件的name。
 
 ## 修饰符
 
 #### 事件修饰符
 
-- @click.prevent：阻止默认行为
-- @click.stop：阻止事件冒泡到上级元素
-- @click.self：只触发当前元素自身的事件，后代元素事件冒泡到当前元素的事件则不触发
-- @click.once：只触发一次
-- @keydown.enter/delete/tab：按键相关
-- @click.left/right：鼠标相关
+- @click.prevent：阻止默认行为。
+- @click.stop：阻止事件冒泡到上级元素。
+- @click.self：只触发当前元素自身的事件，后代元素事件冒泡到当前元素的事件则不触发。
+- @click.once：只触发一次。
+- @keydown.enter/delete/tab：按键相关。
+- @click.left/right：鼠标相关。
 - .....
 
 #### v-model修饰符
 
-- v-model.trim:对表单值进行两端的空格去除并存储
-- v-model.lazy:只有当input失去焦点时，才执行数据双向同步
-- v-model.number:对表单值进行number转换并存储
+- v-model.trim:对表单值进行两端的空格去除并存储。
+- v-model.lazy:只有当input失去焦点时，才执行数据双向同步。
+- v-model.number:对表单值进行number转换并存储。
 
 ## 组件通信方式
 
@@ -566,7 +566,7 @@ export default {
 
 **toRef**
 
-传入一个响应式reactive对象和该对象的一个属性Key，将**该属性转为ref对象**并返回该属性
+传入一个响应式reactive对象和该对象的一个属性Key，将**该属性转为ref对象**并返回该属性：
 
 ```vue
 <script setup lang="ts">
@@ -588,7 +588,7 @@ const name = toRef(obj, 'name');
 
 **toRefs**
 
-传入一个响应式reactive对象，将该对象的**每个属性转为ref对象**并返回一个新的对象
+传入一个响应式reactive对象，将该对象的**每个属性转为ref对象**并返回一个新的对象：
 
 ```vue
 <script setup lang="ts">
@@ -608,7 +608,7 @@ const name = toRef(obj, 'name');
 
 ```
 :::tip 技巧
-- 可对`defineProps`的返回值进行toRefs包裹,然后解构使用
+- 可对`defineProps`的返回值进行toRefs包裹,然后解构使用。
 :::
 
 ## v-model实现
@@ -792,7 +792,7 @@ const inputValue2 = ref();
 
 - 默认属于`懒执行`（初始创建自身时不会执行，后续数据变化才会执行回调）。
 
-- 可以通过设置`{immediate:true}`选项来实现初始渲染会执行回调，后续变化依然会执行回调.
+- 可以通过设置`{immediate:true}`选项来实现初始渲染会执行回调，后续变化依然会执行回调。
 
 - 可以设置一个数组来监听多个响应式数据。
 
@@ -988,7 +988,7 @@ watchEffect(()=>{
     :::
 - `useAttrs()`用于获取当前组件props声明以外的父组件传递的属性（在template中亦可通过`$attrs`获取），与props是互补关系。此外attrs无法通过watch等方式监听变化。
 
--  `<style scoped>`中的样式默认只对当前组件内标签元素生效，对于**内部的子组件则不生效**。否则请使用`:deep`进行深度作用。另外当前组件里通过**v-html**渲染的内容也默认不会被sccoped样式应用
+-  `<style scoped>`中的样式默认只对当前组件内标签元素生效，对于**内部的子组件则不生效**。否则请使用`:deep`进行深度作用。另外当前组件里通过**v-html**渲染的内容也默认不会被sccoped样式应用。
 - `Vue.createApp()`允许你在同一个页面中创建**多个**共存的 Vue 应用，而且每个应用都拥有自己的用于配置和全局资源的作用域。
 - `app.mount()`的返回值是`根组件实例`，而非应用实例。
 - `nextTick()` 可以在状态改变后立即使用，以等待 DOM 更新完成。
@@ -1019,7 +1019,7 @@ watchEffect(()=>{
     <button id="counter" @click="increment">{{ count }}</button>
   </template>
   ```
-- `v-once` 表示只渲染一次，后续哪怕data有更新也不更新渲染（虽然data已变化）
+- `v-once` 表示只渲染一次，后续哪怕data有更新也不更新渲染（虽然data已变化）。
 - Vue2组件中普通函数声明的this指向的是当前`组件实例`（箭头函数则指向window），在Vue3的setup方法里**无法使用this**，因为setup() 函数在组件实例被创建之前被调用，此时this还未指向组件实例（此时为undefined），而script setup中的代码是在组件的 setup() 函数的作用域内执行的，同样无法使用this。
 - v-if与v-for不能同时使用在同一个标签上，因为v-if的优先级更高，这意味着 v-if 的条件将无法访问到 v-for 作用域内定义的变量别名。可采用以下方式:
   ```vue
@@ -1029,7 +1029,7 @@ watchEffect(()=>{
     </div>
   </template> 
   ```
-- 事件绑定函数默认传递第一个参数为event，若要额外手动传递其他参数，则要获取到event参数则需要手动传递  
+- 事件绑定函数默认传递第一个参数为event，若要额外手动传递其他参数，则要获取到event参数则需要手动传递 。 
 
   ```vue
   <script setup lang="ts">
@@ -1050,8 +1050,8 @@ watchEffect(()=>{
   </template>
 
   ```
-- `app.component`定义的是全局组件，处处可以使用,不用仍占内存空间. 在Vue2中通过`compoent:{xxx: xxx}`引入并注册的组件是局部组件，只有在注册时才能使用.
-- 默认情况下,非props中接收的属性会被自动接收并添加到组件的根元素节点属性上,可通过设置`inheritAttrs: false`来关闭这一行为
+- `app.component`定义的是全局组件，处处可以使用,不用仍占内存空间. 在Vue2中通过`compoent:{xxx: xxx}`引入并注册的组件是局部组件，只有在注册时才能使用。
+- 默认情况下,非props中接收的属性会被自动接收并添加到组件的根元素节点属性上,可通过设置`inheritAttrs: false`来关闭这一行为。
   ```vue
   <script setup lang="ts">
   
@@ -1072,7 +1072,7 @@ watchEffect(()=>{
   </template>
   
   ```
-- 模板语法花括号<span>&lbrace;&lbrace;&rbrace;&rbrace;</span>里的内容是会执行`JSON.stringify()`转换来输出渲染结果
-- 计算属性（computed）应该是**只读**的，不要尝试修改计算属性的返回值，应该由依赖源的变化触发它的改变
-- 例如`defineProps`,`defineEmits`这些api都称为**宏**，宏是一种特殊的代码，只能在setup顶层中使用宏，在编译时会将这些特殊的代码转换为浏览器能够直接运行的指定代码，宏不需要手动从vue中import（编译时自动处理转换）
-- prop的key如果是短横线如`custom-class`格式，则在组件中通过小驼峰如`props.customClass`来获取
+- 模板语法花括号<span>&lbrace;&lbrace;&rbrace;&rbrace;</span>里的内容是会执行`JSON.stringify()`转换来输出渲染结果。
+- 计算属性（computed）应该是**只读**的，不要尝试修改计算属性的返回值，应该由依赖源的变化触发它的改变。
+- 例如`defineProps`,`defineEmits`这些api都称为**宏**，宏是一种特殊的代码，只能在setup顶层中使用宏，在编译时会将这些特殊的代码转换为浏览器能够直接运行的指定代码，宏不需要手动从vue中import（编译时自动处理转换）。
+- prop的key如果是短横线如`custom-class`格式，则在组件中通过小驼峰如`props.customClass`来获取。
