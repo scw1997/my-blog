@@ -167,7 +167,11 @@ import(/* webpackPreload: true */ './test.png').then();
 ```
 ### 零碎
 
-- `babel-loader`只是将ts转成js，不包括类型检查功能；`ts-loader`默认转译+类型检查都支持。
+- `babel-loader`只是将ts转成js，不包括类型检查功能。
+
+  `ts-loader`默认转译+类型检查都支持，但不支持多线程，效率慢。
+
+  `fork-ts-checker-webpack-plugin`采用单独线程进行类型检查，效率快，但不支持vue3。
 - `babel`只负责转换新特性，而`babel-polyfill`负责转换新的api。
 
 
