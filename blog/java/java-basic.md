@@ -25,11 +25,11 @@
   |JRE|JRE是java运行环境。包含了JVM虚拟机，核心类库和运行工具。如果只需要运行class文件，则只需要JRE即可。|
   |JVM|JVM是虚拟机，为java程序真正运行的地方。|
 
-## 数据类型
+## 数据类型/类型转换
 
 ### 基本类型
 
-![数据类型.png](/java_data_type.png)
+![数据类型.png](/java_data_type.png)]()
 
 :::tip 拓展
 - 一般来说，整数类型变量默认使用`int`（取值范围大且常用），小数类型默认使用`double`(比float取值范围更大，精度更高)
@@ -39,3 +39,63 @@
 - 定义float类型变量时，值后面需要加一个`F`（可小写），如`foat k = 343.545464F`。
 - 数字取值范围从大到小：`dobule > float > long > int > short > byte`。
 :::  
+
+### 类型转换
+
+
+#### 运算规则
+
+- 只含整数的运算，其结果必然是整数；存在小数的运算，其结果只能是小数。
+
+```java
+ System.out.println(5 / 2); //2
+ System.out.println(6.0 / 2); //3.0
+ System.out.println(6.0 / 2.0); //3.0
+ System.out.println(6 / 2); //3
+ System.out.println(5 / 2.5); //2.0
+```
+
+#### 隐式转换
+
+- **取值范围小的类型值会在运算过程中的会被提升为取值范围大的**。
+:::code-group
+```java [示例1]
+int a = 10;
+double b = a; //注意这里是把int赋值给了double变量，只能把取值范围小的类型值赋值给取值范围大的。
+System.out.println(b); //10.0
+```
+```java [示例2]
+long a =1L;
+int b=2;
+double c=3.0;
+double d=a+b+c; //这里类型必须为double
+```
+:::
+- **运算时存在byte，short,char这三种类型，会先提升对应类型为`int`类型**（此规则比上一条规则优先级更高）。
+
+:::code-group
+```java [示例1]
+byte a=1;
+byte b=2;
+// byte c=a+b; //类型错误
+int c=a+b; //类型正确  
+```
+```java [示例2]
+byte a =1;
+short b =2;
+int c = a+b; //注意这里c是int类型，而不是根据取值范围大小排序判断为short类型
+```
+:::
+
+#### 强制转换
+
+用于把取值范围大的类型值赋值给取值范围小的类型变量.
+
+:::code-group
+```java [示例1]
+byte a=1;
+byte b=2;
+byte c=(byte)(a+b); //a+b本身应该为int类型，需要强制转换才能变成byte类型  
+```
+
+:::
