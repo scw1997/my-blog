@@ -44,21 +44,9 @@
 
 <br/>
 
-#### 运算规则
-
-- 只含整数的运算，其结果必然是整数；存在小数的运算，其结果只能是小数。
-
-```java
- System.out.println(5 / 2); //2
- System.out.println(6.0 / 2); //3.0
- System.out.println(6.0 / 2.0); //3.0
- System.out.println(6 / 2); //3
- System.out.println(5 / 2.5); //2.0
-```
-
 #### 隐式转换
 
-- **取值范围小的类型值会在运算过程中的会被提升为取值范围大的**。
+1. **取值范围小的类型值会在运算过程中的会被提升为取值范围大的**。
 :::code-group
 ```java [示例1]
 int a = 10;
@@ -72,7 +60,7 @@ double c=3.0;
 double d=a+b+c; //这里类型必须为double
 ```
 :::
-- **运算时存在byte，short,char这三种类型，会先提升对应类型为`int`类型**（此规则比上一条规则优先级更高）。
+2. **运算时存在byte，short,char这三种类型，会先提升对应类型为`int`类型**（此规则比第1条规则优先级更高）。
 
 :::code-group
 ```java [示例1]
@@ -88,6 +76,28 @@ int c = a+b; //注意这里c是int类型，而不是根据取值范围大小排�
 ```
 :::
 
+3. **加法运算时存在**字符串**则会进行字符串拼接操作。如果是连续加法，则从左往右执行。**
+
+```java 
+System.out.println( "中" + "abc" + 1); //中abc1
+
+System.out.println("中" + "abc" + true); //中abctrue
+
+System.out.println(1 + 2 + "abc"+ 1 + 2); //3abc12
+```
+:::warning 注意
+此项规则只适用于字符串，**不适用于单个字符**。
+:::
+
+4. **当字符和字符或数字进行加法运算时，会将字符转成对应的ASCII码的数字再进行计算（这条规则实际是第2条规则的补充）**
+
+```java 
+System.out.println('a'+1); //98（a的ascII码数字为97）
+
+System.out.println('a'+"abc"); //aabc（因为存在字符串，所以应用第3条规则）  
+```
+
+
 #### 强制转换
 
 用于把取值范围大的类型值赋值给取值范围小的类型变量.
@@ -98,7 +108,24 @@ byte a=1;
 byte b=2;
 byte c=(byte)(a+b); //a+b本身应该为int类型，需要强制转换才能变成byte类型  
 ```
+:::
 
+:::tip 补充
+
+- 只含整数的运算，其结果必然是整数；存在小数的运算，其结果只能是小数。
+
+  ```java
+   System.out.println(5 / 2); //2
+   System.out.println(6.0 / 2); //3.0
+   System.out.println(6.0 / 2.0); //3.0
+   System.out.println(6 / 2); //3
+   System.out.println(5 / 2.5); //2.0
+  ```
+- `+=,-=，*=，/=`等赋值运算符会根据被赋值变量类型进行内部`强制转换`
+  ```java
+    short a = 1;
+    a+=1; //这里等价于a = (short)(a+1)。虽然按以往规则a=a+1时a会被提升为int类型，但赋值运算符是特殊情况。
+  ```
 :::
 
 
