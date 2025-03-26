@@ -380,6 +380,10 @@ router.registerError((e)=>container.innerHTML = '页面异常，错误消息：<
 **缺点**：稳定性不高，因为所有线程共享同一进程的地址空间。还要注意死锁和数据同步问题。
 
 
+## Git
+
+- git误删远程分支恢复
+   > 通过`git reflog` 命令查看最近一次操作的哈希值，然后通过`git checkout -b 分支名 哈希值` 基于该哈希值创建指定分支。 
 
 
 
