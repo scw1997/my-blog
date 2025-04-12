@@ -29,9 +29,10 @@
 
 - 不利于SEO
 - 增加页面请求
+- 性能较差，每次进入都需要重新加载资源
 - 存在一定安全问题（如xss跨站脚本攻击等）
 - iframe页面不可访问主页面DOM对象
-- 主页面不可访问不同源的iframe内部DOM（可通过postMessage解决）
+- 主页面不可访问不同源的iframe内部DOM（可通过`window.postMessage`解决）
 
 ## Vue vs React
 
