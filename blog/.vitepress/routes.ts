@@ -100,7 +100,7 @@ const routes =  [
                         link:'/core/react/react-architecture'
                     },
                     {
-                        text:'React零碎',
+                        text:'React 零碎',
                         link:'/core/react/fragment'
                     },
 
