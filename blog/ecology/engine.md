@@ -246,7 +246,7 @@ Turborepo 是一个高性能的构建系统，用于管理和优化大型 Monore
   
   使用文件指纹（或哈希）技术来确定文件自上次构建以来是否发生了更改。`通过比较文件的当前指纹与存储在缓存中的上一次构建指纹`，Turborepo 能够快速识别哪些文件需要重新构建。
 
-> turborepo快速入门：https://juejin.cn/post/7369029201578573839?searchId=20250412220700E2EF1AC94FFB30FCD3CF
+> turborepo快速入门：https://juejin.cn/post/7429128606750015514?searchId=202504241740345D417E71A82AA405C0AE
 
 ## 其他
 
