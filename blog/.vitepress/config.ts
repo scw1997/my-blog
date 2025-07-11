@@ -77,8 +77,8 @@ export default defineConfig({
       message: 'MIT Licensed',
       copyright: 'Copyright © 2024-present'
     },
-    socialLinks: [
-      { icon: 'github', link: 'https://github.com/scw1997/my-blog.git' }
-    ]
+    // socialLinks: [
+    //   { icon: 'github', link: 'https://github.com/scw1997/my-blog.git' }
+    // ]
   }
 })
