@@ -338,12 +338,84 @@ public class test {
 
 ```
 :::tip 扩展
-
+- 字符串属于`引用类型`
 - 使用**字面量**形式定义字符串时，系统会检查该字符串是否在串池中已存在。是则复用，否则新建。
 - **str.charAt(index)**：获取指定索引位置的字符
 - **str.length()**：获取字符串长度
 
   :::
+
+## 集合
+
+集合相比于数组，它的**长度是不固定**的。添加删除元素，则其长度也会随之变化
+
+基本示例：
+
+```java
+import java.util.ArrayList;
+
+public class helloworld {
+  public  static void main(String[] args) {
+      ArrayList list = new ArrayList();
+      //添加元素
+      list.add("Hello");
+      list.add("World");
+      list.add(new int[]{1, 2, 3, 4});
+      System.out.println(list); // [Hello, World, [I@4eec7777]
+
+      //删除元素（元素/索引）
+      boolean isDel = list.remove("Hello");
+      System.out.println(isDel); //true
+      Object deleteItem = list.remove(0);
+      System.out.println(deleteItem); // World
+
+
+      //获取元素
+      Object item = list.get(0);
+      System.out.println(item); // [I@4eec7777
+
+      //修改元素
+      list.set(0,"WWE");
+      System.out.println(list); //[WWE]
+
+      //获取长度
+      System.out.println(list.size()); //1
+
+  }
+}
+```
+
+集合的元素**默认只能是引用类型（字符串，对象，数组）**，若要使用基本类型，则需要用**基本类型对应的包装类**：
+
+```java
+import java.util.ArrayList;
+
+public class helloworld {
+  public  static void main(String[] args) {
+    //int的包装类为Integer
+    ArrayList<Integer> list1 = new ArrayList<>();
+    list1.add(1);
+
+    // boolean的包装类为Boolean
+    ArrayList<Boolean> list2 = new ArrayList<>();
+    list2.add(true);
+
+    //char的包装类为Char
+    ArrayList<Character> list3 = new ArrayList<>();
+    list3.add('a');
+    //double的包装类为Double
+    ArrayList<Double> list4 = new ArrayList<>();
+    list4.add(1.0);
+
+    //short的包装类为Short
+    ArrayList<Short> list5 = new ArrayList<>();
+    short a = 1;
+    list5.add(a);
+
+
+  }
+}
+```
 
 ## 其他
 
