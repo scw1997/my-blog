@@ -259,6 +259,13 @@ public class Phone {
 ```
 :::
 
+:::warning 注意事项
+
+- `private`表示私有属性或方法，只能在类内部访问，不能被实例化对象访问
+- 虚拟机会**默认创建无参的构造方法**。执行new时虚拟机会自动调用构造方法，用于给实例初始化。且**构造方法可重载**。
+- This的本质是**调用者的地址值**。
+  :::
+
 ### 工具类
 
 工具类的特点是：
@@ -351,13 +358,85 @@ public static void main(String[] args) {
 - 静态方法没有this关键字
 
 
+### 继承
 
 
-:::warning 注意事项
+示例：
 
-- `private`表示私有属性或方法，只能在类内部访问，不能被实例化对象访问
-- 执行new时虚拟机会自动调用构造方法，用于给实例初始化。且**构造方法可重载**。
-- This的本质是**调用者的地址值**。
+```java
+class Parent {
+    // 字段
+    public String publicField = "Public Field";
+    protected String protectedField = "Protected Field";
+    String defaultField = "Default Field"; // 包私有
+    private String privateField = "Private Field";
+
+    // 方法
+    public void publicMethod() {
+        System.out.println("Public Method");
+    }
+
+    protected void protectedMethod() {
+        System.out.println("Protected Method");
+    }
+
+    void defaultMethod() {
+        System.out.println("Default Method");
+    }
+
+    private void privateMethod() {
+        System.out.println("Private Method");
+    }
+
+    // Getter 用于间接访问 private 字段
+    public String getPrivateField() {
+        return privateField;
+    }
+}
+
+class Child extends Parent {
+    void accessParentMembers() {
+        // 可直接访问的继承成员
+        System.out.println(publicField);      // 继承 public 字段
+        System.out.println(protectedField);   // 继承 protected 字段
+        System.out.println(defaultField);    // 继承默认字段（同一包内）
+
+        // 间接访问 private 字段
+        System.out.println(getPrivateField()); // 通过父类方法访问
+
+        // 调用继承的方法
+        publicMethod();
+        protectedMethod();
+        defaultMethod();
+
+        // 无法直接调用 privateMethod()
+        // privateMethod(); // 编译错误！
+    }
+}
+
+public class InheritanceTest {
+    public static void main(String[] args) {
+        Child child = new Child();
+        child.accessParentMembers();
+    }
+}
+```
+
+#### 可继承
+
+- public/protected属性或方法
+- private属性或方法（子类不可直接访问或调用，可通过调用父类非private方法间接访问或调用）
+- 默认（包私有）属性或方法（仅在同一包内的子类可继承调用）
+#### 不可继承
+
+- 构造方法（子类构造方法必须通过 super() 调用父类构造方法）
+- static属性或方法（但子类可以通过父类名直接访问） 
+
+
+:::warning 注意
+- java支持`单继承`（一个子类只能继承一个父类）和`多层继承`（A继承于B,B继承于C）,不支持多继承。
+- java中所有的类都直接或间接继承于`Object类`，即一个类若没有显式继承其他类，则默认继承Object类。
+- 若子类存在与父类同名属性/方法，则会**重写覆盖**。通过super访问父类方法或属性
 :::
 
 ## 字符串
