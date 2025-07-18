@@ -193,11 +193,18 @@ public class helloworld {
 
 ## 类
 
+### javabean类
+
+javabean类，用来描述某一事物的类，有特定的实现规范，例如
+
+- 实例变量都转为私有变量，并提供相应的getter和setter方法
+- 构造方法重载
+
 基本示例：
 
 :::code-group
 ```java [Test类]
-public class test {
+public class Test {
   public static void main(String[] args) {
     Phone myPhone = new Phone();x
     System.out.println(myPhone.getName());
@@ -212,6 +219,8 @@ public class test {
 ```
 ```java [Phone类]
 public class Phone {
+  //这种类的实现方式叫做javabean类
+  
   //实例变量优化为私有属性，避免外部随意直接修改
   private String name = "Nokia";
   private int price = 1000;
@@ -248,11 +257,104 @@ public class Phone {
 
 
 ```
+:::
 
-:::warning 注意
+### 工具类
 
-- java类的静态方法可以被静态调用，也可以**被实例化对象调用（不推荐，编译器会转为静态调用，增加解析成本）**。
-- 静态方法不能调用实例属性和实例方法
+工具类的特点是：
+
+- 使用 `final` 防止继承
+- `构造函数私有化`并抛出异常防止实例化
+- 方法均为静态方法，通过类名直接调用
+
+基本实例：
+
+```java
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.regex.Pattern;
+ 
+/**
+ * 通用工具类
+ */
+public final class UtilTools {
+ 
+    // 私有构造方法防止实例化
+    private UtilTools() {
+        throw new AssertionError("Cannot instantiate utility class");
+    }
+ 
+    // ==================== 字符串相关 ====================
+ 
+    /**
+     * 检查字符串是否为空或null
+     */
+    public static boolean isEmpty(String str) {
+        return str == null || str.trim().isEmpty();
+    }
+ 
+    /**
+     * 检查字符串是否不为空
+     */
+    public static boolean isNotEmpty(String str) {
+        return !isEmpty(str);
+    }
+ 
+    /**
+     * 生成指定长度的随机字符串（仅包含字母和数字）
+     */
+    public static String generateRandomString(int length) {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        StringBuilder sb = new StringBuilder();
+        Random random = new Random();
+        for (int i = 0; i < length; i++) {
+            sb.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        return sb.toString();
+    }
+ 
+    // ==================== 日期时间相关 ====================
+ 
+    /**
+     * 获取当前时间字符串（格式：yyyy-MM-dd HH:mm:ss）
+     */
+    public static String getCurrentDateTime() {
+        return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+    }
+}
+ 
+```
+
+### main方法
+```java
+public static void main(String[] args) {
+  //
+}
+```
+
+
+- 其中args是命令行参数，用于接收外部键盘参数（现在已不用，新版java已使用scanner替代）。pubic表示允许JVM调用。
+
+- **不是所有类都需要定义main方法**，该方法一般只会在可执行程序（JVM 需要入口点），测试类（用于快速验证功能），命令行工具（接收输入参数）
+  中需要定义。
+- javabean类，工具方法类和一些框架组件通常不需要定义main方法。
+
+
+
+### static（静态变量和静态方法）
+
+- 静态方法可以被类本身静态调用，也可以**被实例化对象调用（不推荐，编译器会转为静态调用，增加解析成本）**
+- 静态方法只能访问静态属性和静态方法
+- 非静态方法可以访问非静态属性和非静态方法，也可以访问静态属性和静态方法（此时静态属性和方法也可通过this调用）
+- 静态方法没有this关键字
+
+
+
+
+:::warning 注意事项
+
 - `private`表示私有属性或方法，只能在类内部访问，不能被实例化对象访问
 - 执行new时虚拟机会自动调用构造方法，用于给实例初始化。且**构造方法可重载**。
 - This的本质是**调用者的地址值**。
