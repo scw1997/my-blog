@@ -783,29 +783,196 @@ public class AbstractMethodDemo {
 
 ### 接口
 
+:::code-group 
+```java [基本示例]
+// 定义多个接口
+public interface Animal {
+    // 常量（默认是public static final）   
+    // 抽象方法（默认是public abstract）
+    void eat();
+    void sleep();
+    
+    // 默认方法（Java 8+）
+    default void breathe() {
+        System.out.println("呼吸空气");
+    }
+    
+    // 静态方法（Java 8+）
+    static boolean isAlive() {
+        return true;
+    }
+}
+interface Swimmable {
+  void swim();
+}
+
+interface Flyable {
+  void fly();
+}
+
+
+// 实现接口
+public class Duck implements Animal,Swimmable, Flyable {
+    @Override
+    public void eat() {
+      System.out.println("鸭子吃水草");
+    }
+  
+    @Override
+    public void sleep() {
+      System.out.println("鸭子站着睡觉");
+    }
+  
+    @Override
+    public void swim() {
+      System.out.println("鸭子划水游泳");
+    }
+  
+    @Override
+    public void fly() {
+      System.out.println("鸭子短距离飞行");
+    }
+    
+    // 可以选择不重写默认方法
+}
+
+public class Main {
+  public static void main(String[] args) {
+    Duck duck = new Duck();
+    duck.eat();      // 鸭子吃水草
+    duck.swim();     // 鸭子划水游泳
+    duck.breathe();  // 呼吸空气（来自接口默认方法）
+
+    System.out.println(Animal.isAlive()); // true（静态方法）
+    System.out.println(Animal.TYPE);      // 生物（常量）
+  }
+}
+```
+```java [default多继承命名冲突]
+interface A {
+    default void show() {
+        System.out.println("A的show");
+    }
+}
+
+interface B {
+    default void show() {
+        System.out.println("B的show");
+    }
+}
+
+class C implements A, B {
+    @Override
+    public void show() {
+        A.super.show(); // 明确调用A的默认方法
+        B.super.show(); // 明确调用B的默认方法
+        System.out.println("C的show");
+    }
+}
+
+```
+:::code-group
+
+
+
 与抽象类相比，接口同样可以实现抽象，但二者各有区别，并且侧重点不同：
 |特性|抽象类|接口|
 |--|--|--|
 |实例化|不支持|不支持|
-|方法实现|支持具体方法|Java 8 前只能有抽象方法，Java 8+ 可有默认方法和静态方法|
+|方法实现|支持具体方法|只支持abstract方法（java8之后可支持static和private方法），默认修饰为**public abstract**|
 |构造方法|支持|不支持|
-|实例变量|支持|只能是 public static final 常量|
+|实例变量|支持|只能是常量，默认修饰为**public static final** |
 |继承|单继承|支持多实现（一个类可实现多个接口）|
 |设计目的|代码复用，部分实现|定义行为规范，多继承支持|
 
-```java
-interface Flyable { void fly(); }
-interface Swimmable { void swim(); }
-class Duck implements Flyable, Swimmable { ... } // 多实现
-```
+:::warning 注意
+- 接口中默认的abstract方法必须在类中实现
+- 接口与接口之间是继承关系，可以单继承，也可以多继承
+- 接口中定义的default方法不是必须要在类中重写，只要当多继承情况下出现同名default方法才必须重写
+- 接口中定义的static方法不需要（也不能）在类中重写，并且只能通过接口名去调用（例如Inter.staticMethod()）
+- 接口中定义的private方法不需要（也不能）在类中重写，这类方法主要是为接口内部所用（例如用于抽取接口内部多个default方法中的公共逻辑），不被类或者外界所用。
+- 当一个方法的参数类型为某个接口，则该参数可以传递该接口实现的所有对象，这叫做接口的多态。
+:::
 
 
 :::tip 接口还是抽象类？
 抽象类适合代码服用，共享父类部分实现，需要继承实例属性的情况。例如模板设计。
 
-接口适合定义行为规范，并且支持多实现的情况。例如插件实现，支持多种插件。
+接口适合定义**行为**规范，并且支持多实现的情况。例如多个类拥有的共同行为方法可以封装成接口，插件实现，支持多种插件。
 :::
 
+#### 适配器模式
+
+场景：某接口的抽象方法很多，但我只需要其中某个或某几个
+
+解决思路：**新建一个抽象中间类（适配器）Adapt重写该接口的所有抽象方法，但方法体都是空。然后用真正的实现类去继承此中间类，需要用到哪个方法只需重写该方法即可**。
+
+:::code-group
+```java [实现类]
+package MyPackage;
+
+public class Javabean extends Adpat {
+    public void method2(){
+        super.method1();
+        System.out.println("重写了method2");
+    }
+}
+
+```
+```java [Adpat中间类]
+package MyPackage;
+
+interface Inter{
+    void method1();
+    void method2();
+    void method3();
+    void method4();
+    void method5();
+    void method6();
+    void method7();
+//    ....
+}
+
+public class Adpat implements Inter {
+    //全为空方法体
+    @Override
+    public void method1() {
+
+    }
+
+    @Override
+    public void method2() {
+
+    }
+
+    @Override
+    public void method3() {
+
+    }
+
+    @Override
+    public void method4() {
+
+    }
+
+    @Override
+    public void method5() {
+
+    }
+
+    @Override
+    public void method6() {
+
+    }
+
+    @Override
+    public void method7() {
+
+    }
+}
+
+```
+:::
 ### 继承
 
 
@@ -989,14 +1156,14 @@ public class PolymorphismExample {
     }
 }
 ```
-#### 缺陷
+:::warning  多态缺陷
 
 多态的缺陷是`不能使用子类独有的功能`，但是可以通过**显式类型转换**转成子类类型，从而调用子类独有方法
 ```java
 Person p = new Person();
 Student s = (Student) p;
 ```
-
+:::
 ### 包
 Java 包（Package）是一种组织和管理 Java 类及相关资源的机制，主要作用包括：
 
