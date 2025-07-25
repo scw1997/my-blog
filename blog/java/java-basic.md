@@ -1314,6 +1314,79 @@ import java.util.ArrayList;
 }
 ```
 
+### 内部类
+
+内部类指在某个类A内部定义的类，此时A叫外部类。
+
+`外部类要想访问内部类，必须创建外部类的对象，然后才能创建内部类对象去访问`。
+
+
+#### 成员内部类
+
+- 特性与外部类的成员类似，同样可以被public, private, protected，默认等修饰符修饰（但用static修饰时则变为了静态内部类，需要特殊区分）。
+- JDK16之前不能定义静态变量，之后版本可以。
+
+### 静态内部类
+- 不能直接访问外部类的非static成员
+- 可以独立于外部类实例存在
+
+:::code-group
+```java [成员内部类]
+public class Test {
+  //外部类的成员数据
+  private String outerField = "Outer field";
+
+  // 默认-成员内部类
+  class InnerClass {
+    void display() {
+      System.out.println("Accessing outer field: " + outerField);
+    }
+  }
+  //私有-成员内部类
+  //不可被不属于当前外部类的其他类访问
+  private class PrivateInnerClass {
+    void display() {
+      System.out.println("Accessing outer field: " + outerField);
+    }
+  }
+
+  //在外部类内部封装获取内部类实例的方法
+  PrivateInnerClass getInnerPrivateClass() {
+    return new PrivateInnerClass();
+  }
+
+
+  public static void main(String[] args) {
+    Test outer = new Test();
+    //第一种:直接通过外部类对象调用成员属性的方式创建内部类对象
+    Test.InnerClass inner = outer.new InnerClass();
+    inner.display(); // 输出: Accessing outer field: Outer field
+    //第二种:调用外部类对象的成员方法getInnerClass()创建私有内部类对象
+    Test.PrivateInnerClass inner2 = outer.getInnerPrivateClass();
+    inner2.display(); // 输出: Accessing outer field: Outer field
+  }
+}
+```
+```java [静态内部类]
+public class OuterClass {
+    private static String staticField = "Static field";
+    private String instanceField = "Instance field";
+    
+    // 静态内部类
+    static class StaticNestedClass {
+        void display() {
+            System.out.println("Accessing static field: " + staticField);
+            // 无法访问instanceField
+        }
+    }
+    
+    public static void main(String[] args) {
+        OuterClass.StaticNestedClass nested = new OuterClass.StaticNestedClass();
+        nested.display(); // 输出: Accessing static field: Static field
+    }
+}
+```
+:::
 
 ## 其他
 
