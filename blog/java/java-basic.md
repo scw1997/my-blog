@@ -278,77 +278,7 @@ public class test {
 
   :::
 
-## 集合
 
-集合相比于数组，它的**长度是不固定**的。添加删除元素，则其长度也会随之变化
-
-基本示例：
-
-```java
-import java.util.ArrayList;
-
-public class helloworld {
-  public  static void main(String[] args) {
-      ArrayList list = new ArrayList();
-      //添加元素
-      list.add("Hello");
-      list.add("World");
-      list.add(new int[]{1, 2, 3, 4});
-      System.out.println(list); // [Hello, World, [I@4eec7777]
-
-      //删除元素（元素/索引）
-      boolean isDel = list.remove("Hello");
-      System.out.println(isDel); //true
-      Object deleteItem = list.remove(0);
-      System.out.println(deleteItem); // World
-
-
-      //获取元素
-      Object item = list.get(0);
-      System.out.println(item); // [I@4eec7777
-
-      //修改元素
-      list.set(0,"WWE");
-      System.out.println(list); //[WWE]
-
-      //获取长度
-      System.out.println(list.size()); //1
-
-  }
-}
-```
-
-集合的元素**默认只能是引用类型（字符串，对象，数组）**，若要使用基本类型，则需要用**基本类型对应的包装类**：
-
-```java
-import java.util.ArrayList;
-
-public class helloworld {
-  public  static void main(String[] args) {
-    //int的包装类为Integer
-    ArrayList<Integer> list1 = new ArrayList<>();
-    list1.add(1);
-
-    // boolean的包装类为Boolean
-    ArrayList<Boolean> list2 = new ArrayList<>();
-    list2.add(true);
-
-    //char的包装类为Char
-    ArrayList<Character> list3 = new ArrayList<>();
-    list3.add('a');
-    //double的包装类为Double
-    ArrayList<Double> list4 = new ArrayList<>();
-    list4.add(1.0);
-
-    //short的包装类为Short
-    ArrayList<Short> list5 = new ArrayList<>();
-    short a = 1;
-    list5.add(a);
-
-
-  }
-}
-```
 
 ## 面向对象
 
@@ -1453,14 +1383,211 @@ public class AnonymousClassDemo {
 
 ## Object
 
-**Java 中的所有类（包括数组）都是 Object 类的直接或间接子类**
+**Java 中的所有类（包括数组）都是 Object 类的直接或间接子类。**
 
-- equals()：用于比较两个对象之间的地址值是否一致，类似于==
-- toString：返回对象的字符串表示（默认输出 类名@地址值）
+常用方法：
+
+- equals()：用于比较两个对象之间的地址值是否一致，类似于==。如果想要比较对象的属性值则需重写。
+- toString()：返回对象的字符串表示（默认输出 类名@地址值）。如果不想打印地址值则需重写。
+- clone():创建并返回当前对象的**浅拷贝**（**一般需要重写，因为Object的clone方法为protected，不可直接调用**）。
+```java
+//clonable表示当前类的对象可被克隆，做类型检查用
+class Person implements Cloneable {
+    String name;
+    @Override
+    protected Object clone() throws CloneNotSupportedException {
+        return super.clone(); // 调用 Object 的 clone() 方法
+    }
+}
+```
 
 :::tip
+- 想要实现深克隆，一般要重写clone方法或调用第三方工具类如gson
+:::
 
-**子类通常需要重写 equals()、hashCode() 和 toString() 以提供特定逻辑**。如String的equals则是重写了该方法，与Object的equals判断逻辑不一样。
+## BigInteger
+BigInteger是Java中用于表示任意精度整数的类,位于java.math包中。它解决了基本整数类型（如int、long）的范围限制问题，可以表示任意大小的整数（仅受内存限制）。
+
+- 如果要表示的数字没有超出long的范围，则使用静态方法如：`BigInteger.valueOf(1234567890L)`
+- 如果要表示的数字超出了long的范围，则使用构造方法如：`new BigInteger("12356565")`
+- **不可变性**：相关计算操作均返回新对象
+
+## BigDecima
+
+它特别适用于较大的小数以及需要精确计算的场景，如财务计算、货币运算等，可以**避免浮点数运算中的精度问题**。
+```java
+// 从字符串构造（推荐方式，避免精度丢失）
+BigDecimal bd1 = new BigDecimal("123.456");
+
+// 从整数构造
+BigDecimal bd2 = new BigDecimal(123);
+
+// 从double构造（不推荐，可能有精度问题）
+BigDecimal bd3 = new BigDecimal(123.456); // 可能得到意外值
+
+// 使用valueOf静态方法，适用于不超过double取值范围的小数（内部实际调用String构造）
+BigDecimal bd4 = BigDecimal.valueOf(123.456);
+```  
+## 正则表达式
+
+示例：
+```java
+import java.util.regex.*;
+
+public class EmailValidator {
+    public static boolean isValidEmail(String email) {
+        String regex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(email);
+        return matcher.matches();
+    }
+    
+    public static void main(String[] args) {
+        String[] emails = {
+            "user@example.com",
+            "firstname.lastname@example.com",
+            "user+tag@example.co.uk",
+            "invalid.email@.com",
+            "@no-local-part.com"
+        };
+        
+        for (String email : emails) {
+            System.out.println(email + " : " + (isValidEmail(email) ? "有效" : "无效"));
+        }
+    }
+}
+// 输出:
+// user@example.com : 有效
+// firstname.lastname@example.com : 有效
+// user+tag@example.co.uk : 有效
+// invalid.email@.com : 无效
+// @no-local-part.com : 无效
+```
+## 时间API
+
+从早期的 java.util.Date 和 java.util.Calendar，到 Java 8 引入的全新日期时间 API (java.time 包)
+:::code-group
+```java [旧版]
+import java.util.Date;
+
+public class OldDateExample {
+    public static void main(String[] args) {
+        Date now = new Date(); // 当前时间
+        System.out.println("当前时间: " + now);
+        
+        // 格式化输出（需要 SimpleDateFormat）
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        System.out.println("格式化后: " + sdf.format(now));
+    }
+}
+```
+```java [新版]
+import java.time.*;
+
+public class Main {
+    public static void main(String[] args) {
+        // 当前日期
+        LocalDate today = LocalDate.now();
+        System.out.println("今天日期: " + today); //今天日期: 2025-07-31
+
+        // 当前时间
+        LocalTime now = LocalTime.now();
+        System.out.println("当前时间: " + now); //当前时间: 21:26:42.401004600
+
+        // 当前日期时间
+        LocalDateTime current = LocalDateTime.now();
+        System.out.println("当前日期时间: " + current);//当前日期时间: 2025-07-31T21:26:42.401004600
+
+        // 带时区的日期时间
+        ZonedDateTime zonedDateTime = ZonedDateTime.now();
+        System.out.println("带时区的日期时间: " + zonedDateTime);//带时区的日期时间: 2025-07-31T21:26:42.402002300+08:00[Asia/Shanghai]
+        
+    }
+}
+```
+
+:::tip 最佳实践
+- `新项目优先使用 Java 8 时间 AI：java.time` 包提供了更清晰、更强大的日期时间处理能力。
+
+- 旧版API存在可读性较差（月份从0开始），线程不安全（Data可变）以及时区易错等问题。
+
+- **避免使用 SimpleDateFormat**：使用 DateTimeFormatter 替代，它是线程安全的
+:::
+
+## 包装类
+
+Java为基本数据类型提供了对应的包装类（Wrapper Classes），这些类位于java.lang包中，用于将基本数据类型封装为对象。包装类的主要作用包括：
+
+- 将基本数据类型转换为对象
+- 提供操作基本数据类型的方法
+- 在集合ArrayList中使用（集合只能存储对象）
+
+:::code-group
+
+```java [创建包装类对象]
+// 使用构造函数（已废弃，推荐使用valueOf）
+Integer intObj1 = new Integer(10); // 不推荐
+
+// 推荐使用valueOf方法
+Integer intObj2 = Integer.valueOf(10);
+
+// 自动装箱（Java 5+）
+Integer intObj3 = 20;
+```
+
+```java [拆箱操作]
+Integer intObj = Integer.valueOf(30);
+
+// 手动拆箱
+int primitiveInt = intObj.intValue();
+
+// 自动拆箱（Java 5+）
+int autoUnboxed = intObj;
+```
+:::
+
+完整示例：
+
+```java
+public class WrapperExample {
+    public static void main(String[] args) {
+        // 自动装箱
+        Integer age = 25;
+        Double price = 99.99;
+        
+        // 自动拆箱
+        int a = age;
+        double p = price;
+        
+        // 字符串转换
+        int num = Integer.parseInt("12345");
+        String str = Integer.toString(num);
+        
+        // 比较
+        Integer x = 1000;
+        Integer y = 1000;
+        System.out.println(x == y); // false
+        System.out.println(x.equals(y)); // true
+        
+        // 缓存示例
+        Integer m = 127;
+        Integer n = 127;
+        System.out.println(m == n); // true（使用缓存）
+        
+        // 注意事项：空指针
+        try {
+            Integer z = null;
+            int value = z; // 抛出NullPointerException
+        } catch (NullPointerException e) {
+            System.out.println("不能对null拆箱");
+        }
+    }
+}
+```
+:::warning 注意
+- 缓存机制：Integer类缓存了-128到127之间的值，所以这个范围包装对象值都是相等的。超出缓存范围的比较应使用equals()而非==
+
+- 频繁装箱拆箱会影响性能，在性能敏感场景应优先使用基本类型
 :::
 ## Java GUI 
 
