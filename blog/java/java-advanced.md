@@ -4,7 +4,7 @@
 
 Java集合框架是一组**用于存储和操作对象**的接口和实现类，位于java.util包中。它提供了多种数据结构实现，如列表、集合、队列和映射等。
 
-**1. Collection（所有集合的根接口）**
+**1. 单列集合**
 
 包含add()，clear(),remove(),contains(),isEmpty(),size()等通用方法，包含以下三大子类：
 
@@ -14,7 +14,11 @@ Java集合框架是一组**用于存储和操作对象**的接口和实现类，
 
 `Queue`：队列（如LinkedList、PriorityQueue）
 
-**2. Map：键值对集合（如HashMap、TreeMap）**
+**2. 双列集合**
+
+包含put()，remove(),clear(),containsKey()等通用方法
+
+`Map`：键值对集合（如HashMap、TreeMap）
 
 
 ### List
@@ -178,7 +182,10 @@ public class LinkedHashSetExample {
 - 对于数值类型：默认按照从小到大排序
 - 对于字符（串）类型：默认按照字符的ASCII的数字升序排序
 
-```java [TreeSet]
+可通过`构造方法传入 Comparator`，覆盖默认的排序规则。
+
+:::code-group
+```java [默认排序]
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -194,6 +201,44 @@ public class TreeSetExample {
     }
 }
 ```
+```java [comparator自定义排序]
+TreeMap<String, Integer> treeMap = new TreeMap<>((a, b) -> a.length() - b.length());
+treeMap.put("Banana", 3);
+treeMap.put("Apple", 5);
+treeMap.put("Cherry", 2);
+
+System.out.println(treeMap); // 输出: {Apple=5, Banana=3, Cherry=2}（键长度 5, 6, 6）
+```
+```java [自定义对象排序]
+// //自定义对象作为元素时，必须实现 Comparable 或提供 Comparator（因为此时无法排序）
+class Person implements Comparable<Person> {
+    String name;
+    int age;
+
+    public Person(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+
+    @Override
+    public int compareTo(Person other) {
+        return this.age - other.age; // 按年龄升序
+    }
+
+    @Override
+    public String toString() {
+        return name + "(" + age + ")";
+    }
+}
+
+TreeSet<Person> people = new TreeSet<>();
+people.add(new Person("Alice", 25));
+people.add(new Person("Bob", 20));
+people.add(new Person("Charlie", 22));
+
+System.out.println(people); // 输出: [Bob(20), Charlie(22), Alice(25)]
+```
+:::
 :::tip 扩展
 - HashSet 和 LinkedHashSet 允许一个 null 元素。TreeSet 不允许 null（因为无法比较排序）。
 - 性能排序：HashSet > LinkedHashSet > TreeSet
@@ -261,7 +306,255 @@ public class EqualsHashCodeExample {
     }
 }
 ```
+### Map
 
+List和Set都属于单列集合，Map是双列集合（元素为键值对）,包含：
+
+- **HashMap**：
+
+   基于哈希表实现，允许null键和null值，不保证顺序。
+
+  依赖hashCode和equals来保证`键`的唯一。如果键存的是自定义对象，则需要重写上述两个方法来确保唯一性。
+
+
+- **LinkedHashMap**：
+
+  HashMap的子类，但通过双向链表维护插入顺序。
+
+- **TreeMap**：
+
+  基于红黑树实现，按键的自然顺序或自定义比较器排序
+
+  默认排序规则：
+
+  - 对于数值类型：默认按照从小到大排序
+  - 对于字符（串）类型：默认按照字符的ASCII的数字升序排序
+
+  可通过`构造方法传入 Comparator`，覆盖默认的排序规则。
+
+  :::code-group
+  ```java [默认排序]
+  import java.util.HashMap;
+  import java.util.Map;
+  
+  public class MapExample {
+      public static void main(String[] args) {
+          // 创建HashMap
+          Map<String, Integer> ageMap = new HashMap<>();
+          
+          // 添加元素
+          ageMap.put("Alice", 25);
+          ageMap.put("Bob", 30);
+          ageMap.put("Charlie", 35);
+          
+          // 获取元素
+          System.out.println("Alice's age: " + ageMap.get("Alice")); // 输出: 25
+          
+          // 检查键是否存在
+          System.out.println("Contains key 'Bob'? " + ageMap.containsKey("Bob")); // true
+          
+          // 检查值是否存在
+          System.out.println("Contains value 40? " + ageMap.containsValue(40)); // false
+          
+          // 遍历Map
+          for (Map.Entry<String, Integer> entry : ageMap.entrySet()) {
+              System.out.println(entry.getKey() + ": " + entry.getValue());
+          }
+          
+          // 删除元素
+          ageMap.remove("Charlie");
+          
+          // 获取大小
+          System.out.println("Map size: " + ageMap.size()); // 2
+      }
+  }
+  ```
+  ```java [自定义比较器]
+  TreeMap<String, Integer> treeMap = new TreeMap<>((a, b) -> a.length() - b.length());
+  treeMap.put("Banana", 3);
+  treeMap.put("Apple", 5);
+  treeMap.put("Cherry", 2);
+  
+  System.out.println(treeMap); // 输出: {Apple=5, Banana=3, Cherry=2}（键长度 5, 6, 6）
+  ```
+  ```java [自定义对象排序]
+  //自定义对象作为键时，必须实现 Comparable 或提供 Comparator（因为此时无法排序）
+  class Person implements Comparable<Person> {
+     String name;
+      int age;
+
+    public Person(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+
+    @Override
+    public int compareTo(Person other) {
+        return this.age - other.age; // 按年龄升序
+    }
+
+    @Override
+    public String toString() {
+        return name + "(" + age + ")";
+    }
+  }
+  
+  TreeMap<Person, String> personMap = new TreeMap<>();
+  personMap.put(new Person("Alice", 25), "Engineer");
+  personMap.put(new Person("Bob", 20), "Student");
+  personMap.put(new Person("Charlie", 22), "Doctor");
+  
+  System.out.println(personMap);
+  // 输出: {Bob(20)=Student, Charlie(22)=Doctor, Alice(25)=Engineer}
+  ```
+:::warning 注意事项
+
+- 每个键最多映射到一个值，添加重复键，新值会覆盖旧值
+- HashMap允许一个null键，TreeMap不允许null键
+- put添加键值时，若不是重复键则put方法返回null，否则返回被覆盖的值
+:::
+
+#### Map的遍历方式
+
+:::code-group
+```java [keySet方式]
+Map<String, Integer> map = new HashMap<>();
+map.put("a", 1);
+map.put("b", 2);
+
+// 方式1：使用迭代器
+Iterator<String> iterator = map.keySet().iterator();
+while (iterator.hasNext()) {
+    String key = iterator.next();
+    System.out.println("Key: " + key + ", Value: " + map.get(key));
+}
+
+// 方式2：增强for循环
+for (String key : map.keySet()) {
+    System.out.println("Key: " + key + ", Value: " + map.get(key));
+}
+```
+```java [键值对方式]
+// 方式1：使用迭代器
+Iterator<Map.Entry<String, Integer>> entryIterator = map.entrySet().iterator();
+while (entryIterator.hasNext()) {
+    Map.Entry<String, Integer> entry = entryIterator.next();
+    System.out.println("Key: " + entry.getKey() + ", Value: " + entry.getValue());
+}
+
+// 方式2：增强for循环（推荐）
+for (Map.Entry<String, Integer> entry : map.entrySet()) {
+    System.out.println("Key: " + entry.getKey() + ", Value: " + entry.getValue());
+}
+```
+```java [forEach + lambda]
+// 遍历键值对
+map.forEach((key, value) -> {
+    System.out.println("Key: " + key + ", Value: " + value);
+});
+
+// 如果需要修改值（注意：不能直接修改key）
+map.replaceAll((key, value) -> value * 2); // 所有值乘以2
+```
+:::
+
+
+### Collections
+`java.util.Collections` 是 Java 提供的一个 集合工具类（非接口/类），它包含大量静态方法，用于操作或返回集合（如 List、Set、Map 等）。
+
+```java
+import java.util.*;
+
+public class CollectionsDemo {
+    public static void main(String[] args) {
+        // 1. 排序
+        List<Integer> nums = new ArrayList<>(Arrays.asList(5, 2, 9, 1));
+        Collections.sort(nums); // [1, 2, 5, 9]
+
+        // 2. 查找
+        int max = Collections.max(nums); // 9
+        int index = Collections.binarySearch(nums, 5); // 2
+
+        // 3. 同步集合
+        List<String> syncList = Collections.synchronizedList(new ArrayList<>());
+
+        // 4. 不可变集合
+        List<String> immutable = Collections.unmodifiableList(Arrays.asList("X", "Y"));
+
+        // 5. 填充与替换
+        Collections.fill(nums, 0); // [0, 0, 0, 0]
+        Collections.replaceAll(nums, 0, 10); // [10, 10, 10, 10]
+
+        // 6. 随机操作
+        Collections.shuffle(nums); // 可能输出: [10, 10, 10, 10]（需先填充不同值）
+
+        // 7. 其他工具方法
+        boolean hasDuplicate = Collections.frequency(nums, 10) > 1;
+    }
+}
+```
+
+### 不可变集合
+
+不可变集合（Immutable Collections） 是指一旦创建后，其内容不能被修改（添加、删除、替换元素等）的集合。
+
+Java 9+ 引入了List.of()、Set.of()、Map.of()
+```java
+import java.util.*;
+
+public class Java9ImmutableCollections {
+    public static void main(String[] args) {
+        // 1. 创建不可变List
+        List<String> immutableList = List.of("Apple", "Banana", "Orange");
+        System.out.println("不可变List: " + immutableList); // [Apple, Banana, Orange]
+
+        // 2. 创建不可变Set
+        Set<Integer> immutableSet = Set.of(1, 2, 3);
+        System.out.println("不可变Set: " + immutableSet); // [1, 2, 3]
+
+        // 3. 创建不可变Map
+        Map<String, Integer> immutableMap = Map.of(
+            "Alice", 25,
+            "Bob", 30
+        );
+        System.out.println("不可变Map: " + immutableMap); // {Alice=25, Bob=30}
+
+        // 4. 尝试修改（抛出 UnsupportedOperationException）
+        try {
+            immutableList.add("Grape"); // 抛出异常
+        } catch (UnsupportedOperationException e) {
+            System.out.println("无法修改Java 9不可变List: " + e.getMessage());
+        }
+
+        // 5. 使用Map.ofEntries()支持更多键值对
+        Map<String, Integer> largeMap = Map.ofEntries(
+            Map.entry("X", 100),
+            Map.entry("Y", 200),
+            Map.entry("Z", 300)
+        );
+        System.out.println("大型不可变Map: " + largeMap); // {X=100, Y=200, Z=300}
+      
+    }
+}
+```
+
+jdk10+ 中创建不可变的Map集合推荐使用`Map.copyOf()`
+
+```java
+      HashMap<String,Integer> hm = new HashMap<>();
+
+      hm.put("one",1);
+      hm.put("two",2);
+      hm.put("three",3);
+
+      Map<String,Integer> immutableHashMap = Map.copyOf(hm);
+      System.out.println(immutableHashMap);
+      immutableHashMap.put("four",4); //报错
+```
+:::warning
+- 不支持 null 元素。
+- Map.of() 最多支持 10 个键值对（超过需用 Map.ofEntries()）。
+::
 ## 泛型
 
 - 泛型不能传递基本数据类型（可以是基本类型的包装类型）
