@@ -306,6 +306,7 @@ router.registerError((e)=>container.innerHTML = '页面异常，错误消息：<
 
 
 ```
+:::
 ## 前端性能优化
 
 ### CSS
@@ -380,6 +381,36 @@ router.registerError((e)=>container.innerHTML = '页面异常，错误消息：<
 
 **缺点**：稳定性不高，因为所有线程共享同一进程的地址空间。还要注意死锁和数据同步问题。
 
+## 常见兼容问题解决
+
+#### ios手机端h5整体页面移除回弹吸顶效果
+
+```css
+html {
+    overflow: hidden;
+}
+body {
+
+    overflow: hidden;
+}
+
+```
+
+#### ios手机端h5页面输入时禁止页面可滚动
+
+```js
+const stopMove = (e: any) => {
+    e.preventDefault()
+}
+
+//对输入组件添加focus和blur事件
+onFocus={() => document.body.addEventListener("touchmove", stopMove, {
+  passive: false, // 解决ios键盘唤起后的滚动问题
+})}
+onBlur={() => document.body.removeEventListener("touchmove", stopMove)
+}
+
+```
 
 ## Git
 
