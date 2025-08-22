@@ -194,6 +194,10 @@ const routes =  [
                     {
                         text:'Java基础',
                         link: '/java/java-basic'
+                    },
+                    {
+                        text:'Java高级',
+                        link: '/java/java-advanced'
                     }
                 ]
             }

@@ -5,6 +5,7 @@
     "cross-env": "^7.0.3",
     "vitepress": "^1.1.4"
   },
+  "packageManager": "pnpm@10.6.0",
   "type": "module",
   "scripts": {
     "docs:dev": "cross-env ENV=dev vitepress dev blog",

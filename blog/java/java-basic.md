@@ -278,77 +278,7 @@ public class test {
 
   :::
 
-## 集合
 
-集合相比于数组，它的**长度是不固定**的。添加删除元素，则其长度也会随之变化
-
-基本示例：
-
-```java
-import java.util.ArrayList;
-
-public class helloworld {
-  public  static void main(String[] args) {
-      ArrayList list = new ArrayList();
-      //添加元素
-      list.add("Hello");
-      list.add("World");
-      list.add(new int[]{1, 2, 3, 4});
-      System.out.println(list); // [Hello, World, [I@4eec7777]
-
-      //删除元素（元素/索引）
-      boolean isDel = list.remove("Hello");
-      System.out.println(isDel); //true
-      Object deleteItem = list.remove(0);
-      System.out.println(deleteItem); // World
-
-
-      //获取元素
-      Object item = list.get(0);
-      System.out.println(item); // [I@4eec7777
-
-      //修改元素
-      list.set(0,"WWE");
-      System.out.println(list); //[WWE]
-
-      //获取长度
-      System.out.println(list.size()); //1
-
-  }
-}
-```
-
-集合的元素**默认只能是引用类型（字符串，对象，数组）**，若要使用基本类型，则需要用**基本类型对应的包装类**：
-
-```java
-import java.util.ArrayList;
-
-public class helloworld {
-  public  static void main(String[] args) {
-    //int的包装类为Integer
-    ArrayList<Integer> list1 = new ArrayList<>();
-    list1.add(1);
-
-    // boolean的包装类为Boolean
-    ArrayList<Boolean> list2 = new ArrayList<>();
-    list2.add(true);
-
-    //char的包装类为Char
-    ArrayList<Character> list3 = new ArrayList<>();
-    list3.add('a');
-    //double的包装类为Double
-    ArrayList<Double> list4 = new ArrayList<>();
-    list4.add(1.0);
-
-    //short的包装类为Short
-    ArrayList<Short> list5 = new ArrayList<>();
-    short a = 1;
-    list5.add(a);
-
-
-  }
-}
-```
 
 ## 面向对象
 
@@ -898,7 +828,7 @@ class C implements A, B {
 :::tip 接口还是抽象类？
 抽象类适合代码服用，共享父类部分实现，需要继承实例属性的情况。例如模板设计。
 
-接口适合定义**行为**规范，并且支持多实现的情况。例如多个类拥有的共同行为方法可以封装成接口，插件实现，支持多种插件。
+接口适合定义**行为规范或者枚举变量规则**，并且支持多实现的情况。例如多个类拥有的共同行为方法可以封装成接口，插件实现，支持多种插件。
 :::
 
 #### 适配器模式
@@ -1173,8 +1103,8 @@ Java 包（Package）是一种组织和管理 Java 类及相关资源的机制�
 - 可读性和可维护性：清晰的包结构使项目更易于理解
 
 #### 内置包
-- java.lang（基础类，如 String、System，Math）
-- java.util（ArrayList、日期时间等）
+- java.lang（基础类，如 String、System，Runtime,Math，Object）
+- java.util（工具类，ArrayList、日期时间等）
 - java.io（输入输出）
 - java.net（网络编程）
 #### 创建包
@@ -1325,11 +1255,22 @@ import java.util.ArrayList;
 
 - 特性与外部类的成员类似，同样可以被public, private, protected，默认等修饰符修饰（但用static修饰时则变为了静态内部类，需要特殊区分）。
 - JDK16之前不能定义静态变量，之后版本可以。
+- 若外部类和内部类存在重名变量或方法，可通过`外部类名.this.成员属性/方法`访问外部类的成员属性或方法。
 
-### 静态内部类
-- 不能直接访问外部类的非static成员
+#### 静态内部类
+- 只能直接访问外部类的static属性/方法
 - 可以独立于外部类实例存在
 
+#### 局部内部类
+- 定义在方法内的类，类似于方法里面的局部变量
+- 可以访问外部类的所有成员和方法内的局部变量
+- 局部内部类只能被该方法在方法体中创建对象去调用
+
+#### 匿名内部类（重要）
+
+- 没有类名的内部类
+- 通常用于**实现接口或继承类并创建实例**（可以写在成员位置或局部位置），一般是只使用一次的对象（避免需要先创建类）
+- 
 :::code-group
 ```java [成员内部类]
 public class Test {
@@ -1386,8 +1327,373 @@ public class OuterClass {
     }
 }
 ```
+```java [局部内部类]
+public class OuterClass {
+    private String outerField = "Outer field";
+    
+    void method() {
+        final String localVar = "Local variable";
+        
+        // 局部内部类
+        class LocalInnerClass {
+            void display() {
+                System.out.println("Accessing outer field: " + outerField);
+                System.out.println("Accessing local variable: " + localVar);
+            }
+        }
+        
+        LocalInnerClass local = new LocalInnerClass();
+        local.display();
+    }
+    
+    public static void main(String[] args) {
+        OuterClass outer = new OuterClass();
+        outer.method();
+    }
+}
+```
+```java [匿名内部类]
+public class AnonymousClassDemo {
+    interface Greeting {
+        void greet();
+    }
+    
+    public static void main(String[] args) {
+        // 匿名内部类实现Greeting接口
+        Greeting greeting = new Greeting() {
+            @Override
+            public void greet() {
+                System.out.println("Hello from anonymous class!");
+            }
+        };
+        
+        greeting.greet(); // 输出: Hello from anonymous class!
+        
+        // 匿名内部类创建Thread
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("Thread running from anonymous class");
+            }
+        }).start();
+    }
+}
+```
 :::
 
+## Object
+
+**Java 中的所有类（包括数组）都是 Object 类的直接或间接子类。**
+
+常用方法：
+
+- equals()：用于比较两个对象之间的地址值是否一致，类似于==。如果想要比较对象的属性值则需重写。
+- toString()：返回对象的字符串表示（默认输出 类名@地址值）。如果不想打印地址值则需重写。
+- clone():创建并返回当前对象的**浅拷贝**（**一般需要重写，因为Object的clone方法为protected，不可直接调用**）。
+```java
+//clonable表示当前类的对象可被克隆，做类型检查用
+class Person implements Cloneable {
+    String name;
+    @Override
+    protected Object clone() throws CloneNotSupportedException {
+        return super.clone(); // 调用 Object 的 clone() 方法
+    }
+}
+```
+
+:::tip
+- 想要实现深克隆，一般要重写clone方法或调用第三方工具类如gson
+:::
+
+## BigInteger
+BigInteger是Java中用于表示任意精度整数的类,位于java.math包中。它解决了基本整数类型（如int、long）的范围限制问题，可以表示任意大小的整数（仅受内存限制）。
+
+- 如果要表示的数字没有超出long的范围，则使用静态方法如：`BigInteger.valueOf(1234567890L)`
+- 如果要表示的数字超出了long的范围，则使用构造方法如：`new BigInteger("12356565")`
+- **不可变性**：相关计算操作均返回新对象
+
+## BigDecima
+
+它特别适用于较大的小数以及需要精确计算的场景，如财务计算、货币运算等，可以**避免浮点数运算中的精度问题**。
+```java
+// 从字符串构造（推荐方式，避免精度丢失）
+BigDecimal bd1 = new BigDecimal("123.456");
+
+// 从整数构造
+BigDecimal bd2 = new BigDecimal(123);
+
+// 从double构造（不推荐，可能有精度问题）
+BigDecimal bd3 = new BigDecimal(123.456); // 可能得到意外值
+
+// 使用valueOf静态方法，适用于不超过double取值范围的小数（内部实际调用String构造）
+BigDecimal bd4 = BigDecimal.valueOf(123.456);
+```  
+## 正则表达式
+
+示例：
+```java
+import java.util.regex.*;
+
+public class EmailValidator {
+    public static boolean isValidEmail(String email) {
+        String regex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(email);
+        return matcher.matches();
+    }
+    
+    public static void main(String[] args) {
+        String[] emails = {
+            "user@example.com",
+            "firstname.lastname@example.com",
+            "user+tag@example.co.uk",
+            "invalid.email@.com",
+            "@no-local-part.com"
+        };
+        
+        for (String email : emails) {
+            System.out.println(email + " : " + (isValidEmail(email) ? "有效" : "无效"));
+        }
+    }
+}
+// 输出:
+// user@example.com : 有效
+// firstname.lastname@example.com : 有效
+// user+tag@example.co.uk : 有效
+// invalid.email@.com : 无效
+// @no-local-part.com : 无效
+```
+## 时间API
+
+从早期的 java.util.Date 和 java.util.Calendar，到 Java 8 引入的全新日期时间 API (java.time 包)
+:::code-group
+```java [旧版]
+import java.util.Date;
+
+public class OldDateExample {
+    public static void main(String[] args) {
+        Date now = new Date(); // 当前时间
+        System.out.println("当前时间: " + now);
+        
+        // 格式化输出（需要 SimpleDateFormat）
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        System.out.println("格式化后: " + sdf.format(now));
+    }
+}
+```
+```java [新版]
+import java.time.*;
+
+public class Main {
+    public static void main(String[] args) {
+        // 当前日期
+        LocalDate today = LocalDate.now();
+        System.out.println("今天日期: " + today); //今天日期: 2025-07-31
+
+        // 当前时间
+        LocalTime now = LocalTime.now();
+        System.out.println("当前时间: " + now); //当前时间: 21:26:42.401004600
+
+        // 当前日期时间
+        LocalDateTime current = LocalDateTime.now();
+        System.out.println("当前日期时间: " + current);//当前日期时间: 2025-07-31T21:26:42.401004600
+
+        // 带时区的日期时间
+        ZonedDateTime zonedDateTime = ZonedDateTime.now();
+        System.out.println("带时区的日期时间: " + zonedDateTime);//带时区的日期时间: 2025-07-31T21:26:42.402002300+08:00[Asia/Shanghai]
+        
+    }
+}
+```
+
+:::tip 最佳实践
+- `新项目优先使用 Java 8 时间 AI：java.time` 包提供了更清晰、更强大的日期时间处理能力。
+
+- 旧版API存在可读性较差（月份从0开始），线程不安全（Data可变）以及时区易错等问题。
+
+- **避免使用 SimpleDateFormat**：使用 DateTimeFormatter 替代，它是线程安全的
+:::
+
+## 包装类
+
+Java为基本数据类型提供了对应的包装类（Wrapper Classes），这些类位于java.lang包中，用于将基本数据类型封装为对象。包装类的主要作用包括：
+
+- 将基本数据类型转换为对象
+- 提供操作基本数据类型的方法
+- 在集合ArrayList中使用（集合只能存储对象）
+
+:::code-group
+
+```java [创建包装类对象]
+// 使用构造函数（已废弃，推荐使用valueOf）
+Integer intObj1 = new Integer(10); // 不推荐
+
+// 推荐使用valueOf方法
+Integer intObj2 = Integer.valueOf(10);
+
+// 自动装箱（Java 5+）
+Integer intObj3 = 20;
+```
+
+```java [拆箱操作]
+Integer intObj = Integer.valueOf(30);
+
+// 手动拆箱
+int primitiveInt = intObj.intValue();
+
+// 自动拆箱（Java 5+）
+int autoUnboxed = intObj;
+```
+:::
+
+完整示例：
+
+```java
+public class WrapperExample {
+    public static void main(String[] args) {
+        // 自动装箱
+        Integer age = 25;
+        Double price = 99.99;
+        
+        // 自动拆箱
+        int a = age;
+        double p = price;
+        
+        // 字符串转换
+        int num = Integer.parseInt("12345");
+        String str = Integer.toString(num);
+        
+        // 比较
+        Integer x = 1000;
+        Integer y = 1000;
+        System.out.println(x == y); // false
+        System.out.println(x.equals(y)); // true
+        
+        // 缓存示例
+        Integer m = 127;
+        Integer n = 127;
+        System.out.println(m == n); // true（使用缓存）
+        
+        // 注意事项：空指针
+        try {
+            Integer z = null;
+            int value = z; // 抛出NullPointerException
+        } catch (NullPointerException e) {
+            System.out.println("不能对null拆箱");
+        }
+    }
+}
+```
+:::warning 注意
+- 缓存机制：Integer类缓存了-128到127之间的值，所以这个范围包装对象值都是相等的。超出缓存范围的比较应使用equals()而非==
+
+- 频繁装箱拆箱会影响性能，在性能敏感场景应优先使用基本类型
+:::
+## Java GUI 
+
+Java GUI（图形用户界面）主要包含 `AWT` 和 `Swing` 两大核心库，提供组件、容器、布局管理器及事件处理机制，支持开发者构建交互式**桌面应用程序**。
+
+其中：
+
+- **AWT（Abstract Window Toolkit）**：Java 最早的 GUI 库，依赖本地系统方法实现功能，与操作系统关联紧密，属于重量级控件。其组件类根类为 Component，容器类根类为 Container。
+
+- **Swing**：基于 AWT 架构构建的轻量级 GUI 库，完全由 Java 实现，增强了代码移植性。其组件类根类为 JComponent，提供了更丰富的组件和更灵活的布局管理器。Swing 组件类名均以 "J" 开头，如 JButton、JFrame 等。
+
+### API分类
+
+#### 顶层容器
+   JFrame：主窗口，包含标题栏、菜单栏等。
+
+   JDialog：对话框，用于临时交互。
+#### 中间容器
+   JPanel：通用面板，用于分组组件。
+
+   JScrollPane：带滚动条的面板，用于显示长内容。
+#### 基本组件
+   JButton：按钮。
+
+   JLabel：标签（显示文本或图标）。
+
+   JTextField：单行文本输入框。
+
+   JTextArea：多行文本区域。
+
+   JCheckBox：复选框。
+
+   JRadioButton：单选按钮（需配合 ButtonGroup 使用）。
+
+   JComboBox：下拉列表框。
+
+   JTable：表格（显示二维数据）。 
+#### 布局管理器
+   FlowLayout：流式布局（从左到右排列）。
+
+   BorderLayout：边框布局（东、南、西、北、中）。
+
+   GridLayout：网格布局（行×列）。
+
+   BoxLayout：垂直或水平排列。
+####  事件监听器
+   ActionListener：响应按钮点击、菜单选择等。
+
+   MouseListener：响应鼠标事件（点击、移动等）。
+
+   KeyListener：响应键盘事件。
+
+基本示例：
+
+```java
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+public class SimpleSwingExample {
+    public static void main(String[] args) {
+        // 1. 创建顶层窗口（JFrame）
+        JFrame frame = new JFrame("Swing 示例");
+        frame.setSize(400, 200); // 设置窗口大小
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); // 点击关闭按钮退出程序
+
+        // 2. 创建中间容器（JPanel）并设置布局
+        JPanel panel = new JPanel();
+        panel.setLayout(new FlowLayout()); // 使用流式布局
+
+        // 3. 创建组件
+        JLabel label = new JLabel("请输入内容：");
+        JTextField textField = new JTextField(15); // 宽度为15列
+        JButton button = new JButton("点击显示");
+
+        // 4. 添加组件到面板
+        panel.add(label);
+        panel.add(textField);
+        panel.add(button);
+
+        // 5. 为按钮添加事件监听器
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String inputText = textField.getText(); // 获取文本框内容
+                JOptionPane.showMessageDialog(frame, "你输入的内容是：" + inputText); // 弹出对话框显示内容
+            }
+        });
+
+        // 6. 将面板添加到窗口
+        frame.add(panel);
+
+        // 7. 显示窗口
+        frame.setVisible(true);
+    }
+}
+```
+
+:::warning 注意细节
+
+- 绝对路径是从盘符（如C:\）开始，相对路径则相对的是当前项目
+- 对于组件来说，先add的在上层显示，后add的在下层显示（有点反直觉）
+
+
+:::
 ## 其他
 
 - java内存分配：
@@ -1397,4 +1703,3 @@ public class OuterClass {
   **栈内存**（基本数据类型和用于**函数运行时**（先入后出））；
 
   **方法区**（存放可运行的class文件）
-- 
