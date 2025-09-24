@@ -27,6 +27,7 @@ const handleContentClick = (e) => {
 
 
 onMounted(() => {
+  console.log('filePath',page?.filePath)
  if(page?.filePath==='yaner/index.md'){
    document.title='难忘的每一天'
  }
