@@ -2,10 +2,13 @@
 import DefaultTheme from 'vitepress/theme'
 import {Image} from 'ant-design-vue'
 import {ref,onMounted,computed} from "vue";
-import {Content, useData} from 'vitepress'
+import {Content, useData, useRoute} from 'vitepress'
 const data = useData()
+const route = useRoute()
 const { page } = data
 const { Layout } = DefaultTheme
+
+const isYanerPage = computed(()=>route.path==='/my-blog/yaner/')
 
 const previewConfig = ref({
   src: undefined,
@@ -27,20 +30,19 @@ const handleContentClick = (e) => {
 
 
 onMounted(() => {
-  console.log('filePath',page?.filePath)
- if(page?.filePath==='yaner/index.md'){
-   document.title='难忘的每一天'
+ if(isYanerPage){
+   document.title = '燕儿，生日快乐'
  }
 });
 </script>
 
 
 <template>
-  <Content v-if="page?.filePath==='yaner/index.md'"/>
-  <Layout @click="handleContentClick" v-if="page?.filePath!=='yaner/index.md'"/>
+  <Content v-if="isYanerPage"/>
+  <Layout @click="handleContentClick" v-if="!isYanerPage"/>
 
   <Image
-      v-if="page?.filePath!=='yaner/index.md' && previewConfig?.src && previewConfig.visible"
+      v-if="!isYanerPage && previewConfig?.src && previewConfig.visible"
       class="image"
       :preview="{
                 visible: previewConfig?.visible,
