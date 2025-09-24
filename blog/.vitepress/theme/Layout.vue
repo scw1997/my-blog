@@ -2,6 +2,10 @@
 import DefaultTheme from 'vitepress/theme'
 import {Image} from 'ant-design-vue'
 import {ref} from "vue";
+import {Content, useData} from 'vitepress'
+const data = useData()
+const {page} = data
+console.log('data',data)
 const { Layout } = DefaultTheme
 
 const previewConfig = ref({
@@ -23,16 +27,17 @@ const handleContentClick = (e) => {
 
 
 <template>
-  <Layout @click="handleContentClick"/>
+  <Content v-if="page.filePath==='yaner/index.md'"/>
+  <Layout @click="handleContentClick" v-if="page.filePath!=='yaner/index.md'"/>
 
   <Image
-      v-if="previewConfig?.src && previewConfig.visible"
+      v-if="page.filePath!=='yaner/index.md' && previewConfig?.src && previewConfig.visible"
       class="image"
       :preview="{
                 visible: previewConfig?.visible,
                 src: previewConfig.src,
                 onVisibleChange: (value) => {
-                    console.log('vake',value)
+                    // console.log('vake',value)
                     previewConfig = { ...previewConfig, visible: value };
                 }
             }"
