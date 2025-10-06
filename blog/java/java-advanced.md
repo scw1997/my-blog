@@ -554,7 +554,84 @@ jdk10+ 中创建不可变的Map集合推荐使用`Map.copyOf()`
 :::warning
 - 不支持 null 元素。
 - Map.of() 最多支持 10 个键值对（超过需用 Map.ofEntries()）。
-::
+:::
+
+### Stream流
+
+Stream API 是 Java 8 引入的一个强大的函数式数据处理特性，它提供了一种高效且易于理解的方式来处理`集合`数据。
+
+#### 单列集合自带Stream
+
+```java
+List<String> names = Arrays.asList("Alice", "Bob", "Charlie", "David", "Eve");
+
+// 过滤长度大于3的名字，转为大写，排序后收集
+List<String> result = names.stream()
+            .filter(name -> name.length() > 3)
+        .map(String::toUpperCase) //方法引用，调用String的toUpperCase方法
+        .sorted()
+        .collect(Collectors.toList()); //处理后的数据收集到一个集合List里，还可以是toSet()和toMap()
+        // collect(Collectors.toSet())
+        // .collect(Collectors.toMap(item->item.charAt(0),item->item.charAt(1)))
+
+System.out.println(result); // 输出: [ALICE, CHARLIE, DAVID]
+```
+:::warning
+- `filter，map，sorted`等方法为中间操作，表示这些操作执行的返回值是stream流，后续可以再链式调用stream相关操作
+- `forEach,toArray,collect`等方法为终结操作，表示这些操作执行的返回值不是stream流，后续不能再链式调用stream相关操作
+:::
+#### Arrays.stream
+
+Arrays.stream() 是 java.util.Arrays 类提供的静态方法，用于将数组转换为流（Stream）
+
+```java
+import java.util.Arrays;
+import java.util.stream.Stream;
+
+   // 1. 对象数组转流
+        String[] names = {"Alice", "Bob", "Charlie"};
+        Stream<String> nameStream = Arrays.stream(names);
+        nameStream.forEach(System.out::println);
+ 
+        // 2. 部分数组转流（索引范围）
+        Stream<String> partialStream = Arrays.stream(names, 0, 2); // "Alice", "Bob"
+        partialStream.forEach(System.out::println);
+ 
+        // 3. 基本类型数组转流
+        int[] numbers = {1, 2, 3, 4, 5};
+        Arrays.stream(numbers).forEach(System.out::println); // IntStream
+```
+
+#### Stream.of
+
+```java
+import java.util.Arrays;
+import java.util.stream.Stream;
+
+// 1. 可变参数转流
+Stream<String> nameStream = Stream.of("Alice", "Bob", "Charlie");
+        nameStream.forEach(System.out::println);
+
+        // 2. 单个元素转流
+        Stream<String> singleStream = Stream.of("Hello");
+        singleStream.forEach(System.out::println);
+
+        // 3. 数组转流（引用类型）
+        String[] names = {"Alice", "Bob", "Charlie"};
+        Stream<String> arrayStream = Stream.of(names); // 等同于 Arrays.stream(names)
+        arrayStream.forEach(System.out::println);
+        
+        //4 .数组转流（基本类型）
+
+        int[] names = {1, 2, 3};
+        //注意：基本类型的数组会被看成一个整体，而不是元素遍历
+        Stream.of(names).forEach(System.out::println); //只打印一次，[I@6d311334
+```
+Stream.of() 是 java.util.stream.Stream 类的静态方法，用于将单个元素或可变参数转换为流（Stream）
+:::warning
+
+- Map（双列集合）不能直接使用stream，可通过`keySet()或entrySet()`间接返回单列集合来操作stream
+:::
 ## 泛型
 
 - 泛型不能传递基本数据类型（可以是基本类型的包装类型）
@@ -671,3 +748,62 @@ List<Double> doubleList = Arrays.asList(1.1, 2.2);
 printList(intList); // 合法
 printList(doubleList); // 合法
 ```
+
+## 方法引用
+
+```java
+import java.util.Arrays;
+import java.util.List;
+import java.util.function.Function;
+import java.util.function.Supplier;
+
+public class MethodReferenceExample {
+    public static void main(String[] args) {
+        List<String> names = Arrays.asList("Alice", "Bob", "Charlie");
+        
+        // 1. 引用静态方法
+        names.forEach(System.out::println); // 等同于 names.forEach(s -> System.out.println(s));
+        
+        // 2. 引用实例方法（特定对象）
+        MethodReferenceExample example = new MethodReferenceExample();
+        names.forEach(example::printUpperCase); // 等同于 names.forEach(s -> example.printUpperCase(s));
+        
+        // 3. 引用任意对象的实例方法
+        names.forEach(String::toUpperCase); // 等同于 names.forEach(s -> s.toUpperCase());
+        
+        // 4. 引用构造器
+        Supplier<List<String>> listSupplier = ArrayList::new; // 等同于 () -> new ArrayList<String>()
+        List<String> newList = listSupplier.get();
+        
+        // 5. 引用数组构造器
+        Function<Integer, int[]> arrayCreator = int[]::new; // 等同于 size -> new int[size]
+        int[] array = arrayCreator.apply(5);
+    }
+    
+    public void printUpperCase(String s) {
+        System.out.println(s.toUpperCase());
+    }
+}
+```
+:::warning 注意
+
+- 如果要引用本类中的成员方法，则可使用`this::方法名`，如果是父类的成员方法，则是`super::方法名`
+:::
+
+
+## 异常处理
+
+异常体系中的最上层父类是`Exception`，分为编译时和运行时异常
+
+
+### 编译时异常
+
+编译阶段就会报错，直接继承于Exception
+
+例如：IOException, SQLException
+
+### 运行时异常
+
+编译阶段没有报错，运行时出现的，为`RuntimeException本身及其子类`
+
+例如NullPointerException, ArrayIndexOutOfBoundsException
