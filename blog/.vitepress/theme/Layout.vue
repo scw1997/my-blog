@@ -30,7 +30,8 @@ const handleContentClick = (e) => {
 
 
 onMounted(() => {
- if(isYanerPage){
+  console.log('xxx',isYanerPage)
+ if(isYanerPage.value){
    document.title = '燕儿，生日快乐'
  }
 });
@@ -38,7 +39,7 @@ onMounted(() => {
 
 
 <template>
-  <Content v-if="isYanerPage"/>
+  <Content v-if="!!isYanerPage"/>
   <Layout @click="handleContentClick" v-if="!isYanerPage"/>
 
   <Image
