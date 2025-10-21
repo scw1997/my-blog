@@ -23,8 +23,7 @@
 
 - 广告嵌入
 - 视频播放
-- 第三方应用嵌入
-
+- 第三方应用嵌入（通常可跨域访问）
 **缺点**
 
 - 不利于SEO
@@ -412,10 +411,16 @@ onBlur={() => document.body.removeEventListener("touchmove", stopMove)
 
 ```
 
+#### ios手机端h5页面底部无法完全覆盖
+
+```html
+  <meta name="viewport" content="width=device-width,initial-scale=1, user-scalable=0, viewport-fit=cover">
+```
+
 ## Git
 
-- git误删远程分支恢复
-   > 通过`git reflog` 命令查看最近一次操作的哈希值，然后通过`git checkout -b 分支名 哈希值` 基于该哈希值创建指定分支。 
+- git误删远程分支恢复方法
+   > 通过`git reflog` 命令查看最近操作记录的哈希值，然后通过`git checkout -b 分支名 哈希值` 基于该哈希值创建指定分支。 
 
 
 
