@@ -795,15 +795,169 @@ public class MethodReferenceExample {
 
 异常体系中的最上层父类是`Exception`，分为编译时和运行时异常
 
+异常的作用：
 
-### 编译时异常
+- 调试bug的参考信息
+- 作为方法内部的特殊返回值
 
-编译阶段就会报错，直接继承于Exception
+
+
+**编译时异常**：
+
+编译阶段就会报错，直接继承于`Exception`
 
 例如：IOException, SQLException
 
-### 运行时异常
+**运行时异常**：
 
-编译阶段没有报错，运行时出现的，为`RuntimeException本身及其子类`
+编译阶段没有报错，运行时出现的，为`RuntimeException`本身及其子类
 
 例如NullPointerException, ArrayIndexOutOfBoundsException
+
+
+#### 多个异常的捕捉处理方式
+
+:::code-group
+```java [多个catch块]
+try {
+    // 可能抛出多种异常的代码
+    int result = 10 / 0; // ArithmeticException
+    String str = null;
+    int length = str.length(); // NullPointerException
+    int[] arr = new int[5];
+    int num = arr[10]; // ArrayIndexOutOfBoundsException
+} catch (ArithmeticException e) {
+    System.out.println("算术异常: " + e.getMessage());
+} catch (NullPointerException e) {
+    System.out.println("空指针异常: " + e.getMessage());
+} catch (ArrayIndexOutOfBoundsException e) {
+    System.out.println("数组越界异常: " + e.getMessage());
+} catch (Exception e) {
+    System.out.println("其他异常: " + e.getMessage());
+}
+//注意：捕获顺序很重要！！！，子类异常必须放在父类异常上面，因为父类在上面会优先匹配，则下面更精确的子类异常则会匹配不到了
+```
+
+```java [多异常捕获（java7）]
+try {
+// 可能抛出多种异常的代码
+int result = 10 / 0;
+        String str = null;
+        int length = str.length();
+        int[] arr = new int[5];
+        int num = arr[10];
+} catch (ArithmeticException | NullPointerException e) {
+        System.out.println("算术或空指针异常: " + e.getMessage());
+        } catch (ArrayIndexOutOfBoundsException e) {
+        System.out.println("数组越界异常: " + e.getMessage());
+        }
+        
+//ps:主要用于多个异常共享相同的处理逻辑
+```
+:::
+
+#### 异常常用方法
+
+```java
+   try {
+            int result = 10 / 0; // 抛出 ArithmeticException
+        } catch (ArithmeticException e) {
+            // 获取异常信息
+            System.out.println("异常消息: " + e.getMessage()); // / by zero
+            System.out.println("异常类名: " + e.getClass().getName()); // java.lang.ArithmeticException
+            System.out.println("异常字符串表示: " + e.toString()); // java.lang.ArithmeticException: / by zero
+
+            // 打印堆栈跟踪（推荐常用）
+            //注意此方法调用只是输出错误，不会停止运行        
+            e.printStackTrace();
+                /* 输出:
+                java.lang.ArithmeticException: / by zero
+                    at ExceptionMethodsDemo.main(ExceptionMethodsDemo.java:5)
+                */
+        }
+```
+
+#### 抛出异常
+
+:::code-group
+```java [运行时异常]
+public class RuntimeExample {
+    public static void checkNumber(int number) {
+        if (number < 0) {
+            // 抛出非检查型异常（RuntimeException子类）
+            throw new IllegalArgumentException("数字不能为负数: " + number);
+        }
+        System.out.println("数字有效: " + number);
+    }
+
+    public static void main(String[] args) {
+        checkNumber(10);  // 正常执行
+        checkNumber(-5);  // 抛出异常
+    }
+}
+
+```
+
+```java [编译时异常]
+import java.io.IOException;
+
+public class CheckedExceptionExample {
+    // 编译时异常必须在方法签名中声明检查型异常
+    public static void readConfig(String filePath) throws IOException {
+        if (filePath == null) {
+            // 抛出检查型异常（必须声明或捕获）
+            throw new IOException("配置文件路径不能为null");
+        }
+        // 实际读取配置文件的代码...
+    }
+
+    public static void main(String[] args) {
+        try {
+            readConfig(null);  // 强制要求处理异常
+        } catch (IOException e) {
+            System.err.println("配置读取失败: " + e.getMessage());
+        }
+    }
+}
+```
+```java [自定义异常抛出]
+// 自定义检查型异常
+class InsufficientBalanceException extends Exception {
+public InsufficientBalanceException(double amount) {
+super("余额不足，需要金额: " + amount);
+}
+}
+
+public class BankAccount {
+private double balance;
+
+    public BankAccount(double initialBalance) {
+        this.balance = initialBalance;
+    }
+
+    public void withdraw(double amount) throws InsufficientBalanceException {
+        if (amount > balance) {
+            // 抛出自定义检查型异常
+            throw new InsufficientBalanceException(amount - balance);
+        }
+        balance -= amount;
+        System.out.println("取款成功，剩余余额: " + balance);
+    }
+
+    public static void main(String[] args) {
+        BankAccount account = new BankAccount(1000);
+        
+        try {
+            account.withdraw(500);   // 成功
+            account.withdraw(800);   // 抛出异常
+        } catch (InsufficientBalanceException e) {
+            System.err.println("交易失败: " + e.getMessage());
+        }
+    }
+}
+```
+:::
+
+:::warning 注意
+- 编译时异常必须在方法签名中进行异常声明，运行时异常则不需要
+:::
