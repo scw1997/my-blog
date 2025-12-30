@@ -8,8 +8,6 @@ const route = useRoute()
 const { page } = data
 const { Layout } = DefaultTheme
 
-const isYanerPage = computed(()=>route.path==='/my-blog/yaner/')
-
 const previewConfig = ref({
   src: undefined,
   visible: false
@@ -28,22 +26,14 @@ const handleContentClick = (e) => {
 };
 
 
-
-onMounted(() => {
-  console.log('xxx',isYanerPage)
- if(isYanerPage.value){
-   document.title = '燕儿，生日快乐'
- }
-});
 </script>
 
 
 <template>
-  <Content v-if="!!isYanerPage"/>
-  <Layout @click="handleContentClick" v-if="!isYanerPage"/>
+  <Layout @click="handleContentClick" />
 
   <Image
-      v-if="!isYanerPage && previewConfig?.src && previewConfig.visible"
+      v-if="previewConfig?.src && previewConfig.visible"
       class="image"
       :preview="{
                 visible: previewConfig?.visible,

@@ -144,16 +144,100 @@ int[] arr = new int[5]; //定义一个长度为5的int数组，并未初始化�
 //写法2（静态初始化）
 int[] arr = {1,2,3,4,5}; //定义一个长度为5的int数组，并定义好各自的值
 
-//注意下面
+//长度为0的数组
 int[] arr = {}; //相当于定义一个长度为0的int数组（等价于int[] arr = new int[0]），所以后续不能再动态添加元素
+
+//当一个方法需要返回一个数组，但恰好此时数组的元素为空，此时适合用空数组
+
+
+//多维数组
+
+int[] arr = {
+    {1,2,3},
+    {4,5,6},
+    {7,8,9}
+};
+
+//拷贝数组
+int[] arr1 = Arrays.copyOf(arr, arr.length); //第二个参数表示要拷贝的长度，若长度超出则会设置为该类型的默认值，例如int 为0，double为0.0，boolean为false，char为'\u0000'
+System.out.println(arr1.equals(arr)); // false
+
+//数组排序
+int[] arr = {1,5,3,2,4};
+  Arrays.sort(arr);
+  System.out.println(Arrays.toString(arr)); //[1,2,3,4,5]
 ```
-- 打印数组输出的是其`地址值`
+- 打印数组输出的是其`地址值`,可通过`Arrays.toString()`方法打印数组的字面量值的字符串
 ```java
-int[] arr = {1,2,3,4,};
+int[] arr = {1,2,3,4};
 
  System.out.println(arr); // [I@4eec7777
+ System.out.println(Arrays.toString(arr)); //[1,2,3,4]
 ```
 
+- 数组比较
+
+```java
+import java.util.Arrays;
+
+int[] arr1 = {1,2,3,4};
+int[] arr2 = {1,2,3,4};
+
+System.out.println(arr1.equals(arr2)); // false-->数组没有重写 Object 类中的 equals(),此时比较地址值，地址值不同
+System.out.println(Arrays.equals(arr1, arr2)); //true-->当数组长度和元素都相同，则返回true
+```
+
+## ==与equals
+:::code-group
+
+```java [==]
+int a = 5;
+int b = 5;
+System.out.println(a == b); // true（值相等）
+
+
+String s1 = new String("hello");
+String s2 = new String("hello");
+System.out.println(s1 == s2); // false（不同对象，地址不同）
+
+
+
+String s3 = s1;
+System.out.println(s1 == s3); // true（s3 和 s1 指向同一对象）
+```
+```java [equals]
+// 是 `Object` 类中的一个方法，默认行为与 `==` 相同（即比较引用）。
+// 但很多类（如 `String`, `Integer`, `Date` 等）重写了 `equals()` 方法，使其比较的是对象的“逻辑内容”而非地址。
+// 如果希望按内容比较，必须**重写 `equals()`（通常也要重写 `hashCode()`）
+
+String s1 = new String("hello");
+String s2 = new String("hello");
+System.out.println(s1.equals(s2)); // true（内容相同）
+
+
+class Person {
+  String name;
+  Person(String name) { this.name = name; }
+}
+
+Person p1 = new Person("Alice");
+Person p2 = new Person("Alice");
+System.out.println(p1.equals(p2)); // false（因为未重写 equals，默认用 == 比较引用）
+
+
+// `equals()` 不能直接用于基本数据类型（如 `int`, `char`），但可以用于它们的包装类（如 `Integer`, `Character`），因为包装类重写了 `equals()`。
+Integer a = 100;
+Integer b = 100;
+System.out.println(a.equals(b)); // true（比较值）
+        System.out.println(a == b);      // 可能 true 或 false（受 Integer 缓存影响）
+```
+:::
+
+:::warning 注意
+- `==`对基本类型比较的是**值**，对引用类型比较的是**引用**。
+- `equals()`不能用于基本类型，默认比较**引用**。**重写（`equals()` 和 `hashCode()`）后可比较内容**
+- 避免对 null 调用 `equals()`，会抛出 `NullPointerException`。
+:::
 ## 方法
 
 基本示例：
@@ -1134,7 +1218,7 @@ public class User {
     }
 }
 ```
-:::warning
+:::warning 注意
 - 包名必须与文件系统的目录结构完全匹配
 
 :::
@@ -1156,7 +1240,7 @@ public class Main {
 }
 ```
 
-:::warning
+:::warning 注意
 - 使用同一个包内或者java.lang的类，不需要导包。否则当用到其他包的类时都需要导包
 - 如果同时使用两个包中的同名类，则需要全类名（例如com.example.myapp.User）
 :::
