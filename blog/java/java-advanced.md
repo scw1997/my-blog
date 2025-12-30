@@ -959,5 +959,198 @@ private double balance;
 :::
 
 :::warning 注意
-- 编译时异常必须在方法签名中进行异常声明，运行时异常则不需要
+- **编译时异常**必须在方法签名中进行异常声明，运行时异常则不需要
 :::
+
+## File
+
+:::code-group
+```java  [java.io.File]
+import java.io.File;
+import java.io.IOException;
+
+public class FileExample {
+    public static void main(String[] args) {
+        // 创建File对象
+        File file = new File("test.txt");
+        //绝对路径
+        File file1 = new File("C:\\dir\\test.txt");
+        //父路径+子路径自动拼接
+        File file2 = new File("C:\\dir","test.txt");        try {
+            // 创建新文件
+            if (file.createNewFile()) {
+                System.out.println("文件创建成功: " + file.getAbsolutePath());
+            } else {
+                System.out.println("文件已存在");
+            }
+            
+            // 检查是否是目录
+            System.out.println("是目录吗? " + file.isDirectory());
+            
+            // 获取文件信息
+            System.out.println("文件大小: " + file.length() + " 字节");
+            
+            // 重命名文件
+            File newFile = new File("renamed.txt");
+            if (file.renameTo(newFile)) {
+                System.out.println("重命名成功");
+            }
+            
+            // 删除文件
+            //默认只能删除文件或空文件夹，删除文件夹及其内容则需要递归删除
+            if (newFile.delete()) {
+                System.out.println("删除成功");
+            }
+
+            //获取某目录下所有文件（夹）并遍历
+            File[] files = file1.listFiles();
+            for (File file : files) {
+                System.out.println(file.getName());
+            }
+            
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+```java [java.nio.file]
+import java.nio.file.*;
+import java.io.IOException;
+import java.util.List;
+
+public class NioFileExample {
+    public static void main(String[] args) {
+        Path path = Paths.get("example.txt");
+        
+        try {
+            // 创建文件并写入内容
+            Files.write(path, "Hello, NIO.2!".getBytes(), StandardOpenOption.CREATE);
+            
+            // 读取文件内容
+            List<String> lines = Files.readAllLines(path);
+            System.out.println("文件内容: " + lines);
+            
+            // 复制文件
+            Path dest = Paths.get("copy.txt");
+            Files.copy(path, dest, StandardCopyOption.REPLACE_EXISTING);
+            
+            // 获取文件属性
+            System.out.println("大小: " + Files.size(path));
+            System.out.println("最后修改时间: " + Files.getLastModifiedTime(path));
+            
+            // 遍历目录
+            Path dir = Paths.get(".");
+            Files.list(dir).forEach(p -> System.out.println(p.getFileName()));
+            
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+:::warning 注意事项
+
+- 使用 FileInputStream、FileOutputStream 等流时，必须确保关闭（使用 try-with-resources）
+- 不同`操作系统`路径分隔符不同（Windows \，Unix /）
+- 大量文件操作时，NIO.2 API (java.nio.file) 通常性能更好
+- 文件操作可能抛出 IOException 或 SecurityException
+- 处理大文件时考虑使用缓冲流
+:::
+
+## IO
+
+IO流可用于读写文件中的内部数据（本地文件或网络文件），而File是做不到的。
+
+按照流向可分为：
+
+- **输入流**：从源（如文件）读取数据到程序中
+- **输出流**：将程序中获取的文件数据向目标（如文件）写入数据
+
+按照操作文件的类型可分为：
+
+- **字节流**：可处理二进制数据等所有文件类型，如图片、音频、视频等
+
+```java 
+
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
+
+//复制文件
+public class ByteStreamExample {
+    public static void main(String[] args) {
+        try (FileInputStream fis = new FileInputStream("input.jpg");
+             FileOutputStream fos = new FileOutputStream("output.jpg")) {
+
+            byte[] buffer = new byte[1024];
+            int len;
+            while ((len = fis.read(buffer)) != -1) { // [!code error]
+                fos.write(buffer, 0, len);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+- **字符流**：处理文本数据，如txt、xml、json等
+
+```java
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+
+//读写文本文件
+public class CharStreamExample {
+    public static void main(String[] args) {
+        try (BufferedReader reader = new BufferedReader(new FileReader("input.txt"));
+             BufferedWriter writer = new BufferedWriter(new FileWriter("output.txt"))) {
+
+            String line;
+            while ((line = reader.readLine()) != null) { // [!code error]
+                writer.write(line);
+                writer.newLine(); // 写入换行
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+| 类型 | 基类 | 常见子类 | 用途 |
+|------|------|--------|------|
+| 字节输入流 | `InputStream` | `FileInputStream`, `BufferedInputStream`, `ObjectInputStream` | 读取二进制数据 |
+| 字节输出流 | `OutputStream` | `FileOutputStream`, `BufferedOutputStream`, `ObjectOutputStream` | 写入二进制数据 |
+| 字符输入流 | `Reader` | `FileReader`, `BufferedReader`, `InputStreamReader` | 读取文本 |
+| 字符输出流 | `Writer` | `FileWriter`, `BufferedWriter`, `OutputStreamWriter` | 写入文本 |
+
+
+
+
+
+
+:::warning 注意事项
+
+- **所有 IO 流操作都需要处理异常**，如文件不存在、权限不足、IO 错误等。
+
+- **所有打开的流必须关闭**，否则可能导致资源泄漏。推荐使用 **try-with-resources** 语法自动关闭。
+
+- **使用字符流时务必注意编码格式（如 UTF-8、GBK）**，尤其是在跨平台或处理中文时。建议显式指定编码，避免依赖系统默认编码。
+
+- **不要混用字节流和字符流操作同一文件**，可能因编码不一致导致乱码。
+
+- **避免在循环中频繁创建/关闭流**,应在操作开始前打开流，结束后统一关闭。
+
+- 对于大文件，应使用缓冲区（如 `byte[8192]`）而非一次性读入全部内容，防止内存溢出。
+
+- 对于高并发、高性能场景（如服务器），建议使用 `java.nio`（如 `FileChannel`、`Selector` 等），传统 IO 是阻塞式的。
+
+:::
+
+
