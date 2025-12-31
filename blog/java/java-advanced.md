@@ -58,9 +58,8 @@ while (it.hasNext()) {
 }
 ```
 
-#### 增强for循环
-
-所有的`基于Collection的变量（List和Set）或者数组`可以使用增强for循环
+#### 增强for循环（for-each 循环）
+所有的`基于Collection的变量即实现了Iterable 接口的对象（如List和Set）或者数组`可以使用增强for循环
 ```java
  //定义arrayList并设置初始值
 Collection<String> list = new ArrayList<>(Arrays.asList("1","2","3","4","5","6","7","8","9"));
@@ -71,6 +70,17 @@ Collection<String> list = new ArrayList<>(Arrays.asList("1","2","3","4","5","6",
         for (String s : list) {
             System.out.println(s);
         }
+//数组
+int[] numbers = {1, 2, 3, 4, 5};
+for (int num : numbers) {
+        System.out.println(num);
+}
+
+//Set集合
+Set<Integer> set = new HashSet<>(Arrays.asList(10, 20, 30));
+for (int value : set) {
+        System.out.println(value);
+}
 ```
 
 #### List的常见遍历方式
@@ -247,7 +257,7 @@ System.out.println(people); // 输出: [Bob(20), Charlie(22), Alice(25)]
 
 Java中的所有对象示例都有一个方法hashCode()返回了该对象的哈希值,它代表的是对象的整数表现形式。
 
-默认情况，hashCode方法是基于对象的地址值计算出哈希值，所以不同对象的hash值是不一样的。
+默认情况，hashCode方法是基于对象的地址值计算出哈希值，所以不同对象（即使内容相同）的hash值是不一样的。
 
 > 但是极小部分情况下，不同的属性或者不同的地址值计算的哈希值有可能一样（哈希碰撞）
 
@@ -258,9 +268,11 @@ Java中的所有对象示例都有一个方法hashCode()返回了该对象的哈
 通常我们会认为两个对象的各自的属性内容相同的话，就认为是同一个对象。所以此时要按照自己期望的规则重写equals方法。
 
 
+> 关键规则：`如果两个对象 equals() 相等，那么它们的 hashCode() 必须相等`
+
 **而当我们重写了equals方法后，在使用HashSet和HashMap时必须要重写hashCode方法**：
 
-因为HashSet和HashMap在添加元素时会进行判断去重处理，会先判断HashCode()是否相等再通过equals()判断。假设此时我们重写了equals方法但没重写hashCode方法，并且依次添加了两个属性内容相同的对象元素。
+因为HashSet，HashMap等哈希集合在将某个对象添加为key或者元素时会进行判断去重处理，会先判断HashCode()是否相等再通过equals()判断。假设此时我们重写了equals方法但没重写hashCode方法，并且依次添加了两个属性内容相同的对象元素。
 
 此时我们希望它认为是重复的元素。但由于此时没重写hashCode方法，固定返回false。此时就已经认为对象不相等了，所以不会后续再调用equals方法。所以此时要重写hashCode方法。
 

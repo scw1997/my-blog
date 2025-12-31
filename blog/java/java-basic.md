@@ -365,8 +365,46 @@ public class test {
 
   :::
 
+## var关键字
+
+var 关键字是在 Java 10（2018年3月发布） 中引入的一个新特性，用于`局部变量类型推断``。
+
+它的主要作用是让**编译器根据变量的初始化表达式自动推断出变量的类型**，从而减少冗余代码，提高可读性和开发效率。
 
 
+```java
+
+var name = "Alice";           // 推断为 String
+var age = 25;                 // 推断为 int
+var list = new ArrayList<String>(); // 推断为 ArrayList<String>
+
+
+//上面的例子等价于
+
+String name = "Alice";
+int age = 25;
+ArrayList<String> list = new ArrayList<String>();
+```
+:::warning
+
+- var仅适用于局部变量，且必须初始化变量值。
+:::
+
+## 枚举
+
+```java
+   enum Day {
+            MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY;
+        }
+  System.out.print(Day.FRIDAY.ordinal()); //4
+  System.out.print(Day.FRIDAY.name()); //FRIDAY
+  System.out.print(Day.FRIDAY.name().toString()); //FRIDAY
+  System.out.print(Day.valueOf("FRIDAY")); //FRIDAY
+```
+使用场景：
+- 表示状态机（如订单状态：PENDING, SHIPPED, DELIVERED）
+- 选项配置（如日志级别：INFO, WARN, ERROR）
+- 替代魔法字符串或整数常量
 ## 面向对象
 
 ### javabean类
@@ -398,6 +436,7 @@ public class Phone {
   //这种类的实现方式叫做javabean类
   
   //实例变量优化为私有属性，避免外部随意直接修改
+  //在构造方法执行前完成初始化赋值
   private String name = "Nokia";
   private int price = 1000;
 
@@ -611,7 +650,7 @@ public class UnrelatedClass {
 
 #### private
 
-**仅限类内部访问，实例不可访问**。用于修饰`类中定义的方法或属性、内部类`,不可修饰外部类。
+**仅限该类内部访问，实例不可访问**。用于修饰`类中定义的方法或属性、内部类`,不可修饰外部类。
 
 ```java
 // File: com/example/PrivateExample.java
@@ -1220,6 +1259,7 @@ public class User {
 ```
 :::warning 注意
 - 包名必须与文件系统的目录结构完全匹配
+- 只能使用`*`导入一个包，不能使用`import java.*`或`import java.*.*`导入多个包
 
 :::
 
@@ -1466,6 +1506,87 @@ public class AnonymousClassDemo {
     }
 }
 ```
+:::
+### 密封类
+
+密封类允许限制哪些类可以继承或实现某个类/接口。
+
+目的是在开放继承和完全封闭之间提供一种中间方案：“受控的继承”
+
+```java
+public sealed class Shape
+    permits Circle, Rectangle, Triangle {
+}
+
+// 子类必须显式指定为 final（不能再继承）、sealed（可继续密封继承） 或 non-sealed（允许任意继承，慎用）
+final class Circle extends Shape { ... }
+final class Rectangle extends Shape { ... }
+non-sealed class Triangle extends Shape { ... } // 允许进一步继承
+```
+### record
+
+record是一种轻量级的类声明方式，专门用于**不可变数据载体** 的场景。
+
+示例：定义一个只用来存储数据（例如坐标）的类
+
+```java
+public class Point {
+    private final int x;
+    private final int y;
+
+    public Point(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    public int x() { return x; }
+    public int y() { return y; }
+
+    @Override
+    public boolean equals(Object o) { ... }
+
+    @Override
+    public int hashCode() { ... }
+
+    @Override
+    public String toString() { ... }
+}
+
+//上述代码等价于
+
+public record Point(int x, int y) {}
+
+//执行此行代码编译器会自动为你生成以下内容：
+
+//private final 字段（x, y）
+//公共的规范构造器（canonical constructor）
+//public 的 accessor 方法（x() 和 y()，注意不是 getX()！）
+//equals()、hashCode()、toString() 的合理实现
+//
+```
+
+使用示例:
+```java
+public class Main {
+  public static void main(String[] args) {
+    Point p = new Point(3, 4);
+    System.out.println(p.x());      // 3
+    System.out.println(p.y());      // 4
+    System.out.println(p);          // Point[x=3, y=4]
+
+    Point p2 = new Point(3, 4);
+    System.out.println(p.equals(p2)); // true
+  }
+}
+
+record Point(int x, int y) {}
+```
+
+:::tip 总结
+
+- record 是 Java 对“纯数据类”的官方解决方案。
+- 自动生成：字段（final）、构造器、accessor、equals（基于字段值比较）/hashCode/toString
+- 不可变、final、简洁、安全
 :::
 
 ## Object
