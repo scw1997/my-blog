@@ -728,9 +728,7 @@ public class Test {
    2. 只在类内部使用的方法设为 private
 
    3. 需要子类重写的方法设为 protected
-- 类：
-只有当前包使用的类设为默认（包私有）
-需要被其他包访问的类设为 public
+- 类： 只有当前包使用的类设为default（包私有） ，需要被其他包访问的类设为 public
 - 常量：通常设为 public static final
 :::
 
@@ -952,12 +950,125 @@ class C implements A, B {
 
 
 :::tip 接口还是抽象类？
-抽象类适合代码服用，共享父类部分实现，需要继承实例属性的情况。例如模板设计。
+抽象类适合代码复用，共享父类部分实现，需要继承实例属性的情况。例如模板设计。
 
 接口适合定义**行为规范或者枚举变量规则**，并且支持多实现的情况。例如多个类拥有的共同行为方法可以封装成接口，插件实现，支持多种插件。
 :::
 
-#### 适配器模式
+### 函数式接口
+
+函数式接口 是指`有且仅有一个抽象方法的接口`。它是支持 Lambda 表达式和方法引用的基础。
+
+函数式接口可以包含：
+
+- 一个抽象方法（必须）；
+- 任意数量的 default 方法；
+- 任意数量的 static 方法；
+- Object 类中的公共方法（如 equals()、toString() 等），这些不计入抽象方法数量。
+
+示例：
+
+```java
+public class Main {
+  //定义函数式接口
+  //要求某匿名类实现Calculator接口的实例要有calculate方法
+  //@FunctionalInterface为函数式接口的注解，用于编译期检查，推荐添加
+  @FunctionalInterface 
+  public interface Calculator {
+    int calculate(int a, int b); // 唯一的抽象方法
+  }
+  
+  
+  public static void main(String[] args) {//TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
+    //实现该接口，创建一个实例（匿名类的写法）
+    Calculator calculator = new Calculator() {
+      @Override
+      public int calculate(int a, int b) {
+        System.out.print(a + b);
+        return a + b;
+
+      }
+    };
+    calculator.calculate(1, 2); //计算1+2=3
+
+    //实现该接口，创建一个实例（lambda表达式写法，与上面写法等价）
+    Calculator calculator2 = (a, b) -> a + b;
+    calculator2.calculate(1, 2); //计算1+2=3
+  }
+
+
+}
+
+```
+
+Java 提供了大量通用的函数式接口，避免重复造轮子：
+
+| 接口 | 抽象方法 | 用途 |
+|------|--------|------|
+| `Function<T, R>` | `R apply(T t)` | 输入 T，输出 R（转换） |
+| `Consumer<T>` | `void accept(T t)` | 消费 T，无返回 |
+| `Supplier<T>` | `T get()` | 无输入，返回 T（供给） |
+| `Predicate<T>` | `boolean test(T t)` | 判断 T 是否满足条件 |
+| `UnaryOperator<T>` | `T apply(T t)` | 对 T 进行一元操作（输入输出同类型） |
+| `BinaryOperator<T>` | `T apply(T t1, T t2)` | 对两个 T 进行二元操作 |
+
+```java
+// Predicate：过滤
+List<String> list = Arrays.asList("apple", "bat", "cat");
+list.stream()
+    .filter(s -> s.length() > 3)
+    .forEach(System.out::println);
+
+// Function：转换
+Function<String, Integer> strToLen = String::length;
+System.out.println(strToLen.apply("hello")); // 5
+
+// Consumer：消费
+Consumer<String> printer = System.out::println;
+printer.accept("Hello");
+
+// Supplier：生成
+Supplier<Double> random = Math::random;
+System.out.println(random.get());
+```
+:::warning 注意事项
+
+- 函数式接口必须是 interface，不能是抽象类
+- 重写 Object 方法不计入抽象方法
+- 函数式接口可以是泛型的，如 Function<T, R>。
+:::
+
+
+
+### Lambda表达式
+
+Lambda 表达式提供了一种简洁、清晰的方式来表示匿名函数（即没有名称的函数），主要用于**简化函数式接口的实现**。
+
+`Lambda 表达式本质上是函数式接口的实例`。
+
+Lambda 表达式只能用于函数式接口。
+
+```java
+
+//自定义的函数式接口
+@FunctionalInterface
+public interface Calculator {
+  int calculate(int a, int b); // 唯一的抽象方法
+}
+
+//实现该接口（lambda写法）
+MyFunction add = (a, b) -> a + b;
+//实现该接口（匿名内部类写法）
+MyFunction add = new MyFunction() {
+    @Override
+  public int calculate(int a, int b) {
+        return a + b;
+    }
+}
+//调用该对象的唯一calculate方法；
+int result = add.calculate(3, 4); // 7
+```
+### 适配器模式
 
 场景：某接口的抽象方法很多，但我只需要其中某个或某几个
 

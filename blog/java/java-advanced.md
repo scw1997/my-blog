@@ -814,13 +814,13 @@ public class MethodReferenceExample {
 
 
 
-**编译时异常**：
+**检查型异常**：
 
 编译阶段就会报错，直接继承于`Exception`
 
 例如：IOException, SQLException
 
-**运行时异常**：
+**非检查型异常**：
 
 编译阶段没有报错，运行时出现的，为`RuntimeException`本身及其子类
 
@@ -851,18 +851,18 @@ try {
 ```
 
 ```java [多异常捕获（java7）]
-try {
-// 可能抛出多种异常的代码
-int result = 10 / 0;
-        String str = null;
-        int length = str.length();
-        int[] arr = new int[5];
-        int num = arr[10];
-} catch (ArithmeticException | NullPointerException e) {
-        System.out.println("算术或空指针异常: " + e.getMessage());
-        } catch (ArrayIndexOutOfBoundsException e) {
-        System.out.println("数组越界异常: " + e.getMessage());
-        }
+  try {
+  // 可能抛出多种异常的代码
+      int result = 10 / 0;
+      String str = null;
+      int length = str.length();
+      int[] arr = new int[5];
+      int num = arr[10];
+  } catch (ArithmeticException | NullPointerException e) {
+    System.out.println("算术或空指针异常: " + e.getMessage());
+  } catch (ArrayIndexOutOfBoundsException e) {
+    System.out.println("数组越界异常: " + e.getMessage());
+  }
         
 //ps:主要用于多个异常共享相同的处理逻辑
 ```
@@ -871,22 +871,22 @@ int result = 10 / 0;
 #### 异常常用方法
 
 ```java
-   try {
-            int result = 10 / 0; // 抛出 ArithmeticException
-        } catch (ArithmeticException e) {
-            // 获取异常信息
-            System.out.println("异常消息: " + e.getMessage()); // / by zero
-            System.out.println("异常类名: " + e.getClass().getName()); // java.lang.ArithmeticException
-            System.out.println("异常字符串表示: " + e.toString()); // java.lang.ArithmeticException: / by zero
+try {
+  int result = 10 / 0; // 抛出 ArithmeticException
+} catch (ArithmeticException e) {
+  // 获取异常信息
+  System.out.println("异常消息: " + e.getMessage()); // / by zero
+  System.out.println("异常类名: " + e.getClass().getName()); // java.lang.ArithmeticException
+  System.out.println("异常字符串表示: " + e.toString()); // java.lang.ArithmeticException: / by zero
 
-            // 打印堆栈跟踪（推荐常用）
-            //注意此方法调用只是输出错误，不会停止运行        
-            e.printStackTrace();
-                /* 输出:
-                java.lang.ArithmeticException: / by zero
-                    at ExceptionMethodsDemo.main(ExceptionMethodsDemo.java:5)
-                */
-        }
+  // 打印堆栈跟踪（推荐常用）
+  //注意此方法调用只是输出错误，不会停止运行        
+  e.printStackTrace();
+      /* 输出:
+      java.lang.ArithmeticException: / by zero
+          at ExceptionMethodsDemo.main(ExceptionMethodsDemo.java:5)
+      */
+}
 ```
 
 #### 抛出异常
@@ -935,14 +935,13 @@ public class CheckedExceptionExample {
 ```java [自定义异常抛出]
 // 自定义检查型异常
 class InsufficientBalanceException extends Exception {
-public InsufficientBalanceException(double amount) {
-super("余额不足，需要金额: " + amount);
-}
+  public InsufficientBalanceException(double amount) {
+    super("余额不足，需要金额: " + amount);
+  }
 }
 
 public class BankAccount {
-private double balance;
-
+    private double balance;
     public BankAccount(double initialBalance) {
         this.balance = initialBalance;
     }
@@ -972,6 +971,61 @@ private double balance;
 
 :::warning 注意
 - **编译时异常**必须在方法签名中进行异常声明，运行时异常则不需要
+- `捕获多异常`时，异常变量e为final，不能被重新赋值
+- finally语句中不要添加return，throw，break，continue等控制流语句，无法保证执行顺序
+:::
+
+
+#### try-with-resources（Java 7+）
+
+当我们执行资源处理相关逻辑时比如文件操作、数据库连接、网络连接等等，通常需要添加异常捕获和手动关闭资源等逻辑。
+
+:::code-group
+```java [传统写法]
+FileInputStream fis = null;
+try {
+    fis = new FileInputStream("file.txt");
+    // 读取文件...
+} catch (IOException e) {
+    e.printStackTrace();
+} finally {
+    if (fis != null) {
+        try {
+            fis.close(); // 手动关闭
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+//这段代码冗长、易错，且容易忘记关闭资源。
+```
+```java [try-with-resources]
+import java.io.*;
+
+public class TryWithResourcesExample {
+  public static void main(String[] args) {
+      //多个资源用分号分割
+    try (FileInputStream fis = new FileInputStream("input.txt");
+         BufferedReader reader = new BufferedReader(new InputStreamReader(fis))) {
+
+      String line;
+      while ((line = reader.readLine()) != null) {
+        System.out.println(line);
+      }
+
+    } catch (IOException e) {
+      System.err.println("读取文件时出错: " + e.getMessage());
+    }
+    // fis 和 reader 会自动关闭！
+  }
+}
+```
+:::
+
+:::warning 注意
+- 优先使用 try-with-resources 管理所有实现了 AutoCloseable接口（未实现则无效） 的资源。
+- 不要手动在 try-with-resources 中调用 close()。即使出现异常，仍然会自动关闭。
+- 捕获具体异常类型，而非泛化的 Exception。
 :::
 
 ## File
