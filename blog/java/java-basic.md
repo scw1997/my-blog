@@ -233,11 +233,14 @@ System.out.println(a.equals(b)); // true（比较值）
 ```
 :::
 
+
 :::warning 注意
 - `==`对基本类型比较的是**值**，对引用类型比较的是**引用**。
 - `equals()`不能用于基本类型，默认比较**引用**。**重写（`equals()` 和 `hashCode()`）后可比较内容**
 - 避免对 null 调用 `equals()`，会抛出 `NullPointerException`。
 :::
+
+
 ## 方法
 
 基本示例：
@@ -1723,6 +1726,84 @@ class Person implements Cloneable {
 :::tip
 - 想要实现深克隆，一般要重写clone方法或调用第三方工具类如gson
 :::
+
+#### hashCode()与equals()
+
+**Object.equals()**：默认使用 == 比较两个对象的引用是否相同（即是否是同一个对象）。
+
+**Object.hashCode()**：默认返回对象的内存地址的哈希值（具体由 JVM 实现决定）。
+
+默认情况，hashCode方法是基于对象的地址值计算出哈希值，所以不同对象（即使内容相同）的hash值是不一样的。
+
+> 但是极小部分情况下，不同的属性或者不同的地址值计算的哈希值有可能一样（哈希碰撞）
+
+#### 为什么需要重写 equals() 和 hashCode()
+
+默认情况下，equals()是通过比较对象的地址值来判断两个对象是否相等，但是通常使用这个方法意义不大，因为除非是同一个对象否则该方法只返回false
+
+大部分情况下我们会认为两个对象的各自的属性内容相同的话，就认为是同一个对象。所以此时要按照自己期望的规则重写equals方法。
+
+
+**而当我们重写了equals方法后，在使用HashSet和HashMap时必须要重写hashCode方法**：
+
+> Java 官方规定关键规则：`如果两个对象通过 equals() 判断为相等，那么它们的 hashCode() 必须返回相同的整数。反过来则不要求`
+
+此外HashSet，HashMap等哈希集合在将某个对象添加为key或者元素时会进行判断去重处理，会先判断HashCode()是否相等再通过equals()判断。假设此时我们重写了equals方法但没重写hashCode方法，并且依次添加了两个属性内容相同的对象元素。
+
+此时我们希望它认为是重复的元素。但由于此时没重写hashCode方法，固定返回false。此时就已经认为对象不相等了，所以不会后续再调用equals方法。所以此时要重写hashCode方法。
+
+:::tip 重写原则
+
+- 使用所有参与逻辑相等判断的字段来计算 hashCode()。
+- 保持 equals() 和 hashCode() 使用相同的字段。
+:::
+```java
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
+
+class Person {
+    private String name;
+    private int age;
+
+    public Person(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+
+    // 必须重写 equals 和 hashCode
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Person person = (Person) o;
+        //基于age和name属性
+        return age == person.age && Objects.equals(name, person.name);
+    }
+
+    @Override
+    public int hashCode() {
+        //同样基于age和name属性
+        return Objects.hash(name, age);
+    }
+}
+
+public class EqualsHashCodeExample {
+    public static void main(String[] args) {
+        Set<Person> set = new HashSet<>();
+        set.add(new Person("Alice", 25));
+        set.add(new Person("Alice", 25)); // 认为是重复对象，不会被添加
+        System.out.println(set.size()); // 输出: 1
+           
+           
+        Person p1 = new Person("Alice", 25);
+        Person p2 = new Person("Alice", 25);
+        System.out.println(p1.equals(p2)); // true（认为是相同的对象）
+        System.out.println(p1.hashCode() == p2.hashCode()); // true
+     
+    }
+}
+```
 
 ## BigInteger
 BigInteger是Java中用于表示任意精度整数的类,位于java.math包中。它解决了基本整数类型（如int、long）的范围限制问题，可以表示任意大小的整数（仅受内存限制）。
