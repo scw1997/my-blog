@@ -4,21 +4,51 @@
 
 Java集合框架是一组**用于存储和操作对象**的接口和实现类，位于java.util包中。它提供了多种数据结构实现，如列表、集合、队列和映射等。
 
-**1. 单列集合**
 
-包含add()，clear(),remove(),contains(),isEmpty(),size()等通用方法，包含以下三大子类：
+Java 集合框架主要由以下几大接口构成：
 
-`List（接口）`：有序集合，允许重复元素（如ArrayList、LinkedList）
+#### `Collection` 接口
 
-`Set（接口）`：无序集合，不允许重复元素（如HashSet、TreeSet）
+- 是所有单值集合的根接口。
+- 包含add()，clear(),remove(),contains(),isEmpty(),size()等通用方法
+- 主要**子接口**包括：
+  - **`List`**：有序、可重复（允许 null），支持按索引访问。
+    - 常见实现类：`ArrayList`、`LinkedList`、`Vector`
+  - **`Set`**：无序（部分实现有序）、不可重复（最多一个 null）。
+    - 常见实现类：`HashSet`、`LinkedHashSet`、`TreeSet`
+  - **`Queue`**：通常用于 FIFO（先进先出）或优先级队列。
+    - 常见实现类：`LinkedList`、`PriorityQueue`、`ArrayDeque`
 
-`Queue`：队列（如LinkedList、PriorityQueue）
+####  `Map` 接口（虽然不属于 `Collection`，但属于集合框架）
+- 存储键值对（key-value pairs），键不可重复（最多一个 null 键），值可以重复。
+- 包含put()，remove(),clear(),containsKey()等通用方法
+- 常见实现类：
+  - `HashMap`：无序，高性能
+  - `LinkedHashMap`：按插入顺序或访问顺序维护
+  - `TreeMap`：按键的自然顺序或自定义比较器排序
+  - `Hashtable`：线程安全但已过时（推荐用 `ConcurrentHashMap`）
 
-**2. 双列集合**
 
-包含put()，remove(),clear(),containsKey()等通用方法
+| 集合类型      | 是否有序 | 是否允许重复 | 是否线程安全 | 底层结构        |
+|---------------|--------|--------------|--------------|----------------|
+| `ArrayList`   | 是     | 是           | 否           | 动态数组       |
+| `LinkedList`  | 是     | 是           | 否           | 双向链表       |
+| `HashSet`     | 否     | 否           | 否           | 哈希表         |
+| `LinkedHashSet`| 是（插入顺序）| 否      | 否           | 哈希表 + 链表  |
+| `TreeSet`     | 是（排序）| 否          | 否           | 红黑树         |
+| `HashMap`     | 否     | 键不重复      | 否           | 哈希表         |
+| `LinkedHashMap`| 是（插入/访问顺序）| 键不重复 | 否       | 哈希表 + 链表  |
+| `TreeMap`     | 是（按键排序）| 键不重复   | 否           | 红黑树         |
 
-`Map`：键值对集合（如HashMap、TreeMap）
+选择思路：
+
+- 需要**保持插入顺序且去重** → `LinkedHashSet`
+- 需要**自动排序** → `TreeSet` / `TreeMap`
+- 高频**随机访问** → `ArrayList`
+- 高频**头尾插入/删除** → `LinkedList` 或 `ArrayDeque`
+- 多线程环境 → 使用 `java.util.concurrent` 包中的并发集合
+
+
 
 
 ### List
@@ -646,10 +676,10 @@ Stream.of() 是 java.util.stream.Stream 类的静态方法，用于将单个元�
 :::
 ## 泛型
 
-- 泛型不能传递基本数据类型（可以是基本类型的包装类型）
-- 泛型类型确定后，可以传递该类型以及其子类类型
-- 不写泛型，默认就是`Object`
-- 泛型不具备继承性（不支持多态），但是数据支持继承性
+泛型用于在编译期提供`类型安全`和`代码复用`能力。
+
+
+
 
 #### 基本使用
 
@@ -739,27 +769,74 @@ public class Main {
 ```
 :::
 
+:::warning 注意
+- 泛型不能传递基本数据类型（但可以是基本类型的**包装类型**，如Integer、Character等）
+- 泛型类型确定后，可以传递该类型以及其子类类型
+- 不能创建泛型数组，如`T[] arr = new T[10]`是错误的。
+- 静态成员不能使用类的泛型参数
+  ```java
+  public class Box<T> {
+    private static T value; // ❌ 错误！static 属于类，与 T 无关
+  }
+  ```
+- 不写泛型，默认就是`Object`
+- 泛型不具备继承性（不支持多态），但是数据支持继承性
+- 
+:::
+
+#### 常见泛型命名约定
+
+| 字母 | 含义 |
+|------|------|
+| `T`  | Type（类型） |
+| `E`  | Element（集合元素） |
+| `K`  | Key（键） |
+| `V`  | Value（值） |
+| `N`  | Number（数字） |
+| `S`, `U`, `V` | 第二、第三、第四个类型 |
+
+例如：
+```java
+Map<K, V>
+List<E>
+Function<T, R>
+```
+
 #### 泛型通配符
 
-? 表示未知类型，常用于方法参数或返回值，提高灵活性。
+无界通配符`?` ：表示为止类型常用于方法参数或返回值，提高灵活性。
 
-上界通配符： **? extends T：表示类型是 T 或其子类**。
+上界通配符`? extends T`：表示该类型是 T 或其子类。
 
-下界通配符：**? super T：表示类型是 T 或其父类**。
-```java
-// 上界通配符示例
-public static void printList(List<? extends Number> list) {
-    for (Number num : list) {
-        System.out.println(num);
+下界通配符`? super T`：表示该类型是 T 或其父类。
+
+:::code-group
+```java [无界通配符]
+public void printList(List<?> list) {
+  for (Object obj : list) {
+    System.out.println(obj);
+  }
+}
+// 可接受 List<String>, List<Integer> 等
+```
+```java [上界通配符]
+public double sum(List<? extends Number> numbers) {
+    double total = 0;
+    for (Number n : numbers) {
+        total += n.doubleValue();
     }
+    return total;
 }
 
-// 使用
-List<Integer> intList = Arrays.asList(1, 2, 3);
-List<Double> doubleList = Arrays.asList(1.1, 2.2);
-printList(intList); // 合法
-printList(doubleList); // 合法
+// 可传入：List<Integer>, List<Double> 等
 ```
+```java [下界通配符]
+public void addNumbers(List<? super Integer> list) {
+    list.add(100); // OK！因为 Integer 是 ? 的子类型
+    list.add(200);
+}
+```
+
 
 ## 方法引用
 
@@ -1028,6 +1105,83 @@ public class TryWithResourcesExample {
 - 捕获具体异常类型，而非泛化的 Exception。
 :::
 
+## 日志
+
+#### 内置日志系统
+
+日志信息级别从高到低为：**SEVERE > WARNING > INFO > CONFIG > FINE > FINER > FINEST**
+
+:::code-group
+```java [基本使用]
+
+import java.util.logging.Logger;
+import java.util.logging.Level;
+
+public class Main {
+    //创建一个日志记录器，命名可选择类名或包名
+    private static final Logger logger = Logger.getLogger(Main.class.getName());//或com.xx.xxx
+
+    public  static void main(String[] args) {
+        logger.log(Level.SEVERE,"Starting operation...");
+        try {
+            // some logic
+        } catch (Exception e) {
+            //默认情况下，日志输出级别为INFO。所以SEVERE,WARNING，INFO才会输出信息，其他不会输出
+            logger.warning("Operation failed");
+            logger.severe("Operation failed");
+            logger.info("Operation failed");
+        }
+    }
+}
+```
+```java [调整日志级别]
+import java.util.logging.*;
+
+public class Main {
+    public static void main(String[] args) {
+        Logger logger = Logger.getLogger(Main.class.getName());
+
+        // 获取控制台处理器（ConsoleHandler）
+        ConsoleHandler handler = new ConsoleHandler();
+        handler.setLevel(Level.FINE); // 设置处理器级别为 FINE
+
+        // 设置 Logger 的级别
+        logger.setLevel(Level.FINE);
+
+        // 移除默认的 handler
+        logger.setUseParentHandlers(false);
+        logger.addHandler(handler);
+
+        // 测试日志
+        logger.info("INFO 日志");
+        logger.fine("FINE 日志");     // 现在FINE级别消息也会打印了！
+        logger.finer("FINER 日志");
+    }
+}
+```
+:::tip 技巧
+- 修改日志级别时，必须同时设置 Logger 和 Handler 的级别才能生效。
+- 开发阶段可设置日志级别为`FINE`(替换System.out.print)，便于调试。生产环境则设置为`INFO` 或 `WARNING`。
+
+:::
+
+#### SLF4J + Logback(主流推荐)
+
+日志级别从低到高：**TRACE < DEBUG < INFO < WARN < ERROR < FATAL**
+
+```java
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class Main {
+    private static final Logger logger = LoggerFactory.getLogger(Main.class);
+    //
+    public static void main(String[] args) {
+        logger.info("使用 SLF4J + Logback 记录日志");
+        logger.debug("用户 {} 登录成功", "张三"); // 支持占位符，避免字符串拼接开销
+    }
+}
+```
 ## File
 
 :::code-group
