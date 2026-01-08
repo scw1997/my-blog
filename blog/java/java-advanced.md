@@ -478,6 +478,8 @@ public class CollectionsDemo {
 
 不可变集合（Immutable Collections） 是指一旦创建后，其内容不能被修改（添加、删除、替换元素等）的集合。
 
+特点：**线程安全；防止调用方意外修改集合内容；适合定义常量**
+
 Java 9+ 引入了List.of()、Set.of()、Map.of()
 ```java
 import java.util.*;
@@ -506,7 +508,7 @@ public class Java9ImmutableCollections {
             System.out.println("无法修改Java 9不可变List: " + e.getMessage());
         }
 
-        // 5. 使用Map.ofEntries()支持更多键值对
+        // 5. Map内部超过 10 对用 Map.ofEntries()
         Map<String, Integer> largeMap = Map.ofEntries(
             Map.entry("X", 100),
             Map.entry("Y", 200),
@@ -518,99 +520,121 @@ public class Java9ImmutableCollections {
 }
 ```
 
-jdk10+ 中创建不可变的Map集合推荐使用`Map.copyOf()`
-
-```java
-      HashMap<String,Integer> hm = new HashMap<>();
-
-      hm.put("one",1);
-      hm.put("two",2);
-      hm.put("three",3);
-
-      Map<String,Integer> immutableHashMap = Map.copyOf(hm);
-      System.out.println(immutableHashMap);
-      immutableHashMap.put("four",4); //报错
-```
-:::warning
-- 不支持 null 元素。
+:::warning 注意
+- 元素必须唯一（Set 和 Map 的 key 不能重复）。不支持 null 元素。
 - Map.of() 最多支持 10 个键值对（超过需用 Map.ofEntries()）。
+- 返回的是 java.util.ImmutableCollections 内部类，非 ArrayList/HashMap。
 :::
 
 ### Stream流
 
 Stream API 是 Java 8 引入的一个强大的函数式数据处理特性，它提供了一种高效且易于理解的方式来处理`集合`数据。
 
-#### 单列集合自带Stream
+
+Stream的创建方式
+```java
+// 1. 从集合创建
+List<String> list = Arrays.asList("a", "b", "c");
+Stream<String> stream1 = list.stream();
+
+// 2. 从数组创建
+String[] arr = {"x", "y", "z"};
+Stream<String> stream2 = Arrays.stream(arr);
+
+// 3. 使用 Stream.of()
+Stream<Integer> stream3 = Stream.of(1, 2, 3, 4);
+
+// 4. 生成无限流（需配合 limit）
+Stream<Integer> infinite = Stream.iterate(0, n -> n + 2); // 0, 2, 4, 6...
+Stream<Double> randoms = Stream.generate(Math::random);    // 随机数流
+```
+
+#### 常用操作分类
+
+#### 中间操作
+返回一个新的 Stream，可链式调用。
+
+| 方法 | 说明 |
+|------|------|
+| `filter(Predicate<T>)` | 过滤满足条件的元素 |
+| `map(Function<T, R>)` | 将元素转换为另一种类型 |
+| `flatMap(Function<T, Stream<R>>)` | 扁平化嵌套结构（如 List> → List） |
+| `sorted()` / `sorted(Comparator)` | 排序 |
+| `distinct()` | 去重 |
+| `limit(long n)` | 截取前 n 个元素 |
+| `skip(long n)` | 跳过前 n 个元素 |
+| `peek(Consumer<T>)` | 调试用，对每个元素执行操作（不影响流） |
+
+#### 终止操作
+触发流的执行，并产生结果或副作用。
+
+| 方法 | 说明 |
+|------|------|
+| `forEach(Consumer<T>)` | 遍历每个元素 |
+| `collect(Collector<T, A, R>)` | 将结果收集到集合、字符串等（最常用！） |
+| `reduce(BinaryOperator<T>)` | 归约操作（如求和、拼接） |
+| `count()` | 返回元素数量 |
+| `min(Comparator)` / `max(Comparator)` | 求最小/最大值 |
+| `anyMatch(Predicate)` / `allMatch(Predicate)` / `noneMatch(Predicate)` | 判断是否满足条件 |
+| `findFirst()` / `findAny()` | 返回 Optional |
+
+:::warning 注意
+从java9开始，`count()` 对无状态、无副作用的流做了优化：
+
+>如果 Stream 能够在不遍历元素的情况下确定元素数量（比如源是 Collection），那么 count() 可能直接返回 source.size()，而完全跳过中间操作（如 map、filter）！
 
 ```java
-List<String> names = Arrays.asList("Alice", "Bob", "Charlie", "David", "Eve");
-
-// 过滤长度大于3的名字，转为大写，排序后收集
-List<String> result = names.stream()
-            .filter(name -> name.length() > 3)
-        .map(String::toUpperCase) //方法引用，调用String的toUpperCase方法
-        .sorted()
-        .collect(Collectors.toList()); //处理后的数据收集到一个集合List里，还可以是toSet()和toMap()
-        // collect(Collectors.toSet())
-        // .collect(Collectors.toMap(item->item.charAt(0),item->item.charAt(1)))
-
-System.out.println(result); // 输出: [ALICE, CHARLIE, DAVID]
+List<String> list = Arrays.asList("1","2","3");
+Stream<String> s = list.stream();
+Stream<String> s2 = s.map((ss)->{
+    System.out.print("xxx"); //java9+不执行此行代码
+    return "1";
+});
+long num = s2.count(); //触发流执行，但因map操作无副作用，count()可能直接返回list.size()而不执行map操作
 ```
-:::warning
-- `filter，map，sorted`等方法为中间操作，表示这些操作执行的返回值是stream流，后续可以再链式调用stream相关操作
-- `forEach,toArray,collect`等方法为终结操作，表示这些操作执行的返回值不是stream流，后续不能再链式调用stream相关操作
 :::
-#### Arrays.stream
 
-Arrays.stream() 是 java.util.Arrays 类提供的静态方法，用于将数组转换为流（Stream）
+操作示例：
 
-```java
-import java.util.Arrays;
-import java.util.stream.Stream;
+:::code-group
+```java [筛选，转换，收集]
+List<String> names = Arrays.asList("Alice", "Bob", "Charlie", "David");
 
-   // 1. 对象数组转流
-        String[] names = {"Alice", "Bob", "Charlie"};
-        Stream<String> nameStream = Arrays.stream(names);
-        nameStream.forEach(System.out::println);
- 
-        // 2. 部分数组转流（索引范围）
-        Stream<String> partialStream = Arrays.stream(names, 0, 2); // "Alice", "Bob"
-        partialStream.forEach(System.out::println);
- 
-        // 3. 基本类型数组转流
-        int[] numbers = {1, 2, 3, 4, 5};
-        Arrays.stream(numbers).forEach(System.out::println); // IntStream
+List<String> result = names.stream()
+        .filter(name -> name.length() > 3)     // 筛选长度 > 3
+        .map(String::toUpperCase)              // 转大写
+        .sorted()                              // 排序
+        .collect(Collectors.toList());         // 收集为 List
+
+// 结果: ["ALICE", "CHARLIE", "DAVID"]
 ```
+```java [求和]
+List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);
 
-#### Stream.of
+int sum = numbers.stream()
+    .mapToInt(Integer::intValue)  // 转为 IntStream（避免装箱）
+    .sum();
 
-```java
-import java.util.Arrays;
-import java.util.stream.Stream;
-
-// 1. 可变参数转流
-Stream<String> nameStream = Stream.of("Alice", "Bob", "Charlie");
-        nameStream.forEach(System.out::println);
-
-        // 2. 单个元素转流
-        Stream<String> singleStream = Stream.of("Hello");
-        singleStream.forEach(System.out::println);
-
-        // 3. 数组转流（引用类型）
-        String[] names = {"Alice", "Bob", "Charlie"};
-        Stream<String> arrayStream = Stream.of(names); // 等同于 Arrays.stream(names)
-        arrayStream.forEach(System.out::println);
-        
-        //4 .数组转流（基本类型）
-
-        int[] names = {1, 2, 3};
-        //注意：基本类型的数组会被看成一个整体，而不是元素遍历
-        Stream.of(names).forEach(System.out::println); //只打印一次，[I@6d311334
+// 或直接：
+int sum2 = numbers.stream().reduce(0, Integer::sum);
 ```
-Stream.of() 是 java.util.stream.Stream 类的静态方法，用于将单个元素或可变参数转换为流（Stream）
-:::warning
+```java [分组]
+List<Person> people = ...;
 
+Map<String, List<Person>> byCity = people.stream()
+    .collect(Collectors.groupingBy(Person::getCity));
+```
+:::
+
+:::warning 注意
+- Stream 只能消费一次;
+  ```java
+  Stream<String> s = list.stream();
+  s.forEach(System.out::println);
+  s.count(); // ❌ 报错：stream has already been operated upon or closed
+  ```
 - Map（双列集合）不能直接使用stream，可通过`keySet()或entrySet()`间接返回单列集合来操作stream
+- 如果没有终止操作，整个stream流不会运行
 :::
 ## 泛型
 
@@ -774,7 +798,7 @@ public void addNumbers(List<? super Integer> list) {
     list.add(200);
 }
 ```
-
+:::
 
 ## 方法引用
 
@@ -1120,6 +1144,7 @@ public class Main {
     }
 }
 ```
+
 ## File
 
 :::code-group
@@ -1209,88 +1234,131 @@ public class NioFileExample {
 ```
 :::warning 注意事项
 
-- 使用 FileInputStream、FileOutputStream 等流时，必须确保关闭（使用 try-with-resources）
 - 不同`操作系统`路径分隔符不同（Windows \，Unix /）
 - 大量文件操作时，NIO.2 API (java.nio.file) 通常性能更好
 - 文件操作可能抛出 IOException 或 SecurityException
-- 处理大文件时考虑使用缓冲流
 :::
 
 ## IO
 
-IO流可用于读写文件中的内部数据（本地文件或网络文件），而File是做不到的。
-
-按照流向可分为：
-
-- **输入流**：从源（如文件）读取数据到程序中
-- **输出流**：将程序中获取的文件数据向目标（如文件）写入数据
-
-按照操作文件的类型可分为：
-
-- **字节流**：可处理二进制数据等所有文件类型，如图片、音频、视频等
-
-```java 
-
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+ **I/O 流（Input/Output Streams）** 是 Java 用于处理**输入与输出操作**的核心机制，主要用于在程序与外部资源（如文件、网络、内存、控制台等）之间传输数据。
+ 
+I/O 流位于 `java.io` 包中（传统 I/O），Java 1.4 起还引入了更高效的 **NIO（New I/O，`java.nio` 包）**。
 
 
-//复制文件
-public class ByteStreamExample {
-    public static void main(String[] args) {
-        try (FileInputStream fis = new FileInputStream("input.jpg");
-             FileOutputStream fos = new FileOutputStream("output.jpg")) {
+### 字节流
 
-            byte[] buffer = new byte[1024];
-            int len;
-            while ((len = fis.read(buffer)) != -1) { // [!code error]
-                fos.write(buffer, 0, len);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+| 输入流（读） | 输出流（写） | 用途 |
+|-------------|-------------|------|
+| `FileInputStream` | `FileOutputStream` | 读写文件（字节） |
+| `ByteArrayInputStream` | `ByteArrayOutputStream` | 读写内存字节数组 |
+| `BufferedInputStream` | `BufferedOutputStream` | 带缓冲，提高性能 |
+| `DataInputStream` | `DataOutputStream` | 读写基本数据类型（int, double 等） |
+| `ObjectInputStream` | `ObjectOutputStream` | 序列化/反序列化对象 |
+
+### 字符流
+
+| 输入流（读） | 输出流（写） | 用途 |
+|-------------|-------------|------|
+| `FileReader` | `FileWriter` | 读写文本文件（使用平台默认编码） |
+| `InputStreamReader` | `OutputStreamWriter` | **桥接字节流与字符流**，可指定编码（如 UTF-8） |
+| `BufferedReader` | `BufferedWriter` | 带缓冲的字符流，支持 `readLine()` |
+| `StringReader` | `StringWriter` | 读写字符串 |
+| `PrintWriter` | — | 格式化输出（类似 `System.out.println`） |
+
+> 注意：`FileReader`/`FileWriter` **不能指定编码**！推荐用：
+> ```java
+> new InputStreamReader(new FileInputStream("file.txt"), "UTF-8")
+> ```
+
+
+#### 典型使用示例
+
+:::code-group
+
+```java [读取文本文件]
+try (BufferedReader reader = new BufferedReader(
+        new InputStreamReader(
+            new FileInputStream("input.txt"), 
+            StandardCharsets.UTF_8
+        )
+    )) {
+    String line;
+    while ((line = reader.readLine()) != null) {
+        System.out.println(line);
     }
+} catch (IOException e) {
+    e.printStackTrace();
 }
 ```
 
-- **字符流**：处理文本数据，如txt、xml、json等
 
-```java
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-
-//读写文本文件
-public class CharStreamExample {
-    public static void main(String[] args) {
-        try (BufferedReader reader = new BufferedReader(new FileReader("input.txt"));
-             BufferedWriter writer = new BufferedWriter(new FileWriter("output.txt"))) {
-
-            String line;
-            while ((line = reader.readLine()) != null) { // [!code error]
-                writer.write(line);
-                writer.newLine(); // 写入换行
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+```java [写入文本文件]
+try (BufferedWriter writer = new BufferedWriter(
+        new OutputStreamWriter(
+            new FileOutputStream("output.txt"),
+            StandardCharsets.UTF_8
+        )
+    )) {
+    writer.write("Hello, Java IO!");
+    writer.newLine();
+} catch (IOException e) {
+    e.printStackTrace();
 }
 ```
 
-| 类型 | 基类 | 常见子类 | 用途 |
-|------|------|--------|------|
-| 字节输入流 | `InputStream` | `FileInputStream`, `BufferedInputStream`, `ObjectInputStream` | 读取二进制数据 |
-| 字节输出流 | `OutputStream` | `FileOutputStream`, `BufferedOutputStream`, `ObjectOutputStream` | 写入二进制数据 |
-| 字符输入流 | `Reader` | `FileReader`, `BufferedReader`, `InputStreamReader` | 读取文本 |
-| 字符输出流 | `Writer` | `FileWriter`, `BufferedWriter`, `OutputStreamWriter` | 写入文本 |
 
+```java  [复制二进制文件]
+try (FileInputStream in = new FileInputStream("src.jpg");
+     FileOutputStream out = new FileOutputStream("dest.jpg")) {
 
+    byte[] buffer = new byte[8192]; // 8KB 缓冲
+    int len;
+    while ((len = in.read(buffer)) != -1) {
+        out.write(buffer, 0, len);
+    }
+} catch (IOException e) {
+    e.printStackTrace();
+}
+```
 
+```java [对象序列化]
+// 写入
+try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("obj.dat"))) {
+    //`Person` 必须实现 `Serializable` 接口。
+    oos.writeObject(new Person("Alice", 30));
+        
+        
+        
+}
 
+// 读取
+try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream("obj.dat"))) {
+    Person p = (Person) ois.readObject();
+}
+```
+:::
+
+#### NIO vs IO
+
+| 特性 | 传统 IO（`java.io`） | NIO（`java.nio`） |   |
+|------|---------------------|------------------|---|
+| 模型 | 阻塞式（Blocking） | 非阻塞 + 通道（Channel）+ 缓冲区（Buffer） |   |
+| 性能 | 适合小文件、简单场景 | 适合高并发、大文件（如服务器） |   |
+| 使用难度 | 简单直观 | 较复杂 |   |
+| 关键类 | `InputStream`, `Reader` | `FileChannel`, `ByteBuffer`, `Path`, `Files` |   |
+
+> 对于大多数文件读写任务，传统 IO + try-with-resources 已足够。
+
+---
+
+:::tip 选择技巧
+- 文本 → 用 `Reader/Writer` + 指定编码
+- 二进制 → 用 `InputStream/OutputStream`
+- 性能 → 加 `Buffered` 包装
+- 安全 → 用 try-with-resources 自动关闭
+- 对象持久化 → 用 `ObjectInputStream/ObjectOutputStream`
+:::
 
 
 :::warning 注意事项
@@ -1310,5 +1378,438 @@ public class CharStreamExample {
 - 对于高并发、高性能场景（如服务器），建议使用 `java.nio`（如 `FileChannel`、`Selector` 等），传统 IO 是阻塞式的。
 
 :::
+
+
+## 进程与线程
+
+### 进程
+- **定义**：进程是操作系统分配资源的基本单位，是一个正在运行的程序的实例。
+- **特点**：
+  - 每个进程有独立的内存空间（堆、栈、代码段等）。
+  - 进程之间相互隔离，一个进程崩溃通常不会影响其他进程。
+  - 创建和销毁进程开销较大（需要分配/回收内存、文件句柄等资源）。
+- **示例**：启动一个 Java 应用（`java MyApp`）就是一个独立的 JVM 进程。
+
+早期 Java 只能通过 `Runtime.exec()` 或 `ProcessBuilder` 启动外部进程，但控制能力有限。**Java 9 引入了 `ProcessHandle` API**，大大增强了进程管理能力。
+
+示例：启动并监控外部进程
+
+```java
+// 启动一个外部命令（如 ping）
+ProcessBuilder pb = new ProcessBuilder("ping", "baidu.com");
+Process process = pb.start();
+
+// 获取进程信息（Java 9+）
+ProcessHandle handle = process.toHandle();
+System.out.println("PID: " + handle.pid());
+System.out.println("Is alive: " + handle.isAlive());
+
+// 等待进程结束
+process.waitFor();
+```
+
+### 线程
+- **定义**：线程是 CPU 调度的基本单位，是进程内的执行路径。
+- **特点**：
+  - 同一进程内的多个线程共享该进程的内存空间（如堆、方法区），但每个线程有自己的栈。
+  - 线程创建和切换开销小，适合高并发任务。
+  - 线程间通信方便（可直接读写共享变量），但也需注意**线程安全**问题（如竞态条件、死锁）。
+- **Java 中**：每个 Java 程序至少有一个主线程（`main` 方法所在的线程）。
+
+
+#### 创建线程的两种方式
+:::code-group
+
+```java [继承Thread类]
+class MyThread extends Thread {
+    public void run() {
+        System.out.println("Thread running: " + Thread.currentThread().getName());
+    }
+}
+
+// 使用
+new MyThread().start();
+```
+```java [实现Runnable接口（推荐）]
+Runnable task = () -> System.out.println("Running in: " + Thread.currentThread().getName());
+new Thread(task).start();
+```
+:::
+
+> ✅ 推荐使用 `Runnable`：避免单继承限制，更符合“组合优于继承”原则。
+
+#### 高级并发工具（Java 5+）
+- `ExecutorService`：线程池管理
+  ```java
+  ExecutorService executor = Executors.newFixedThreadPool(4);
+  executor.submit(() -> System.out.println("Task executed"));
+  executor.shutdown();
+  ```
+- `CompletableFuture`：异步编程
+- `synchronized` / `ReentrantLock`：线程同步
+- `volatile`：保证可见性
+
+
+#### 对比
+
+| 特性 | 进程（Process）                                               | 线程（Thread） |
+|------|-----------------------------------------------------------|----------------|
+| 内存空间 | 独立                                                        | 共享（同进程内） |
+| 创建开销 | 大                                                         | 小 |
+| 通信方式 | IPC（管道、Socket、文件等）                                        | 直接共享变量（需同步） |
+| 安全性 | 高（隔离性强）                                                   | 低（需处理并发问题） |
+| 切换成本 | 高                                                         | 低 |
+| Java 支持 | `ProcessBuilder`, `ProcessHandle`（Java 9+）                | `Thread`, `ExecutorService`, 并发包 |
+|应用场景| 多进程：<br/>Java 主程序调用 MATLAB 进行数值计算<br/>启动独立的监控代理进程（如日志收集器） |多线程：<br/>Web 服务器处理多个 HTTP 请求（Tomcat 使用线程池）。<br/>图像处理：并行解码多路视频流。
+
+
+:::tip 总结
+- **线程**是 Java 并发的核心，轻量、高效，适合 I/O 密集型和 CPU 并行任务。
+- **进程**用于隔离、调用外部程序，在 Java 中主要用于与系统或其他语言交互。
+- 现代 Java 应用通常以**多线程为主 + 必要时调用外部进程**的混合模式运行。
+:::
+
+### 锁
+
+锁是用于控制多线程对共享资源访问的同步机制，目的是**防止多个线程同时修改共享数据**而导致数据不一致或竞态条件。
+
+
+#### 内置锁（synchronized）
+
+- 是 Java 最早提供的线程同步机制。
+- 每个对象都有一个与之关联的**监视器锁（monitor）**。
+- 可用于：
+  - **方法级别**（实例方法或静态方法）
+  - **代码块级别**
+
+:::code-group
+```java [基本用法]
+// 方法级
+public synchronized void method() {
+    // 临界区
+}
+
+// 静态方法（锁的是类对象）
+public static synchronized void staticMethod() {
+    // 临界区
+}
+
+// 代码块级
+synchronized (lockObject) {
+    // 临界区
+}
+```
+
+```java [场景示例]
+//场景：多人排队上厕所
+//解决方案：门口挂一把“正在使用”牌子（相当于 synchronized 锁）。
+//第一个人进去，挂上牌子（加锁）。
+//后面的人看到牌子，就在门口排队等（阻塞等待）。
+//第一个人出来，摘下牌子（释放锁），下一个人进去。
+
+public synchronized void useToilet() {
+  // 上厕所（临界区）
+}
+```
+:::
+
+特点：
+- 自动加锁/释放（进入时加锁，退出时自动释放，包括异常）
+- 不可中断（无法响应 Thread.interrupt()）
+- 不支持超时
+- 不支持尝试获取锁（非阻塞）
+- 锁不可重入？✅ 实际上 **synchronized 是可重入的**
+
+
+#### 显式锁
+
+JDK 1.5 引入了 `java.util.concurrent.locks` 包，提供了更灵活的锁机制。
+
+---
+#### 1.ReentrantLock（可重入锁）
+- 实现了 `Lock` 接口
+- 功能比 synchronized 更强大
+
+```java
+//场景示例：热门图书只有一本，10 个人都想借
+//等5分钟就去借，借不到就继续等。
+//借了书的人必须还书
+
+Lock bookLock = new ReentrantLock();
+
+if (bookLock.tryLock(5, TimeUnit.MINUTES)) {
+    try {
+    // 借书、看书
+    } finally {
+     bookLock.unlock(); // 必须还书！
+    }
+}
+```
+
+特性：
+- **可重入**：同一个线程可以多次获取同一把锁
+- **可中断**：`lockInterruptibly()` 支持响应中断
+- **可设置公平性**：构造函数可传 `fair=true`（默认是非公平）
+- **支持尝试获取锁**：`tryLock()`、`tryLock(timeout, unit)`
+- **支持 Condition**：替代 Object 的 wait/notify 机制
+
+---
+#### 2.ReadWriteLock（读写锁）
+- 适用于“多读少写”场景
+- 接口：`ReadWriteLock`
+- 常用实现：`ReentrantReadWriteLock`
+
+```java
+//场景示例：一份 Excel 表格，多人要查看，偶尔有人要修改。
+//多人可以同时读（看表格不影响别人看）
+//但只要有人在写（修改），其他人都不能读也不能写
+//写操作必须独占
+
+ReadWriteLock rwLock = new ReentrantReadWriteLock();
+
+// 读操作
+rwLock.readLock().lock();
+try { /* 查看数据 */ } finally { rwLock.readLock().unlock(); }
+
+// 写操作
+rwLock.writeLock().lock();
+try { /* 修改数据 */ } finally { rwLock.writeLock().unlock(); }
+```
+
+- 多个读线程可同时持有读锁
+- 写锁是独占的（排斥读和其他写）
+- 读锁和写锁不能同时持有
+
+---
+#### 3.StampedLock（JDK 8 引入）
+- 性能优于 ReentrantReadWriteLock
+- 支持三种模式：写、读、乐观读（optimistic read）
+- **不是可重入的**
+- 不支持 Condition
+- **适合数据变更不频繁的场景**
+
+
+场景示例：某商品价格大部分时间不变，小部分时间会被修改。现在需要对某商品进行读取价格结账
+
+**传统方式：悲观读**
+```java
+ReadWriteLock rwLock = new ReentrantReadWriteLock();
+// 悲观读：每次读都要加读锁来锁住价格，用来避免期间价格被修改
+rwLock.readLock().lock();
+try {
+    return price; // 安全，但每次都要排队拿锁
+} finally {
+    rwLock.readLock().unlock();
+}
+
+//假如同时有1000用户购买此商品，则需要1000次加锁释放锁。会有性能问题
+```
+
+**StampedLock方式：乐观读 + 降级保护**
+```java
+public class PriceService {
+ //volatile作用：让所有线程（写和读）看到同一个变量的最新值，并且按你写的顺序执行相关操作。   
+  private volatile double price; // ⚠️ 必须 volatile！
+  private final StampedLock sl = new StampedLock();
+
+  // 写操作
+  public void setPrice(double newPrice) {
+    long stamp = sl.writeLock();
+    try {
+      this.price = newPrice; // 写入 volatile 字段
+    } finally {
+      sl.unlockWrite(stamp);
+    }
+  }
+
+  // 读操作（乐观读 + 降级保护）
+  public double getPrice() {
+    long stamp = sl.tryOptimisticRead();     // 1. 尝试乐观读
+    double currentPrice = this.price;        // 2. 读 volatile 价格字段
+
+    if (!sl.validate(stamp)) {               // 3. 从乐观读操作到现在期间是否有写操作？
+      stamp = sl.readLock();               // 4. 有写操作，则升级为悲观读。获取读锁，避免期间进行写操作
+      try {
+        currentPrice = this.price;       // 5. 重新读（此时有内存屏障）
+      } finally {
+        sl.unlockRead(stamp);            // 6. 释放读锁
+      }
+    }
+    return currentPrice;
+  }
+}
+//由于该商品价格被修改的概率较小，所以大部分时间都不会加读锁，优化了性能。
+```
+
+
+#### 如何选择
+
+| 场景 | 推荐 |
+|------|------|
+| 简单同步 | `synchronized`（简洁、安全） |
+| 需要超时/中断/公平性 | `ReentrantLock` |
+| 多读少写 | `ReentrantReadWriteLock` 或 `StampedLock` |
+| 高并发短临界区 | 考虑 `synchronized`（JVM 优化好）或 `StampedLock` |
+
+
+
+:::warning 注意事项
+- 使用显式锁（如 ReentrantLock）**必须在 finally 块中释放锁**，否则可能死锁。
+- 避免锁的粒度过大（影响并发）或过小（增加复杂度）。
+- 尽量减少锁的持有时间。
+- 警惕死锁：避免嵌套锁、按固定顺序获取多个锁。
+:::
+
+#### 乐观锁与悲观锁
+
+#### 乐观锁：
+
+思想：无锁读写，提交时检查是否被别人修改过
+
+适合场景：读多写少或者写操作简单迅速（如网站点击量），数据变化频率低
+
+经典应用：网站点击量（CAS高效），缓存配置获取（StampedLock乐观读）
+
+CAS方式实现乐观锁：
+```java
+
+private AtomicInteger count = new AtomicInteger(0);
+
+public void increment() {
+    int current;
+    do {
+        current = count.get();          // 读当前值
+      // 如果此时此刻count值还是current,则修改为我希望的值即current+1（即成功，跳出循环）；
+      //否则说明count值不是current（被别人修改了），则重新获取最新count值再循环重来
+      //CAS思想总结：我先记住现在的样子，然后验证如果它没变，我就把它改成我期待的样子；变了就获取最新样子再重复此逻辑
+    } while (!count.compareAndSet(current, current + 1)); 
+}
+```
+
+#### 悲观锁
+思想：写时加锁，读写互斥
+
+适合场景：写多读少，数据变化频繁
+
+经典应用：限时秒杀库存，银行转账（使用synchronized）
+
+
+## 模块
+Java 的模块系统是 **Java 9（2017 年）** 引入的一项重大特性。
+
+它的核心目标是：**让 Java 平台和应用程序具备更强的可维护性、安全性、性能和封装能力**。
+
+
+
+#### 为什么需要模块
+
+在 Java 9 之前，Java 只有 **类（class）→ 包（package）→ JAR 文件** 三层结构，存在严重问题：
+
+##### **类路径地狱（Classpath Hell）**
+- 所有 JAR 都扔到 classpath，JVM 不知道哪些类属于哪个逻辑组件。
+- 依赖冲突、版本混乱（比如两个库依赖不同版本的 Guava）。
+
+#####  **缺乏封装**
+- `public` 类对所有其他代码可见，无法真正“隐藏内部实现”。
+- 比如你用了 JDK 内部的 `sun.misc.Unsafe`，Oracle 一直想移除它，但太多人偷偷用了，不敢动！
+
+##### **臃肿的 JDK**
+- 即使你只写个 Hello World，也要加载整个 `rt.jar`（包含 Swing、CORBA 等无用模块）。
+- 不利于微服务、容器化（镜像太大）。
+
+---
+
+####  模块的组成结构
+
+模块 = **一组包 + 一个 module-info.java 描述文件**
+
+```
+my-app/
+├── module-info.java   ← 模块描述文件（关键！）
+├── com/example/main/
+│   └── Main.java
+└── com/example/util/
+    └── Helper.java
+```
+
+核心：`module-info.java`
+这是模块的“身份证”，声明：
+- **模块名**
+- **导出哪些包**（对外公开 API）
+- **依赖哪些其他模块**
+- **开放哪些包给反射**（可选）
+
+```java
+// module-info.java
+module com.example.myapp {
+    // 1. 导出包（只有被 exports 的包，外部模块才能访问）
+    exports com.example.main;
+
+    // 2. 依赖其他模块（requires）
+    requires java.base;        // 所有模块默认依赖 java.base
+    requires org.slf4j;        // 第三方日志模块
+
+    // 3. 开放包给反射（比如 Spring 需要）
+    opens com.example.util;
+}
+```
+
+####  exports 和 opens 的区别
+| 特性 | `exports` | `opens`                                     |
+|------|----------|---------------------------------------------|
+| 用途 | 允许其他模块正常编译和调用（如 `new MyClass()`） | 允许其他模块通过**反射**访问（如 `field.set(obj, value)`） |
+| 访问级别 | 只能访问 `public` 类和成员 | 可访问 所有成员（包括 `private`、`protected`）          |
+| 安全性 | 较高（只暴露 API） | 较低（暴露内部实现）                                  |
+| 典型场景 | 提供公共 API | 支持依赖注入、序列化、测试等反射框架                          |
+
+
+
+---
+
+#### 模块的特性
+
+| 特性 | 说明 | 举例 |
+|------|------|------|
+| **强封装（Strong Encapsulation）** | 未 `exports` 的包，**其他模块完全不可见**（连反射都默认禁止） | `com.example.internal` 没 exports → 别人无法使用 |
+| **显式依赖（Explicit Dependencies）** | 必须用 `requires` 声明依赖，否则编译/运行时报错 | 忘了 `requires java.sql` → 用 `Connection` 就报错 |
+| **可靠配置（Reliable Configuration）** | 启动时 JVM 会检查模块依赖是否完整，避免运行时 `NoClassDefFoundError` | 缺少依赖模块 → 启动直接失败，不等到运行时才崩 |
+| **更小的运行时（Smaller Runtime）** | 可用 `jlink` 工具打包**只包含所需模块的 JRE** | 微服务镜像从 400MB → 50MB |
+
+
+
+#### 模块 vs 包 vs JAR
+
+| 层级 | 作用 | 可见性控制 |
+|------|------|-----------|
+| **类（Class）** | 代码基本单元 | `private` / `protected` / `public` |
+| **包（Package）** | 组织类 | 默认包内可见，`public` 全局可见（无限制）|
+| **模块（Module）** | 组织包 + 声明依赖 | **只有 `exports` 的包才对外可见** ✅ |
+
+
+
+:::tip 非模块化代码
+
+Java 为了向后兼容，设计了 **“未命名模块（Unnamed Module）”**：
+
+- 所有没有 `module-info.java` 的 JAR，会被放入 **同一个未命名模块**。
+- 这个模块：
+  - **能读取所有其他模块**（包括 JDK 模块）
+  - **但自己的所有包都对外暴露**（像以前一样）
+  - **不能被模块化代码直接依赖**（除非用 `--add-modules` 等参数）
+
+> ✅ 所以老项目可以**逐步迁移**，不用一次性重写。
+:::
+
+####  模块场景
+
+| 场景 | 好处 |
+|------|------|
+| **大型应用** | 清晰划分组件边界，避免“意大利面条式依赖” |
+| **安全敏感系统** | 隐藏内部实现，防止误用或攻击（如禁止访问内部 API）|
+| **微服务/容器** | 用 `jlink` 生成超小 JRE，加快启动、减少攻击面 |
+| **库开发者** | 明确区分 public API 和 internal 实现，未来升级更安全 |
+
+
+
 
 
