@@ -1456,6 +1456,13 @@ new Thread(task).start();
 
 > 推荐使用 `Runnable`：避免了Thread使用时的单继承限制，更符合“组合优于继承”原则。
 
+:::tip 为什么是调用start()而不是run()？
+
+调用run()只是在当前线程（比如 main 线程）中执行 run() 方法体，不会并发执行，程序仍然是单线程的。
+
+而调用start()后，JVM会为这个线程分配独立的虚拟机栈，将线程状态从 NEW 变为 RUNNABLE，在新线程的上下文中，自动调用该对象的 run() 方法
+:::
+
 #### 线程的生命周期
 | 状态 | 说明 |
 |------|------|
@@ -1682,7 +1689,9 @@ public class PriceService {
 }
 //由于该商品价格被修改的概率较小，所以大部分时间都不会加读锁，优化了性能。
 ```
-
+:::warning 注意
+- `volatile`变量不能保证原子性（如 i++ 仍需 synchronized 或 AtomicInteger）
+:::
 
 #### 如何选择
 
