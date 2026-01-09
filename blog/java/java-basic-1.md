@@ -177,8 +177,19 @@ int[] arr1 = {1,2,3,4};
 int[] arr2 = {1,2,3,4};
 
 System.out.println(arr1.equals(arr2)); // false-->数组没有重写 Object 类中的 equals(),此时比较地址值，地址值不同
+
+//一维数组比较内容的正确方式
 System.out.println(Arrays.equals(arr1, arr2)); //true-->当数组长度和元素都相同，则返回true
+
+//多维数组比较内容的正确方式
+int[][] a = {{1, 2}, {3, 4}};
+int[][] b = {{1, 2}, {3, 4}};
+System.out.println(Arrays.deepEquals(a, b)); // true
+
+
+
 ```
+
 
 ## ==与equals
 :::code-group
@@ -222,7 +233,7 @@ System.out.println(p1.equals(p2)); // false（因为未重写 equals，默认用
 Integer a = 100;
 Integer b = 100;
 System.out.println(a.equals(b)); // true（比较值）
-        System.out.println(a == b);      // 可能 true 或 false（受 Integer 缓存影响）
+System.out.println(a == b);      // 可能 true 或 false（受 Integer 缓存影响）
 ```
 :::
 
@@ -230,6 +241,8 @@ System.out.println(a.equals(b)); // true（比较值）
 :::warning 注意
 - `==`对基本类型比较的是**值**，对引用类型比较的是**引用**。
 - `equals()`不能用于基本类型，默认比较**引用**。**重写（`equals()` 和 `hashCode()`）后可比较内容**
+- `Integer`, `Character`等包装类以及`String/List/Set/Map/BigInteger/BigDecimal`等类型重写了 `equals()`，所以比较的是值内容，而不是地址值。
+
 - 避免对 null 调用 `equals()`，会抛出 `NullPointerException`。
 :::
 
@@ -1978,8 +1991,8 @@ public class WrapperExample {
 }
 ```
 :::warning 注意
-- 缓存机制：Integer类缓存了-128到127之间的值，所以这个范围包装对象值都是相等的。超出缓存范围的比较应使用equals()而非==
-
+- 缓存机制：Integer类缓存了`-128到127`之间的值，所以这个范围包装对象值都是相等的。超出缓存范围的比较应使用`equals()`而非==
+- 
 - 频繁装箱拆箱会影响性能，在性能敏感场景应优先使用基本类型
 :::
 ## Java GUI 
