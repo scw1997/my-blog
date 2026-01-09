@@ -1239,14 +1239,14 @@ public class NioFileExample {
 - 文件操作可能抛出 IOException 或 SecurityException
 :::
 
-## IO
+## IO流
 
  **I/O 流（Input/Output Streams）** 是 Java 用于处理**输入与输出操作**的核心机制，主要用于在程序与外部资源（如文件、网络、内存、控制台等）之间传输数据。
  
 I/O 流位于 `java.io` 包中（传统 I/O），Java 1.4 起还引入了更高效的 **NIO（New I/O，`java.nio` 包）**。
 
 
-### 字节流
+#### 字节流
 
 | 输入流（读） | 输出流（写） | 用途 |
 |-------------|-------------|------|
@@ -1256,7 +1256,7 @@ I/O 流位于 `java.io` 包中（传统 I/O），Java 1.4 起还引入了更高�
 | `DataInputStream` | `DataOutputStream` | 读写基本数据类型（int, double 等） |
 | `ObjectInputStream` | `ObjectOutputStream` | 序列化/反序列化对象 |
 
-### 字符流
+#### 字符流
 
 | 输入流（读） | 输出流（写） | 用途 |
 |-------------|-------------|------|
@@ -1414,7 +1414,8 @@ process.waitFor();
   - 同一进程内的多个线程共享该进程的内存空间（如堆、方法区），但每个线程有自己的栈。
   - 线程创建和切换开销小，适合高并发任务。
   - 线程间通信方便（可直接读写共享变量），但也需注意**线程安全**问题（如竞态条件、死锁）。
-- **Java 中**：每个 Java 程序至少有一个主线程（`main` 方法所在的线程）。
+
+> Java 程序默认至少有两个线程：main 主线程 和 垃圾回收线程（GC Thread）。
 
 
 #### 创建线程的两种方式
@@ -1426,9 +1427,14 @@ class MyThread extends Thread {
         System.out.println("Thread running: " + Thread.currentThread().getName());
     }
 }
-
 // 使用
 new MyThread().start();
+
+
+//java8+可使用lambda表达式简化上述代码
+new Thread(() -> {
+        System.out.println("Hello from thread: " + Thread.currentThread().getName());
+        }).start();
 ```
 ```java [实现Runnable接口（推荐）]
 Runnable task = () -> System.out.println("Running in: " + Thread.currentThread().getName());
@@ -1436,18 +1442,40 @@ new Thread(task).start();
 ```
 :::
 
-> ✅ 推荐使用 `Runnable`：避免单继承限制，更符合“组合优于继承”原则。
+> 推荐使用 `Runnable`：避免单继承限制，更符合“组合优于继承”原则。
 
-#### 高级并发工具（Java 5+）
-- `ExecutorService`：线程池管理
-  ```java
-  ExecutorService executor = Executors.newFixedThreadPool(4);
-  executor.submit(() -> System.out.println("Task executed"));
-  executor.shutdown();
-  ```
-- `CompletableFuture`：异步编程
-- `synchronized` / `ReentrantLock`：线程同步
-- `volatile`：保证可见性
+#### 线程的生命周期
+| 状态 | 说明 |
+|------|------|
+| `NEW` | 线程刚创建，尚未启动（`start()` 未调用） |
+| `RUNNABLE` | 正在 JVM 中运行或等待 CPU 时间片（包括就绪和运行） |
+| `BLOCKED` | 等待获取监视器锁（如进入 synchronized 块时被阻塞） |
+| `WAITING` | 无限期等待其他线程显式唤醒（如 `wait()`, `join()`, `LockSupport.park()`） |
+| `TIMED_WAITING` | 有超时的等待（如 `sleep(1000)`, `wait(1000)`, `parkNanos()`） |
+| `TERMINATED` | 线程执行完毕或异常终止 |
+
+
+#### 线程池
+手动创建线程开销大、难管理。Java 提供线程池统一管理
+```java
+ExecutorService executor = Executors.newFixedThreadPool(4);
+executor.submit(() -> {
+    System.out.println("Task executed by: " + Thread.currentThread().getName());
+});
+executor.shutdown();
+```
+
+常见线程池类型：
+
+| 方法 | 特点 |
+|------|------|
+| `newFixedThreadPool(n)` | 固定大小线程池 |
+| `newCachedThreadPool()` | 弹性线程池（空闲线程60秒回收） |
+| `newSingleThreadExecutor()` | 单线程顺序执行 |
+| `newScheduledThreadPool()` | 支持定时/周期任务 |
+
+
+#### 线程安全
 
 
 #### 对比
@@ -1469,7 +1497,7 @@ new Thread(task).start();
 - 现代 Java 应用通常以**多线程为主 + 必要时调用外部进程**的混合模式运行。
 :::
 
-### 锁
+### 线程安全（锁）
 
 锁是用于控制多线程对共享资源访问的同步机制，目的是**防止多个线程同时修改共享数据**而导致数据不一致或竞态条件。
 
@@ -1524,6 +1552,8 @@ public synchronized void useToilet() {
 #### 显式锁
 
 JDK 1.5 引入了 `java.util.concurrent.locks` 包，提供了更灵活的锁机制。
+
+> 默认情况下，优先推荐使用此包提供的线程同步方案，而不是synchronized
 
 ---
 #### 1.ReentrantLock（可重入锁）
@@ -1810,6 +1840,75 @@ Java 为了向后兼容，设计了 **“未命名模块（Unnamed Module）”*
 | **库开发者** | 明确区分 public API 和 internal 实现，未来升级更安全 |
 
 
+## Java虚拟机
 
+Java虚拟机（JVM）它是一个抽象的计算引擎，负责加载、验证、执行 Java 字节码（bytecode），并管理内存、线程、安全等底层资源。
+
+#### 虚拟机的作用
+
+- **跨平台运行**：
+
+  Java 源代码（.java）通过调用`javac java文件名`被编译成与平台无关的字节码（.class 文件），由 JVM通过`java class文件名（不含后缀）` 在不同操作系统（Windows、Linux、macOS 等）上解释或编译执行。
+
+- **自动内存管理**：
+JVM 提供垃圾回收（GC）机制，自动回收不再使用的对象，避免内存泄漏和手动内存管理的复杂性。
+- **安全性**：
+JVM 提供字节码校验、类加载器隔离、安全管理器等机制，防止恶意代码破坏系统。
+- **性能优化**:
+通过 即时编译器（JIT, Just-In-Time Compiler）将热点代码编译为本地机器码，提升运行效率。
+
+#### 虚拟机组成结构
+
+
+#### 1.类加载子系统
+
+  负责将 .class 文件加载到内存，并生成对应的 Class 对象。
+
+#### 2.运行时数据区
+
+  这是 JVM 的`内存模型`，分为线程共享和线程私有区域：
+
+##### （1）线程共享
+    
+- **方法区**：存储类信息、常量、静态变量、JIT 编译后的代码
+- **堆**： 存放几乎所有对象实例和数组
+##### （2）线程私有
+
+- **虚拟机栈**：每个线程一个栈，存储栈帧（Stack Frame），包含局部变量表、操作数栈、动态链接、方法返回地址等。**方法调用 = 压栈，方法返回 = 出栈**。
+- **本地方法栈**：用于执行 native 方法（如 C/C++ 代码）
+- **程序计数器**：记录当前线程执行到哪一行代码
+
+#### 3.执行引擎
+
+负责执行字节码指令，包含解释器, 即时编译器，垃圾回收器。
+
+#### 4.本地方法接口
+
+允许 Java 代码调用本地（如 C/C++）库，扩展 JVM 功能（如访问硬件、调用系统 API）。
+#### 5.本地方法库
+包含 JVM 使用的本地库（如 java.lang.System 的部分实现）。
+
+#### 虚拟机运行流程
+
+```text
+.java 源码 
+   ↓ (javac 编译)
+.class 字节码 
+   ↓ (JVM 加载)
+类加载器 → 方法区（存储类结构）
+   ↓
+main() 方法入口 → 创建主线程 → 虚拟机栈压入 main 栈帧
+   ↓
+执行引擎解释/编译字节码 → 操作堆中对象
+   ↓
+GC 定期清理无用对象
+```
+
+#### JDK/JRE/JVM关系
+|名词|介绍|
+|--|--|
+|JDK|JDK是java开发工具包，包含了JVM虚拟机，核心类库和开发工具（java,javac等）。用于编写代码+运行程序。|
+|JRE|JRE是java运行环境。包含了JVM虚拟机，核心类库和运行工具。如果只需要运行class文件，则只需要JRE即可。|
+|JVM|JVM是虚拟机，为java程序真正运行的地方。|
 
 

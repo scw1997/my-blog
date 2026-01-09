@@ -192,12 +192,12 @@ const routes =  [
                 collapsed: true,
                 items: [
                     {
-                        text:'Java基础',
-                        link: '/java/java-basic'
+                        text:'Java基础（上）',
+                        link: '/java/java-basic-1'
                     },
                     {
-                        text:'Java高级',
-                        link: '/java/java-advanced'
+                        text:'Java基础（下）',
+                        link: '/java/java-basic-2'
                     }
                 ]
             }
