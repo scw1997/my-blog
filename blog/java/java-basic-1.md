@@ -170,16 +170,20 @@ int[] arr = {1,2,3,4};
 
 - 数组比较
 
+数组作为java内置类型，与其他普通类不同，默认`没有重写equals()方法`，所以不适合用equals()方法比较数组内容。
+
 ```java
 import java.util.Arrays;
 
 int[] arr1 = {1,2,3,4};
 int[] arr2 = {1,2,3,4};
 
-System.out.println(arr1.equals(arr2)); // false-->数组没有重写 Object 类中的 equals(),此时比较地址值，地址值不同
+//数组没有重写 Object 类中的 equals(),此时比较地址值，地址值不同
+System.out.println(arr1.equals(arr2)); // false--
 
+//采用工具类来比较
 //一维数组比较内容的正确方式
-System.out.println(Arrays.equals(arr1, arr2)); //true-->当数组长度和元素都相同，则返回true
+System.out.println(Arrays.equals(arr1, arr2)); //true
 
 //多维数组比较内容的正确方式
 int[][] a = {{1, 2}, {3, 4}};
@@ -187,9 +191,10 @@ int[][] b = {{1, 2}, {3, 4}};
 System.out.println(Arrays.deepEquals(a, b)); // true
 
 
-
 ```
-
+:::warning 注意
+- 由于数组没有默认重写equals()方法，所以也不适合将数组作为Map的key
+:::
 
 ## ==与equals
 :::code-group
