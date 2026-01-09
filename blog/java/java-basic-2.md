@@ -1427,22 +1427,34 @@ class MyThread extends Thread {
         System.out.println("Thread running: " + Thread.currentThread().getName());
     }
 }
-// 使用
-new MyThread().start();
+// 使用(注意：必须调用 start()，不是 run())
+new MyThread().start(); 
 
 
 //java8+可使用lambda表达式简化上述代码
 new Thread(() -> {
-        System.out.println("Hello from thread: " + Thread.currentThread().getName());
+        System.out.println("Thread running: " + Thread.currentThread().getName());
         }).start();
 ```
 ```java [实现Runnable接口（推荐）]
+class MyTask implements Runnable {
+    @Override
+    public void run() {
+        System.out.println("Task running in: " + Thread.currentThread().getName());
+    }
+}
+
+// 使用
+Thread t = new Thread(new MyTask());
+t.start();
+
+//java8+可使用lambda表达式简化上述代码
 Runnable task = () -> System.out.println("Running in: " + Thread.currentThread().getName());
 new Thread(task).start();
 ```
 :::
 
-> 推荐使用 `Runnable`：避免单继承限制，更符合“组合优于继承”原则。
+> 推荐使用 `Runnable`：避免了Thread使用时的单继承限制，更符合“组合优于继承”原则。
 
 #### 线程的生命周期
 | 状态 | 说明 |
