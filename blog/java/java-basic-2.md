@@ -2138,10 +2138,6 @@ JVM 自动判断对象是否“逃逸”出方法：
 - 减少线程上下文切换开销
 
 
-
-
-
-
 ### JDK/JRE/JVM关系
 |名词|介绍|
 |--|--|
@@ -2150,3 +2146,61 @@ JVM 自动判断对象是否“逃逸”出方法：
 |JVM|JVM是虚拟机，为java程序真正运行的地方。|
 
 
+## 反射
+
+反射是java语言中的一种机制，允许程序在运行时`动态地获取、操作类、对象、字段和方法等信息`。
+
+| 操作 | 代码示例 |
+|------|--------|
+| 获取类信息 | `Class.forName("java.util.ArrayList")` |
+| 创建对象 | `clazz.newInstance()` 或 `constructor.newInstance()` |
+| 调用方法 | `method.invoke(obj, args)` |
+| 访问字段（包括 private！） | `field.set(obj, value)` |
+| 查看注解 | `method.getAnnotation(MyAnnotation.class)` |
+
+:::warning 注意
+
+- 反射可以突破`private`限制，需谨慎使用
+- 反射一般用于**框架开发，工具类**，极少用于业务代码。
+  :::
+
+示例：
+```java
+// 1. 定义一个普通类
+public class Person {
+    private String name;
+    
+    public Person(String name) {
+        this.name = name;
+    }
+    
+    private void sayHello() {
+        System.out.println("Hello, I'm " + name);
+    }
+}
+
+// 2. 用反射调用它的 private 方法！
+public class ReflectionDemo {
+    public static void main(String[] args) throws Exception {
+        // 获取 Person 类
+        Class<?> clazz = Person.class;
+        
+        // 创建对象实例
+        Object person = clazz.getConstructor(String.class).newInstance("小明");
+        
+        // 获取 private 方法
+        Method method = clazz.getDeclaredMethod("sayHello");
+        method.setAccessible(true); // 关键！允许访问 private
+        
+        // 调用方法
+        method.invoke(person); // 输出：Hello, I'm 小明
+    }
+}
+```
+
+反射的缺点：
+
+- **性能较低**：调用反射方法会比直接调用方法性能较低。
+- **破坏封装性**：能访问 private 成员，容易引发安全问题。
+- **编译器无法检查**：反射操作无法在编译时进行静态检查，可能会导致运行时错误。
+- **代码可读性差**。
