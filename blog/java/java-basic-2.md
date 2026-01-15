@@ -1241,6 +1241,11 @@ public class NioFileExample {
 
 ## IO流
 
+File 不能读写文件内容。它只是一个“文件的引用”或“路径描述符”，主要用于**文件/目录的元信息操作**。
+
+而IO流是用于**数据内容的读写操作**。
+
+
  **I/O 流（Input/Output Streams）** 是 Java 用于处理**输入与输出操作**的核心机制，主要用于在程序与外部资源（如文件、网络、内存、控制台等）之间传输数据。
  
 I/O 流位于 `java.io` 包中（传统 I/O），Java 1.4 起还引入了更高效的 **NIO（New I/O，`java.nio` 包）**。
@@ -1248,29 +1253,31 @@ I/O 流位于 `java.io` 包中（传统 I/O），Java 1.4 起还引入了更高�
 
 #### 字节流
 
-| 输入流（读） | 输出流（写） | 用途 |
-|-------------|-------------|------|
-| `FileInputStream` | `FileOutputStream` | 读写文件（字节） |
-| `ByteArrayInputStream` | `ByteArrayOutputStream` | 读写内存字节数组 |
-| `BufferedInputStream` | `BufferedOutputStream` | 带缓冲，提高性能 |
-| `DataInputStream` | `DataOutputStream` | 读写基本数据类型（int, double 等） |
-| `ObjectInputStream` | `ObjectOutputStream` | 序列化/反序列化对象 |
+| 输入流（读）                           | 输出流（写）                  | 用途                                   |
+|----------------------------------|-------------------------|--------------------------------------|
+| `FileInputStream`                | `FileOutputStream`      | 读写文件（字节）                             |
+| `ByteArrayInputStream`           | `ByteArrayOutputStream` | 读写内存字节数组                             |
+| `BufferedInputStream`            | `BufferedOutputStream`  | 带缓冲的字节流，提高性能                         |
+| `DataInputStream`                | `DataOutputStream`      | 读写基本数据类型（int, double 等）              |
+| `ObjectInputStream`              | `ObjectOutputStream`    | 序列化/反序列化对象（对象必须实现`Serializable` 接口）  |
+| 无                                | `PrintStream`           | 格式化输出（例如`System.out`是PrintStream的实例） |
+| `GZIPInputStream / ZipInputStream` | 无                       | 解压缩文件                             |
 
 #### 字符流
 
-| 输入流（读） | 输出流（写） | 用途 |
-|-------------|-------------|------|
-| `FileReader` | `FileWriter` | 读写文本文件（使用平台默认编码） |
-| `InputStreamReader` | `OutputStreamWriter` | **桥接字节流与字符流**，可指定编码（如 UTF-8） |
-| `BufferedReader` | `BufferedWriter` | 带缓冲的字符流，支持 `readLine()` |
-| `StringReader` | `StringWriter` | 读写字符串 |
-| `PrintWriter` | — | 格式化输出（类似 `System.out.println`） |
+| 输入流（读）              | 输出流（写） | 用途                                                                         |
+|---------------------|-------------|----------------------------------------------------------------------------|
+| `FileReader`        | `FileWriter` | 读写文本文件（使用平台默认编码）                                                           |
+| `InputStreamReader` | `OutputStreamWriter` | **桥接字节流与字符流（本质是字符流）**，作用：<br/>- 支持指定编码（如 UTF-8）<br/>- 基于字节流转换成字符流来使用字符流的方法 |
+| `BufferedReader`    | `BufferedWriter` | 带缓冲的字符流，支持 `readLine()`                                                    |
+| `StringReader`      | `StringWriter` | 读写字符串                                                                      |
+| 无                   | `PrintWriter` | 格式化输出（类似 `System.out.println`）                                             |
 
-> 注意：`FileReader`/`FileWriter` **不能指定编码**！推荐用：
-> ```java
-> new InputStreamReader(new FileInputStream("file.txt"), "UTF-8")
-> ```
+:::tip 技巧
+- 记忆技巧：**以Reader/Writer结尾为字符流，以Stream结尾为字节流，以StreamReader/Writer结尾为桥接转换流**
 
+- `FileReader`/`FileWriter` **不能指定编码**。推荐用：new InputStreamReader(new FileInputStream("file.txt"), "UTF-8")
+:::
 
 #### 典型使用示例
 
@@ -1284,6 +1291,7 @@ try (BufferedReader reader = new BufferedReader(
         )
     )) {
     String line;
+    //这里必须用变量接收读取下一行的结果，否则会导致文件指针提前移动（只要执行读取就会移动文件指针，必须用变量保存结果）
     while ((line = reader.readLine()) != null) {
         System.out.println(line);
     }
@@ -1325,32 +1333,76 @@ try (FileInputStream in = new FileInputStream("src.jpg");
 ```java [对象序列化]
 // 写入
 try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("obj.dat"))) {
-    //`Person` 必须实现 `Serializable` 接口。
+    //`Person` 必须实现 `Serializable` 接口（将Person类implements Serializable即可）。
     oos.writeObject(new Person("Alice", 30));
         
         
         
 }
 
-// 读取
+// 读取（反序列化）
 try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream("obj.dat"))) {
     Person p = (Person) ois.readObject();
 }
 ```
+```java [打印流]
+PrintStream ps = new PrintStream("output.txt");
+ps.println("Hello, World!");
+ps.printf("Number: %d", 42);
+ps.close();
+
+
+PrintWriter log = new PrintWriter(new FileWriter("app.log", true), true);
+log.println("[INFO] Application started at " + new Date());
+// 即使磁盘满，程序不会 crash（PrintStream 更安全）
+```
+```java [解压缩流]
+/// 解压 .gz 文件
+try (GZIPInputStream gis = new GZIPInputStream(new FileInputStream("data.txt.gz"));
+    BufferedReader reader = new BufferedReader(new InputStreamReader(gis))) {
+      String line;
+      while ((line = reader.readLine()) != null) {
+          System.out.println(line);
+      }
+}
+
+///解压 ZIP 中所有文件
+try (ZipInputStream zis = new ZipInputStream(new FileInputStream("archive.zip"))) {
+    ZipEntry entry;
+    while ((entry = zis.getNextEntry()) != null) {
+        System.out.println("Extracting: " + entry.getName());
+        // 可将 zis 的内容写入新文件
+        Files.copy(zis, Paths.get("extracted/" + entry.getName()),StandardCopyOption.REPLACE_EXISTING);
+        zis.closeEntry();
+    }
+}
+```
 :::
+
+#### 打印流 vs 标准输出流
+
+| 特性                     | 打印流（PrintStream / PrintWriter）        | 普通输出流（如 FileOutputStream / OutputStreamWriter） |
+|--------------------------|---------------------------------------|--------------------------------------------------------|
+| 数据类型支持             | **直接支持基本类型、对象、格式化字符串**                | 仅支持字节或字符（需手动转换）                         |
+| 换行处理                 | 提供 `println()`，自动平台适配                 | 需手动写 `\n` 或 `\r\n`                                |
+| 异常处理                 | `PrintStream` 不抛异常；`PrintWriter` 可选   | 所有 I/O 错误均抛出 `IOException`                      |
+| 自动刷新                 | 支持（构造时开启）                             | 必须手动调用 `flush()`                                 |
+| 主要用途                 | **日志、控制台、文本报告等人类可读输出**                | 通用数据写入（包括二进制、文本、网络等）               |
+| 字节 vs 字符             | `PrintStream` 是字节流；`PrintWriter` 是字符流 | 两者都有字节流和字符流版本                             |
+
+
 
 #### NIO vs IO
 
-| 特性 | 传统 IO（`java.io`） | NIO（`java.nio`） |   |
-|------|---------------------|------------------|---|
-| 模型 | 阻塞式（Blocking） | 非阻塞 + 通道（Channel）+ 缓冲区（Buffer） |   |
-| 性能 | 适合小文件、简单场景 | 适合高并发、大文件（如服务器） |   |
-| 使用难度 | 简单直观 | 较复杂 |   |
-| 关键类 | `InputStream`, `Reader` | `FileChannel`, `ByteBuffer`, `Path`, `Files` |   |
+| 特性 | 传统 IO（`java.io`） | NIO（`java.nio`） |   
+|------|---------------------|------------------|
+| 模型 | 阻塞式（Blocking） | 非阻塞 + 通道（Channel）+ 缓冲区（Buffer） |   
+| 性能 | 适合小文件、简单场景 | 适合高并发、大文件（如服务器） |   
+| 使用难度 | 简单直观 | 较复杂 |   
+| 关键类 | `InputStream`, `Reader` | `FileChannel`, `ByteBuffer`, `Path`, `Files` |   
 
 > 对于大多数文件读写任务，传统 IO + try-with-resources 已足够。
 
----
 
 :::tip 选择技巧
 - 文本 → 用 `Reader/Writer` + 指定编码
@@ -1438,29 +1490,83 @@ new Thread(() -> {
 ```
 ```java [实现Runnable接口（推荐）]
 class MyTask implements Runnable {
-    @Override
-    public void run() {
-        System.out.println("Task running in: " + Thread.currentThread().getName());
-    }
+  @Override
+  public void run() {
+    System.out.println("Task running in: " + Thread.currentThread().getName());
+  }
 }
 
 // 使用
-Thread t = new Thread(new MyTask());
+Thread t = new Thread(new MyTask(),"threadName");
 t.start();
 
 //java8+可使用lambda表达式简化上述代码
-Runnable task = () -> System.out.println("Running in: " + Thread.currentThread().getName());
-new Thread(task).start();
+// Runnable task = () -> System.out.println("Running in: " + Thread.currentThread().getName());
+// new Thread(task,"threadName").start();
+
+t.getName() ; // 获取线程名称
+t.setPriority(5); // 设置线程优先级,值为1-10，默认为5
 ```
 :::
 
-> 推荐使用 `Runnable`：避免了Thread使用时的单继承限制，更符合“组合优于继承”原则。
+> 推荐使用 `Runnable`：避免了另一种方法（继承Thread类）使用时的**单继承**限制，更符合“组合优于继承”原则。
 
 :::tip 为什么是调用start()而不是run()？
 
 调用run()只是在当前线程（比如 main 线程）中执行 run() 方法体，不会并发执行，程序仍然是单线程的。
 
 而调用start()后，JVM会为这个线程分配独立的虚拟机栈，将线程状态从 NEW 变为 RUNNABLE，在新线程的上下文中，自动调用该对象的 run() 方法
+:::
+
+#### 守护线程
+
+```java
+public class DaemonThreadExample {
+    public static void main(String[] args) throws InterruptedException {
+        Thread daemon = new Thread(() -> {
+            while (true) {
+                System.out.println("守护线程正在运行...");
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        });
+
+        daemon.setDaemon(true); // 设置为守护线程
+        daemon.start();
+
+        // 主线程（用户线程）休眠3秒后结束
+        Thread.sleep(3000);
+        System.out.println("主线程结束");
+        // JVM 退出，守护线程被强制终止
+    }
+}
+//输出可能为：
+
+//守护线程正在运行...
+//守护线程正在运行...
+//守护线程正在运行...
+//主线程结束
+//（程序退出，不再打印）
+```
+
+**作用**：为其他用户线程提供服务。当 JVM 中所有用户线程都结束运行后，无论守护线程是否还在执行，JVM 都会自动退出，不会等待守护线程完成。
+
+**特点**：`随用户线程共存亡`
+
+**应用场景**：监控、清理、日志记录、定时任务等后台服务或辅助功能（例如聊天为用户线程，发送文件为守护线程）。
+
+:::warning 注意
+
+- 通过 `new Thread()` 创建的线程默认是用户线程。
+- 守护线程创建的子线程也是**守护线程**
+- 守护线程必须在**线程启动前（start() 之前）设置**，否则会抛出 IllegalThreadStateException
+- 不要在守护线程中执行 I/O 或持久化操作。因为JVM随时可能退出。
+
+
 :::
 
 #### 线程的生命周期
