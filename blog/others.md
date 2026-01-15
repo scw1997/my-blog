@@ -417,7 +417,9 @@ onBlur={() => document.body.removeEventListener("touchmove", stopMove)
 ```html
   <meta name="viewport" content="width=device-width,initial-scale=1, user-scalable=0, viewport-fit=cover">
 ```
+#### ios手机端safari浏览器页面底部遮挡
 
+全局布局容器高度设置为`window.innerHeight`，不要使用`100vh`
 ## Git
 
 - git误删远程分支恢复方法
