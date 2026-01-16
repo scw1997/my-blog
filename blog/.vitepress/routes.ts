@@ -188,19 +188,30 @@ const routes =  [
         text: '后端',
         items:[
             {
-                text:'Java',
+                text: 'Java',
                 collapsed: true,
-                items: [
+                items:[
                     {
                         text:'Java基础（上）',
-                        link: '/java/java-basic-1'
+                        link: '/backend/java/java-basic-1'
                     },
                     {
                         text:'Java基础（下）',
-                        link: '/java/java-basic-2'
+                        link: '/backend/java/java-basic-2'
+                    },
+                ]
+            },
+            {
+                text: '数据库',
+                collapsed: true,
+                items:[
+                    {
+                        text:'MySql',
+                        link: '/backend/database/mysql'
                     }
                 ]
             }
+
         ]
     },
     {
