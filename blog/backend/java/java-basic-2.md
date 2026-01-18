@@ -1505,7 +1505,6 @@ t.start();
 // new Thread(task,"threadName").start();
 
 t.getName() ; // 获取线程名称
-t.setPriority(5); // 设置线程优先级,值为1-10，默认为5
 ```
 :::
 
@@ -1553,7 +1552,7 @@ public class DaemonThreadExample {
 //（程序退出，不再打印）
 ```
 
-**作用**：为其他用户线程提供服务。当 JVM 中所有用户线程都结束运行后，无论守护线程是否还在执行，JVM 都会自动退出，不会等待守护线程完成。
+**作用**：为其他用户线程（线程默认都是用户线程）提供服务。当 JVM 中所有用户线程都结束运行后，无论守护线程是否还在执行，JVM 都会自动退出，不会等待守护线程完成。
 
 **特点**：`随用户线程共存亡`
 
@@ -1565,20 +1564,126 @@ public class DaemonThreadExample {
 - 守护线程创建的子线程也是**守护线程**
 - 守护线程必须在**线程启动前（start() 之前）设置**，否则会抛出 IllegalThreadStateException
 - 不要在守护线程中执行 I/O 或持久化操作。因为JVM随时可能退出。
+:::
 
+#### 礼让线程
 
+`Thread.yield()`礼让线程是指一个正在运行的线程主动放弃当前已获得的 CPU 时间片，让其他同优先级或更高优先级的线程有机会执行。
+
+```java
+public class YieldExample {
+    private static volatile boolean flag = false;
+
+    public static void main(String[] args) throws InterruptedException {
+        Thread producer = new Thread(() -> {
+            for (int i = 0; i < 5; i++) {
+                System.out.println("Producer: " + i);
+                if (i == 3) flag = true;
+                Thread.yield(); // 礼让，让 consumer 有机会检查 flag
+            }
+        });
+
+        Thread consumer = new Thread(() -> {
+            while (!flag) {
+                System.out.println("Consumer waiting...");
+                Thread.yield(); // 避免空循环疯狂占用 CPU
+            }
+            System.out.println("Consumer got the signal!");
+        });
+
+        consumer.start();
+        producer.start();
+
+        producer.join();
+        consumer.join();
+    }
+}
+```
+:::warning 注意
+Thread.yield() 是一个“礼貌的提示”，告诉调度器：“我现在不着急，可以让别人先跑”。
+
+它不阻塞线程，不保证线程切换，不释放锁；实际是否发生线程切换，取决于底层线程调度策略（如时间片轮转、优先级调度等）。
+
+`生产代码中尽量避免使用礼让线程，不要用于替代同步机制`
+:::
+
+#### 插入线程
+
+`Thread.join()`是线程的插队（join）机制 —— 即当前线程“插入”到另一个线程的执行流程中，等待目标线程结束后再继续。
+
+```java
+public class JoinExample {
+    public static void main(String[] args) throws InterruptedException {
+        Thread worker = new Thread(() -> {
+            System.out.println("子线程开始工作...");
+            try {
+                Thread.sleep(2000); // 模拟耗时任务
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            System.out.println("子线程工作完成！");
+        });
+
+        worker.start();
+
+        System.out.println("主线程准备等待子线程...");
+        worker.join(); // ✅ “插入”：主线程在此等待 worker 结束
+        System.out.println("主线程继续执行，程序结束。");
+    }
+}
+
+// 输出为：
+//主线程准备等待子线程...
+//子线程开始工作...
+// （等待2秒）
+//子线程工作完成！
+//主线程继续执行，程序结束。
+```
+:::tip 
+- `join()` 插入线程会阻塞当前线程，直到目标线程结束。是最简单的同步方式之一；。
+- 必须先 start() 再 join(),否则 join() 立即返回（因为线程已“结束”——从未运行）。
+- 适用于主线程等待所有子任务完成或 按顺序执行多个线程的场景
+:::
+#### 线程优先级
+
+Java 中线程优先级是一个 int 值，范围是 1 到 10，对应三个常量：
+
+| 常量 | 值 | 含义 |
+|------|----|------|
+| `Thread.MIN_PRIORITY` | 1 | 最低优先级 |
+| `Thread.NORM_PRIORITY` | 5 | 默认优先级（主线程和普通新线程的默认值） |
+| `Thread.MAX_PRIORITY` | 10 | 最高优先级 |
+
+示例：
+```java
+Thread t = new Thread(() -> {
+    System.out.println("Priority: " + Thread.currentThread().getPriority());
+});
+
+t.setPriority(Thread.MAX_PRIORITY); // 设置优先级（必须在 start() 前）
+System.out.println("Set to: " + t.getPriority()); // 获取优先级
+t.start();
+```
+:::warning 注意事项
+- 优先级必须在`start()之前`设置，否则可能无效。
+- 优先级**无法保证执行顺序和内存可见性**（即使线程 A 优先级高于 B，也不能保证 A 一定先运行）。
+- 优先级应在**同类任务**间比较才有意义,例如：多个下载任务中，VIP 用户的下载线程优先级更高。
+- 设置优先级`不是可靠的调度控制手段`,仅在特定平台和场景下可能产生轻微影响（某些平台几乎忽略线程优先级）。**大部分情况下无需修改优先级**。
 :::
 
 #### 线程的生命周期
-| 状态 | 说明 |
-|------|------|
-| `NEW` | 线程刚创建，尚未启动（`start()` 未调用） |
-| `RUNNABLE` | 正在 JVM 中运行或等待 CPU 时间片（包括就绪和运行） |
-| `BLOCKED` | 等待获取监视器锁（如进入 synchronized 块时被阻塞） |
-| `WAITING` | 无限期等待其他线程显式唤醒（如 `wait()`, `join()`, `LockSupport.park()`） |
-| `TIMED_WAITING` | 有超时的等待（如 `sleep(1000)`, `wait(1000)`, `parkNanos()`） |
-| `TERMINATED` | 线程执行完毕或异常终止 |
+| 状态（`Thread.State`） | 说明 | 触发条件 |
+|------------------------|------|----------|
+| NEW | 新建状态 | 线程对象已创建，但尚未调用 `start()` |
+| RUNNABLE | 可运行状态 | 已调用 `start()`，正在 JVM 中执行（可能正在 CPU 上运行，也可能在就绪队列中等待 CPU） |
+| BLOCKED | 阻塞状态 | 等待获取一个监视器锁（synchronized 锁），以便进入同步代码块/方法 |
+| WAITING | 无限等待状态 | 调用了 `Object.wait()`、`Thread.join()` 或 `LockSupport.park()`，不会超时，需其他线程显式唤醒 |
+| TIMED_WAITING | 计时等待状态 | 调用了带超时参数的方法，如 `Thread.sleep(1000)`、`Object.wait(1000)`、`Thread.join(1000)`、`LockSupport.parkNanos()` 等 |
+| TERMINATED | 终止状态 | 线程执行完毕（正常结束或因异常退出） |
 
+:::warning sleep()执行结束后，后面代码会立即执行吗？
+不会。因为sleep时间到了之后，会**从阻塞状态变成可运行状态**，但可能被其他线程抢占，导致后面代码无法立即执行（需要进行CPU执行权的抢夺）。
+:::
 
 #### 线程池
 手动创建线程开销大、难管理。Java 提供线程池统一管理
@@ -1600,7 +1705,6 @@ executor.shutdown();
 | `newScheduledThreadPool()` | 支持定时/周期任务 |
 
 
-#### 线程安全
 
 
 #### 对比
@@ -1626,6 +1730,8 @@ executor.shutdown();
 
 锁是用于控制多线程对共享资源访问的同步机制，目的是**防止多个线程同时修改共享数据**而导致数据不一致或竞态条件。
 
+因为多线程的执行调度是随机的，比如正在执行A线程时也可能会在执行B线程。如果涉及访问或修改同一变量时，可能会产生数据不一致问题。
+
 
 #### 内置锁（synchronized）
 
@@ -1648,6 +1754,8 @@ public static synchronized void staticMethod() {
 }
 
 // 代码块级
+//这里lockObject为锁对象。锁对象必须保证唯一（即所有线程加锁的逻辑都使用这唯一的锁对象，如果各自用的锁对于不一样，锁就无意义。）
+static Object lockObject = new Object();
 synchronized (lockObject) {
     // 临界区
 }
