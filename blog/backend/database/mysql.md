@@ -74,10 +74,31 @@ SQL 是操作数据库的“语言”，MySQL 是实现这种语言的“数据�
   ```cmd
   net start MySQL80
   ```
+  
+#### 3.添加环境变量
 
-#### 3：连接测试
+<br/>
+
+#####  方法 1：图形界面（推荐）
+1. 按 `Win + S`，搜索 **“环境变量”** → 选择 **“编辑系统环境变量”**
+2. 点击 **“环境变量...”** 按钮
+3. 在 **“系统变量”** 区域，找到并选中 `Path`，点击 **“编辑”**
+4. 点击 **“新建”**，然后粘贴你的 MySQL Server `bin` 路径，一般默认为：
+   ```
+   C:\Program Files\MySQL\MySQL Server 8.0\bin
+   ```
+5. 点击 **确定** 保存所有窗口
+
+##### 方法 2：命令行（管理员权限）
+```cmd
+setx /M PATH "%PATH%;C:\Program Files\MySQL\MySQL Server 8.0\bin"
+```
+> ⚠️ 注意：`setx` 修改后需**重新打开 CMD** 才生效。
+
+
+#### 4：连接测试
 1. 打开命令提示符（CMD）
-2. 进入 MySQL（Mysql Server） bin 目录（或已添加 PATH）：
+2. 进入 MySQL（Mysql Server） bin 目录或任意目录（已添加环境变量情况下）：
    ```cmd
    mysql -u root -p
    ```
@@ -101,6 +122,13 @@ SHOW DATABASES;
 | DCL | 控制数据库访问权限和安全，管理用户角色与权限。      | `GRANT`, `REVOKE` | —  | 
 | TCL | 管理事务，确保数据一致性（ACID 特性）。 | `COMMIT`, `ROLLBACK`, `SAVEPOINT` | —        | 
 | DQL | 专门用于查询数据        | `SELECT` | —        | 
+
+此外，一些常用命令有：
+
+- `USE database_name;`：选择数据库
+- `SHOW databases;`：查看所有数据库
+- `SHOW tables;`：查看当前数据库的所有表
+- `DESCRIBE table_name;`：查看表结构（数据）
 
 ### 书写规范
 
@@ -250,7 +278,7 @@ CREATE TABLE users (
 :::
 
 
-### 主键PRIMARY KEY
+## 主键PRIMARY KEY
 
 :::code-group
 ```sql [单列主键]
@@ -296,4 +324,85 @@ CREATE TABLE order_items (
 - 避免使用自然主键（如用“身份证号”、“邮箱”作主键），因为这些数据长度大且可能会修改。
 - 分布式系统考虑 UUID（全局唯一，适合分库分表）
 - 避免主键进行更新，因为会导致`索引重建和外键级联更新（可能锁表）`。
+:::
+
+
+## 聚合
+
+MySQL 的聚合函数（Aggregate Functions） 用于对一组值执行计算，并返回单个汇总结果。它们通常与 GROUP BY 子句配合使用，是数据分析、报表统计的核心工具。
+
+假设有一张销售表 sales：
+
+```sql
+CREATE TABLE sales (
+    id INT,
+    product VARCHAR(50),
+    amount DECIMAL(10,2),
+    region VARCHAR(20)
+);
+
+INSERT INTO sales VALUES
+(1, 'Laptop', 5000.00, 'North'),
+(2, 'Mouse', 50.00, 'North'),
+(3, 'Keyboard', 150.00, 'South'),
+(4, 'Monitor', NULL, 'East');  -- 注意：amount 为 NULL
+```
+
+
+- `COUNT(*)`：统计所有行数（包括 NULL 和重复值）
+- `COUNT(column)`：统计指定列非 NULL 的行数
+- `SUM(column)`：对数值列求和，忽略 NULL。如果所有值都是 NULL，返回 NULL（不是 0）
+- `AVG(column)`：对数值列求平均值，忽略 NULL。如果所有值都是 NULL，返回 NULL（不是 0）。`AVG(column) = SUM(column) / COUNT(column)`
+
+:::code-group
+```sql [COUNT]
+SELECT 
+    COUNT(*) AS total_rows,        -- 4（含 NULL 行）
+    COUNT(amount) AS non_null_amounts  -- 3（忽略 amount=NULL 的行）
+FROM sales; 
+
+-- 统计商品种类（使用DISTINCT将product列去重）
+SELECT COUNT(DISTINCT product) FROM sales;
+
+```
+```sql [SUM]
+SELECT SUM(amount) FROM sales;  -- 结果: 5200.00 (5000+50+150)
+```
+```sql [AVG]
+SELECT AVG(amount) FROM sales;  
+-- 结果: 1733.3333 (5200 / 3)，不是 5200/4！
+```
+```sql [MIN/MAX]
+SELECT 
+    MIN(amount),   -- 50.00
+    MAX(amount),   -- 5000.00
+    MIN(product),  -- 'Keyboard'（字母序最小）
+    MAX(region)    -- 'South'
+FROM sales;
+```
+:::
+
+#### 与GROUP BY（分组）配合使用
+
+```sql
+SELECT 
+    region,
+    COUNT(*) AS order_count,
+    SUM(amount) AS total_sales,
+    AVG(amount) AS avg_order_value
+FROM sales
+GROUP BY region;
+```
+则执行结果如下：
+
+| region | order_count | total_sales | avg_order_value |
+|--------|-------------|-------------|-----------------|
+| North  | 2           | 5050.00     | 2525.00         |
+| South  | 1           | 150.00      | 150.00          |
+| East   | 1           | NULL        | NULL            |
+>East 区的 amount 为 NULL，所以 SUM 和 AVG 返回 NULL
+
+:::warning 注意
+- `WHERE 不能用聚合函数`。如WHERE AVG(amount) > 100会报错，可改用 HAVING AVG(amount) > 100来进行过滤操作
+- 所有非聚合字段必须出现在 GROUP BY 中。例如`SELECT name, COUNT(*) FROM t（若 name 未 GROUP BY）`会报错
 :::
