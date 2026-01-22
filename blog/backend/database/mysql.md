@@ -406,3 +406,179 @@ GROUP BY region;
 - `WHERE 不能用聚合函数`。如WHERE AVG(amount) > 100会报错，可改用 HAVING AVG(amount) > 100来进行过滤操作
 - 所有非聚合字段必须出现在 GROUP BY 中。例如`SELECT name, COUNT(*) FROM t（若 name 未 GROUP BY）`会报错
 :::
+
+#### HAVING vs WHERE
+
+| 特性 | `WHERE` | `HAVING` |
+|------|--------|---------|
+| 作用阶段 | 在分组前过滤原始行 | 在分组后过滤聚合结果 |
+| 能否用聚合函数 | ❌ 不能（如 `COUNT()`, `SUM()`） | ✅ 可以 |
+| 性能 | 更快（减少参与分组的数据量） | 较慢（需先分组再过滤） |
+| 必须配合 GROUP BY 吗？ | 否 | 通常需要（除非用聚合函数但不分组） |
+
+
+示例：
+
+有如下表结构：
+
+```sql
+CREATE TABLE orders (
+    id INT,
+    customer_id INT,
+    amount DECIMAL(10,2)
+);
+
+INSERT INTO orders VALUES
+(1, 101, 100.00),
+(2, 101, 200.00),
+(3, 102, 50.00),
+(4, 103, 300.00),
+(5, 103, 150.00);
+```
+
+```sql
+-- 找出“单笔订单 ≥ 100 元”的客户中，总消费 > 200 的
+SELECT 
+    customer_id,
+    COUNT(*) AS order_count,
+    SUM(amount) AS total
+FROM orders
+WHERE amount >= 100          -- 先过滤掉小额订单
+GROUP BY customer_id
+HAVING SUM(amount) > 200;    -- 再过滤总消费
+```
+
+:::tip
+- 总结：`WHERE 过滤“行”，HAVING 过滤“组”`
+- 最佳实践：先用 WHERE 减少数据量，再用 GROUP BY 分组，最后用 HAVING 过滤聚合结果。
+:::
+
+## 排序
+
+排序是通过`ORDER BY`子句实现的，用于控制查询结果的`行`返回顺序。
+
+基本语法：
+
+```sql
+SELECT column1, column2, ...
+FROM table_name
+WHERE ...          -- 可选
+GROUP BY ...       -- 可选
+HAVING ...         -- 可选
+ORDER BY 
+    column_name [ASC | DESC],
+    expression [ASC | DESC],
+    position [ASC | DESC];
+```
+> ASC为升序（默认），DESC为降序
+
+示例：
+
+:::code-group
+```sql [单列排序]
+-- 按价格升序（默认）
+SELECT * FROM products ORDER BY price;
+
+-- 按销量降序
+SELECT * FROM products ORDER BY sales_count DESC;
+```
+```sql [多列排序]
+-- 先按部门升序，同部门内按工资降序
+SELECT name, dept, salary
+FROM employees
+ORDER BY dept ASC, salary DESC;
+```
+```sql [多种排序依据]
+-- 按姓名长度排序
+ORDER BY LENGTH(name)
+
+-- 按年份排序
+ORDER BY YEAR(created_at)
+```
+:::
+
+:::warning 注意
+- NULL在排序中被视为最小值
+- 先 WHERE 过滤，再 ORDER BY，减少排序数据量
+- ORDER BY 可能导致`全表排序`，影响性能。建议为常用排序字段添加索引
+    ```sql
+    -- 为常用排序字段建索引
+    CREATE INDEX idx_products_price ON products(price);
+    
+    -- 复合排序？建联合索引
+    CREATE INDEX idx_emp_dept_sal ON employees(dept, salary);
+    ```
+- 分页查询必须带 ORDER BY
+    ```sql
+    -- 最贵的 5 个商品
+    SELECT * FROM products
+    ORDER BY price DESC
+    LIMIT 5;
+    
+    -- 分页：第 2 页（每页 10 条）
+    SELECT * FROM products
+    ORDER BY id
+    LIMIT 10 OFFSET 10;
+    ```
+:::
+
+
+## 数据更新
+
+#### 插入数据
+
+添加数据可以通过`INSERT INTO`语句实现,其基本语法如下：
+
+```sql
+-- 方式1：指定列名（推荐）
+INSERT INTO table_name (col1, col2, col3)
+VALUES (val1, val2, val3);
+
+-- 方式2：不指定列名（必须提供所有列的值，按表定义顺序）
+INSERT INTO table_name
+VALUES (val1, val2, val3);
+```
+
+示例：
+
+:::code-group
+```sql [单条插入]
+-- 向 users 表插入一条记录
+INSERT INTO users (id, name, email, created_at)
+VALUES (1, 'Alice', 'alice@example.com', NOW());
+```
+```sql [多条插入]
+INSERT INTO users (name, email) VALUES
+('Bob', 'bob@example.com'),
+('Carol', 'carol@example.com');
+```
+```sql [从其他表插入]
+INSERT INTO active_users (user_id, name)
+SELECT id, name FROM users WHERE status = 'active';
+```
+:::
+
+#### 修改数据
+
+```sql
+UPDATE table_name
+SET column1 = value1, column2 = value2, ...
+WHERE condition;  -- ⚠️ 强烈建议加上！
+```
+
+> `必须加 WHERE 条件`。如果省略 WHERE，会更新整张表的所有行，极易造成生产事故！
+
+
+#### 删除数据
+
+```sql
+DELETE FROM table_name
+WHERE condition;  -- ⚠️ 强烈建议加上！
+```
+
+> `必须加 WHERE 条件`。如果省略 WHERE会删除整张表数据，但表结构保留。
+
+
+:::tip
+- 插入/删除/修改数据操作都`可支持回滚`。
+:::
