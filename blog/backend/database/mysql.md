@@ -133,7 +133,7 @@ SHOW DATABASES;
 ### 书写规范
 
 - 语句以分号`;` 结尾
-- 字符串用单引号 ' '，别名/标识符用反引号 ````  （MySQL）或双引号 "（标准 SQL / PostgreSQL）
+- 字符串用单引号 ' '，别名（用`AS声明`，AS可省略）/标识符用反引号 ````  （MySQL）或双引号 "（标准 SQL / PostgreSQL）
     ```sql
     -- 正确：字符串值
     SELECT 'Hello', name FROM users WHERE email = 'user@example.com';
@@ -161,29 +161,14 @@ SHOW DATABASES;
 
 - WHERE 条件注意 NULL 处理（NULL 不能用 =, != 判断（否则会返回`UNKNOWN`值，而不是TRUE/FALSE，而WHERE只取返回TRUE的结果），需用 `IS NULL / IS NOT NULL`）
     ```sql
-    -- ❌ 错误
-    WHERE status != 'deleted'
+    -- ❌ 错误（会忽视掉status为NUll的数据）
+    WHERE status != 'deleted' 
     
     -- ✅ 正确（若 status 可能为 NULL）
     WHERE status IS NULL OR status != 'deleted'
     -- 或
     WHERE COALESCE(status, '') != 'deleted'
     ```
-- 在 `NOT IN` 前确保子查询无 NULL（因为`id NOT IN (x, NULL)`等价于`id != x AND id != NULL`，NULL使用了!=判断则此时整体返回UNKNOWN）
-    ```sql
-    -- ❌ 可能错误（若user_id值可能为NULL的情况下）
-   SELECT name FROM users  WHERE id NOT IN (SELECT user_id FROM ordered_user_ids);
-    
-    -- ✅ 正确
-    SELECT name
-    FROM users
-    WHERE id NOT IN (
-    SELECT user_id
-    FROM ordered_user_ids
-    WHERE user_id IS NOT NULL   -- 👈 关键！过滤掉 NULL
-    );
-    ```
-    > 如果是`IN`,则`WHERE id IN(x,NULL)`等价于`WHERE id = x OR id = NULL`，此时id=NULL也会被忽略
 
 ### 数据类型
 
@@ -581,4 +566,538 @@ WHERE condition;  -- ⚠️ 强烈建议加上！
 
 :::tip
 - 插入/删除/修改数据操作都`可支持回滚`。
+:::
+
+## 事务
+
+用于`将一组数据库操作打包成一个逻辑工作单元`，确保这些操作要么全部成功执行，要么全部不执行，从而保证数据的一致性和可靠性。
+
+事务的特性：
+
+- **原子性**：事务中的所有操作是一个不可分割的整体：要么全做，要么全不做。 
+- **一致性**：事务执行前后，数据库必须从一个合法状态转移到另一个合法状态（如满足约束、触发器等）。
+- **隔离性**： 多个并发事务之间互不干扰，每个事务都感觉不到其他事务的存在。 
+- **持久性**：一旦事务提交（`COMMIT`），其结果将永久保存，即使系统崩溃也不会丢失。 
+
+事务的基本控制语句：
+
+| 语句 | 作用 |
+|------|------|
+| `BEGIN` 或 `START TRANSACTION` | 显式开启一个事务 |
+| `COMMIT` | 提交事务，使所有更改永久生效 |
+| `ROLLBACK` | 回滚事务，撤销自 `BEGIN` 以来的所有更改 |
+| `SAVEPOINT name` | 在事务中设置保存点 |
+| `ROLLBACK TO SAVEPOINT name` | 回滚到指定保存点（保留之后的操作） |
+
+示例：
+
+:::code-group
+```sql [事务基本用法]
+-- 开启事务
+START TRANSACTION;
+
+-- 1. 扣减 A 的余额
+UPDATE accounts SET balance = balance - 100 WHERE user_id = 'A';
+
+-- 2. 增加 B 的余额
+UPDATE accounts SET balance = balance + 100 WHERE user_id = 'B';
+
+-- 检查是否出错（如 A 余额不足）
+-- 如果一切正常：
+COMMIT;
+
+-- 如果中途出错（如网络中断、余额不足）：
+-- ROLLBACK;
+```
+```sql [保存点用法]
+START TRANSACTION;
+
+INSERT INTO logs VALUES ('step1');
+SAVEPOINT sp1;
+
+INSERT INTO logs VALUES ('step2');
+SAVEPOINT sp2;
+
+-- 出错了，只回滚到最后一个保存点
+ROLLBACK TO sp2;
+
+-- 继续执行
+INSERT INTO logs VALUES ('step3');
+
+COMMIT;
+```
+:::
+> 如果不用事务：<br/>
+> 步骤1成功（A 扣了100），但步骤2失败（B 没收到）→ 钱凭空消失！<br/>
+> 事务确保：要么两人账都对，要么都不变。
+
+### 事务隔离
+
+假如有以下场景：
+
+你和你的配偶共用一个银行账户，余额 1000 元。
+
+- 你（事务 A）：在 ATM 机上查询余额 → 准备取 500 元
+- 配偶（事务 B）：同时在手机银行转账 600 元给朋友
+
+两个操作几乎同时发生（多个事务同时执行），可能引发以下问题：
+
+| 问题        | 描述 | 场景示例                                                             |
+|-----------|------|------------------------------------------------------------------|
+| **脏读**    | 读到另一个事务未提交的数据 | 事务 B 执行后（未commit），事务A此时读到了余额400，以为钱少了。而后B因为网络异常rollback恢复为1000元。 |
+| **不可重复读** | 同一事务内，两次读同一行，结果不同（因被其他事务修改并提交） | 事务 A 第一次查询余额为1000，而后事务B执行完，A再次查询余额为400,前后不一致。                    |                                  |
+| **幻读**    | 同一事务内，两次查询返回的行数不同（因其他事务插入/删除了符合条件的行） | 事务A查询了最近的交易数量，事务B执行完交易流程后，A再次查询则数量+1，前后不一致。                      |
+
+四种隔离级别对比：
+
+| 隔离级别 | 脏读 | 不可重复读 | 幻读 | 实现机制 | 适用场景 |
+|--------|------|-----------|------|--------|--------|
+| READ UNCOMMITTED | ✅ 允许 | ✅ 允许 | ✅ 允许 | 无锁 | 日志分析等容忍脏数据的场景 |
+| READ COMMITTED | ❌ 禁止 | ✅ 允许 | ✅ 允许 | 行级锁 + 快照读 | 一般 Web 应用（如 Oracle 默认） |
+| REPEATABLE READ（MySQL 默认） | ❌ | ❌ | ❌（InnoDB 特有） | MVCC + 间隙锁 | 大多数业务系统（保证一致性） |
+| SERIALIZABLE | ❌ | ❌ | ❌ | 强制串行 | 金融核心系统（如对账） |
+
+
+
+设置隔离级别：
+
+```sql
+-- 查看当前隔离级别
+SELECT @@transaction_isolation;
+
+-- 设置会话级别
+SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+```
+
+:::tip 最佳实践
+
+- 事务越短越好,长事务会占用资源、阻塞其他操作、增加死锁风险。
+- 避免在事务中处理业务逻辑（如调用外部 API、发送邮件）
+- 异常时必须回滚
+- 不要在事务中读用户输入
+- 合理选择隔离级别：一般业务使用`READ COMMITTED` 或 `REPEATABLE READ`，金融核心系统考虑用`SERIALIZABLE`
+
+:::
+
+
+
+## 视图
+
+视图（View） 是一个虚拟表，其内容由一条 SELECT 查询语句定义。
+
+视图本身不存储数据，而是每次查询时动态执行底层 SQL 生成结果。
+
+
+基本语法：
+
+```sql
+CREATE [OR REPLACE] VIEW view_name [(column_list)] AS
+SELECT column1, column2, ...
+FROM table_name
+[WHERE ...]
+[GROUP BY ...];
+```
+
+示例：创建一个“活跃用户”视图
+
+```sql
+-- 假设有 users 和 orders 表
+CREATE VIEW active_users AS
+SELECT 
+    u.id,
+    u.name,
+    u.email,
+    COUNT(o.id) AS order_count
+FROM users u
+LEFT JOIN orders o ON u.id = o.user_id
+WHERE u.status = 'active'
+GROUP BY u.id, u.name, u.email;
+
+-- 像查普通表一样使用它：
+
+SELECT * FROM active_users WHERE order_count > 5;
+
+```
+
+
+:::tip 最佳实践
+
+- 视图名加前缀，如 v_active_users 或 vw_user_summary
+- 简单查询无需视图
+- 用 COMMENT 说明视图用途
+    ```sql
+    CREATE VIEW active_users COMMENT '近30天有订单的活跃用户' AS ... 
+    ```
+- 视图适合装复杂查询逻辑，兼容旧接口（视图模拟旧表结构）和数据安全控制（创建只暴露部分字段的视图）等场景
+:::
+
+## 子查询
+子查询（Subquery） 是指嵌套在另一个 SQL 语句中的 SELECT 查询。外层的语句可以是 SELECT、INSERT、UPDATE 或 DELETE，因此子查询也被称为“嵌套查询”。
+
+:::tip 子查询特点
+- 必须用 括号 () 括起来
+- 可以出现在：
+  - SELECT 列表中（标量子查询）
+  - FROM 子句中（派生表）
+  - WHERE / HAVING 条件中（常用）
+  - INSERT / UPDATE / DELETE 的值或条件中
+- 执行顺序：先执行子查询，再执行外层查询
+:::
+
+示例：
+
+:::code-group
+```sql [返回单行单列（一个值）]
+-- 可用于 SELECT、WHERE、ORDER BY 等任何需要单个值的地方
+-- 也称为标量子查询
+
+-- 查询每个用户的订单总数（作为一列）
+SELECT 
+    name,
+    (SELECT COUNT(*) FROM orders WHERE user_id = users.id) AS order_count
+FROM users;
+```
+```sql [返回单行多列]
+-- 通常与行构造器（如 (col1, col2)）配合使用
+-- 查找与用户 'Alice' 相同部门和职位的人（排除自己）
+SELECT name 
+FROM employees 
+WHERE (dept, job_title) = (
+    SELECT dept, job_title FROM employees WHERE name = 'Alice'
+)
+AND name != 'Alice';
+```
+```sql [返回多行多列]
+-- 常用于 IN、EXISTS、FROM 等场景
+
+-- 例子1：查找下过单的用户
+SELECT name 
+FROM users 
+WHERE id IN (SELECT user_id FROM orders);
+
+
+-- 例子2：先统计每个用户的订单数，再筛选大于5的
+-- 注意：派生表必须有别名
+SELECT * FROM (
+    SELECT user_id, COUNT(*) AS cnt 
+    FROM orders 
+    GROUP BY user_id
+) AS user_order_counts
+WHERE cnt > 5;
+```
+:::
+
+### 子查询 vs JOIN
+
+示例：获取“用户姓名及其订单数”
+
+:::code-group
+```sql [标量子查询]
+SELECT 
+    name,
+    (SELECT COUNT(*) FROM orders WHERE user_id = users.id) AS order_count
+FROM users;
+```
+```sql [LEFT JOIN + GROUP BY]
+SELECT 
+    u.name,
+    COUNT(o.id) AS order_count
+FROM users u
+LEFT JOIN orders o ON u.id = o.user_id
+GROUP BY u.id, u.name;
+```
+:::
+
+
+### CTE（MySQL 8新增）
+
+CTE为替代传统子查询的优雅方案，CTE可以定义为临时表，然后引用多次。
+
+```sql
+-- 用 CTE 重写派生表
+WITH user_orders AS (
+    SELECT user_id, COUNT(*) AS cnt
+    FROM orders
+    GROUP BY user_id
+)
+SELECT * FROM user_orders WHERE cnt > 5;
+```
+
+
+### IN 和 EXISTS
+
+示例：查找下过订单的用户
+
+:::code-group 
+```sql [IN + 子查询]
+SELECT * FROM users 
+WHERE id IN (SELECT user_id FROM orders);
+```
+```sql [EXISTS + 子查询]
+SELECT * FROM users u
+WHERE EXISTS (
+    SELECT 1 FROM orders o WHERE o.user_id = u.id
+);
+```
+:::
+
+:::warning NOT IN与NULL的冲突
+
+**在 `NOT IN` 前应确保子查询无 NULL**
+
+因为`id NOT IN (x, NULL)`等价于`id != x AND id != NULL`，NULL使用了!=判断则此时整体返回UNKNOWN
+
+```sql
+-- ❌ 可能报错（若user_id值可能为NULL的情况下）
+SELECT name FROM users  WHERE id NOT IN (SELECT user_id FROM ordered_user_ids);
+
+-- ✅ 正确
+SELECT name
+FROM users
+WHERE id NOT IN (
+SELECT user_id
+FROM ordered_user_ids
+WHERE user_id IS NOT NULL   -- 👈 关键！过滤掉 NULL
+);
+```
+> 如果是`IN`,则`WHERE id IN(x,NULL)`等价于`WHERE id = x OR id = NULL`，此时id=NULL也会被忽略
+
+:::
+
+
+:::tip 最佳实践
+- 小结果用标量，大集合用 IN/EXISTS
+- `用 EXISTS 替代 IN`（尤其涉及 NOT 时），永远不要用 NOT IN，改用 NOT EXISTS。
+- 能用 `JOIN` 就不用子查询，复杂逻辑用`CTE`
+:::
+
+## 常用函数
+
+- 字符串：CONCAT, SUBSTRING, REPLACE
+- 数值：ROUND, ABS, RAND
+- 日期：NOW, DATE_FORMAT, DATE_ADD
+- 逻辑：IF, CASE, COALESCE
+- 聚合：COUNT, SUM, AVG
+
+
+示例：
+
+:::code-group
+```sql [字符串]
+-- 生成完整姓名
+SELECT CONCAT(first_name, ' ', last_name) AS full_name 
+FROM users;
+
+-- 拼接 URL
+SELECT CONCAT('https://example.com/user/', id) AS profile_url
+FROM users;
+
+
+-- 隐藏手机号中间4位：138****1234
+SELECT CONCAT(LEFT(phone, 3), '****', RIGHT(phone, 4)) AS masked_phone
+FROM users;
+
+-- 提取文件扩展名
+SELECT SUBSTRING_INDEX(filename, '.', -1) AS ext FROM files;
+
+-- 清理脏数据：把中文逗号换成英文
+UPDATE products SET tags = REPLACE(tags, '，', ',');
+
+-- 移除空格
+SELECT REPLACE(description, ' ', '') FROM products;
+```
+```sql [数值]
+-- 显示2位小数的价格。四舍五入（保留小数）
+SELECT name, ROUND(price, 2) AS price FROM products;
+
+-- 百分比（如 0.875 → 87.5%）
+SELECT CONCAT(ROUND(ratio * 100, 1), '%') AS percent FROM stats;
+```
+```sql [日期]
+-- 插入带时间戳的记录
+INSERT INTO logs (message, created_at) 
+VALUES ('用户登录', NOW());
+
+-- 查询今天的数据
+SELECT * FROM orders WHERE DATE(order_time) = CURDATE();
+
+-- 显示“2026年01月29日”
+SELECT DATE_FORMAT(NOW(), '%Y年%m月%d日') AS today;
+
+-- 按月统计订单
+SELECT DATE_FORMAT(order_time, '%Y-%m') AS month, COUNT(*)
+FROM orders
+GROUP BY month;
+
+-- 查询7天内注册的用户。日期加减（避免直接用 + -）
+SELECT * FROM users 
+WHERE reg_time >= DATE_SUB(NOW(), INTERVAL 7 DAY);
+
+-- 会员到期时间（注册+1年）
+SELECT name, DATE_ADD(reg_time, INTERVAL 1 YEAR) AS expire_date
+FROM users;
+```
+```sql [逻辑]
+-- 用户状态显示。简单条件判断（类似三元运算符）
+SELECT name, IF(is_vip, 'VIP', '普通') AS user_type FROM users;
+
+-- 安全除法（避免除零）
+SELECT IF(total > 0, success / total, 0) AS rate FROM metrics;
+
+-- 订单状态分类
+SELECT 
+    order_id,
+    CASE 
+        WHEN status = 'paid' THEN '已支付'
+        WHEN status = 'shipped' THEN '已发货'
+        ELSE '其他'
+    END AS status_desc
+FROM orders;
+```
+```sql [聚合]
+-- 总用户数
+SELECT COUNT(*) FROM users;
+
+-- 有填写手机号的用户数
+SELECT COUNT(phone) FROM users;  -- 自动忽略 NULL
+
+-- 总销售额
+SELECT SUM(amount) FROM orders;
+
+-- 平均订单金额（只算有效订单）
+SELECT AVG(amount) FROM orders WHERE amount > 0;
+
+-- 每个部门的员工姓名列表
+SELECT dept, GROUP_CONCAT(name SEPARATOR ', ') AS members
+FROM employees
+GROUP BY dept;
+-- 结果: "研发部 | 张三, 李四"
+```
+:::
+
+
+:::warning 注意
+
+- 避免在 `WHERE` 中对字段使用函数（会导致索引失效）
+    ```sql
+    -- 错误
+    WHERE YEAR(create_time) = 2026
+    
+    -- 正确
+    WHERE create_time BETWEEN '2026-01-01' AND '2026-12-31'
+    ```
+
+- 日期计算优先用 `DATE_ADD/INTERVAL`，而非字符串拼接
+- 用 `COALESCE` 处理 NULL
+    ```sql
+    SELECT COALESCE(phone, '未填写') FROM users;
+    ```
+:::
+
+## 表的加减法
+
+### 加法（合并多个表数据）
+
+| 操作 | 含义 | 是否去重 |
+|------|------|--------|
+| `UNION` | 合并结果并自动去重 | ✅ 是 |
+| `UNION ALL` | 合并结果保留所有行（包括重复） | ❌ 否 |
+
+示例：
+```sql
+-- 查询 2025 年 12 月和 2026 年 1 月的所有订单（假设分表）
+SELECT order_id, user_id, amount FROM orders_202512
+UNION ALL
+SELECT order_id, user_id, amount FROM orders_202601;
+```
+:::tip 要求
+- 列数相同
+- 对应列类型兼容
+- 列名以第一个 SELECT 为准
+:::
+
+### 减法
+
+找出在一个表中有、另一个表中没有的记录
+
+示例：找出“注册了但从未下单的用户”
+
+:::code-group
+```sql [方法1：NOT EXISTS]
+SELECT * FROM users u
+WHERE NOT EXISTS (
+    SELECT 1 FROM orders o WHERE o.user_id = u.id
+);
+```
+```sql [方法2：LEFT JOIN]
+
+-- 合并后保留两张表的各自的字段，若o.user_id此字段为null，则表示这条此条user数据没有在order表中有匹配，即此user没有下过单，
+SELECT u.* 
+FROM users u
+LEFT JOIN orders o ON u.id = o.user_id
+WHERE o.user_id IS NULL;
+```
+:::
+
+
+## JOIN（联结）
+
+现实中的数据通常分散在多张表中（如用户信息、订单、商品），要回答“用户买了什么商品？”这类问题，必须把相关表连接起来。
+
+联结（JOIN） 是用于将多个表的数据按关联条件组合在一起，按照某种规则把两张表“拼”成一张宽表
+
+基本语法：
+
+```sql
+SELECT columns
+FROM table1
+[INNER | LEFT | RIGHT | CROSS] JOIN table2
+ON table1.column = table2.column; --指定如何匹配两表的行即匹配规则
+```
+
+#### JOIN类型
+
+- `INNER JOIN`（内联结）：只保留两表都匹配的行。最常用、性能最好
+- `LEFT JOIN`（左外联结）：保留左表（FROM 表）所有行。右表无匹配时，字段为 NULL
+- `RIGHT JOIN`（右外联结）：保留右表（TO 表）所有行。左表无匹配时，字段为 NULL
+- `CROSS JOIN`（叉联结）：将两表所有行都匹配，结果集为两表行数乘积（**慎用**）
+
+```sql
+-- 查询有订单的用户及其订单
+SELECT u.name, o.amount
+FROM users u
+INNER JOIN orders o ON u.id = o.user_id;
+
+-- 查询所有用户，包括未下单的
+SELECT u.name, o.amount
+FROM users u
+LEFT JOIN orders o ON u.id = o.user_id;
+
+-- 查询所有订单，包括用户已删除的（user_id 无效）
+SELECT u.name, o.amount
+FROM users u
+RIGHT JOIN orders o ON u.id = o.user_id;
+
+-- 生成所有用户和所有商品的组合（用于推荐系统初始化？）
+SELECT u.name, p.name
+FROM users u
+CROSS JOIN products p;
+```
+:::tip 最佳实践
+- 外联结场景：主表 + 附属信息（如用户 + 订单，文章 + 评论）
+- 尽量用 `LEFT JOIN` 替代 `RIGHT JOIN`（通过调整表顺序），可读性更好。
+- 不要忘记写ON条件，否则会变成`CROSS JOIN`
+- 不要LEFT JOIN 后在 WHERE 中过滤右表。否则会变成 INNER JOIN
+```sql
+-- ❌ 错误：NULL 行被过滤掉
+SELECT u.name, o.amount
+FROM users u
+LEFT JOIN orders o ON u.id = o.user_id
+WHERE o.amount > 100;  -- 这里直接移除了 o.amount IS NULL 的行，变成了 INNER JOIN效果
+
+-- ✅ 正确：把条件移到 ON 中（保证了左表的所有行都返回，避免了 NULL 行被过滤掉）
+SELECT u.name, o.amount
+FROM users u
+LEFT JOIN orders o ON u.id = o.user_id AND o.amount > 100;
+```
 :::
