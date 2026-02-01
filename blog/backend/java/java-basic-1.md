@@ -348,6 +348,7 @@ public class helloworld {
     String sbStr = sb.toString();
     System.out.println(sbStr);//abchelloworldmynameiszhangsan
 ```
+> StringBuilder为非线程安全，若需要考虑多线程场景，则使用`StringBuffer`.
 #### StringJoiner
 
 `StringJoiner`是一个java内置类，基于StringBuilder实现，它更适合带分隔符、前缀和后缀的字符串拼接。
@@ -1495,6 +1496,7 @@ import java.util.ArrayList;
   }
 }
 ```
+:::
 
 ### 内部类
 
@@ -1522,7 +1524,7 @@ import java.util.ArrayList;
 
 - 没有类名的内部类
 - 通常用于**实现接口或继承类并创建实例**（可以写在成员位置或局部位置），一般是只使用一次的对象（避免需要先创建类）
-- 
+
 :::code-group
 ```java [成员内部类]
 public class Test {

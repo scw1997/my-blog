@@ -1469,7 +1469,7 @@ process.waitFor();
 > Java 程序默认至少有两个线程：main 主线程 和 垃圾回收线程（GC Thread）。
 
 
-#### 创建线程的两种方式
+### 创建线程的两种方式
 :::code-group
 
 ```java [继承Thread类]
@@ -1516,7 +1516,7 @@ t.getName() ; // 获取线程名称
 而调用start()后，JVM会为这个线程分配独立的虚拟机栈，将线程状态从 NEW 变为 RUNNABLE，在新线程的上下文中，自动调用该对象的 run() 方法
 :::
 
-#### 守护线程
+### 守护线程
 
 ```java
 public class DaemonThreadExample {
@@ -1565,7 +1565,7 @@ public class DaemonThreadExample {
 - 不要在守护线程中执行 I/O 或持久化操作。因为JVM随时可能退出。
 :::
 
-#### 礼让线程
+### 礼让线程
 
 `Thread.yield()`礼让线程是指一个正在运行的线程主动放弃当前已获得的 CPU 时间片，让其他同优先级或更高优先级的线程有机会执行。
 
@@ -1606,7 +1606,7 @@ Thread.yield() 是一个“礼貌的提示”，告诉调度器：“我现在�
 `生产代码中尽量避免使用礼让线程，不要用于替代同步机制`
 :::
 
-#### 插入线程
+### 插入线程
 
 `Thread.join()`是线程的插队（join）机制 —— 即当前线程“插入”到另一个线程的执行流程中，等待目标线程结束后再继续。
 
@@ -1643,7 +1643,7 @@ public class JoinExample {
 - 必须先 start() 再 join(),否则 join() 立即返回（因为线程已“结束”——从未运行）。
 - 适用于主线程等待所有子任务完成或 按顺序执行多个线程的场景
 :::
-#### 线程优先级
+### 线程优先级
 
 Java 中线程优先级是一个 int 值，范围是 1 到 10，对应三个常量：
 
@@ -1670,7 +1670,7 @@ t.start();
 - 设置优先级`不是可靠的调度控制手段`,仅在特定平台和场景下可能产生轻微影响（某些平台几乎忽略线程优先级）。**大部分情况下无需修改优先级**。
 :::
 
-#### 线程的生命周期
+### 线程的生命周期
 | 状态（`Thread.State`） | 说明 | 触发条件 |
 |------------------------|------|----------|
 | NEW | 新建状态 | 线程对象已创建，但尚未调用 `start()` |
@@ -1684,25 +1684,88 @@ t.start();
 不会。因为sleep时间到了之后，会**从阻塞状态变成可运行状态**，但可能被其他线程抢占，导致后面代码无法立即执行（需要进行CPU执行权的抢夺）。
 :::
 
-#### 线程池
-手动创建线程开销大、难管理。Java 提供线程池统一管理
+### 线程池
+线程池（Thread Pool） 是一种用于管理和复用线程的机制，它通过**预先创建一定数量的线程并维护一个任务队列，来高效地执行大量异步任务，避免频繁创建和销毁线程带来的性能开销**。
+
+Java 通过 java.util.concurrent 包提供了强大的线程池支持，核心接口是 Executor 及其子接口 ExecutorService，最常用的实现类是 ThreadPoolExecutor。
+
+#### 为什么需要线程池？
+- 创建线程（new Thread()）涉及系统调用，开销大。频繁创建/销毁线程会导致 GC 压力增大、CPU 资源浪费。
+- 无限制创建线程可能导致系统崩溃。线程池可限制最大并发数，防止资源耗尽。
+- 提供任务队列、拒绝策略、生命周期管理、统计信息等高级功能。
+
+以最常用的线程池实现类`ThreadPoolExecutor`为例：
+
+其构造参数说明：
+
 ```java
-ExecutorService executor = Executors.newFixedThreadPool(4);
+public ThreadPoolExecutor(
+    int corePoolSize,      // 核心线程数（即使空闲也不会被回收）
+    int maximumPoolSize,   // 最大线程数
+    long keepAliveTime,    // 非核心线程空闲超时时间
+    TimeUnit unit,         // 时间单位
+    BlockingQueue<Runnable> workQueue, // 任务队列
+    ThreadFactory threadFactory,       // 线程工厂（可自定义线程名、优先级等）
+    RejectedExecutionHandler handler   // 拒绝策略
+)
+
+```
+
+拒绝策略介绍：
+
+| 策略 | 行为 |
+|------|------|
+| `AbortPolicy`（默认） | 抛出 `RejectedExecutionException` |
+| `CallerRunsPolicy` | 由提交任务的线程自己执行（降低新任务提交速度） |
+| `DiscardPolicy` | 静默丢弃任务 |
+| `DiscardOldestPolicy` | 丢弃队列中最老的任务，重试提交 |
+
+
+
+:::tip  ThreadPoolExecutor工作流程
+- 如果当前线程数 < corePoolSize → 创建新线程执行任务。
+- 如果≥ corePoolSize → 尝试放入 workQueue。
+- 如果队列已满 且 线程数 < maximumPoolSize → 创建新线程（非核心）。
+- 如果队列满 且 线程数 = maximumPoolSize → 触发拒绝策略。
+:::
+
+
+使用示例：
+```java
+// 自定义线程工厂（便于日志排查）
+ThreadFactory namedFactory = r -> {
+    Thread t = new Thread(r, "MyPool-" + r.hashCode());
+    t.setDaemon(false);
+    return t;
+};
+
+// 创建有界线程池
+ThreadPoolExecutor executor = new ThreadPoolExecutor(
+    2,                            // corePoolSize
+    4,                            // maximumPoolSize
+    60L,                          // keepAliveTime
+    TimeUnit.SECONDS,
+    new ArrayBlockingQueue<>(10), // 有界队列
+    namedFactory,
+    new ThreadPoolExecutor.CallerRunsPolicy() // 拒绝策略
+);
+
+// 提交任务
 executor.submit(() -> {
     System.out.println("Task executed by: " + Thread.currentThread().getName());
 });
-executor.shutdown();
+
+// 关闭线程池（优雅关闭）
+executor.shutdown(); // 不再接受新任务，但执行完队列中任务
+// 或 executor.shutdownNow(); // 立即尝试停止所有任务
 ```
 
-常见线程池类型：
-
-| 方法 | 特点 |
-|------|------|
-| `newFixedThreadPool(n)` | 固定大小线程池 |
-| `newCachedThreadPool()` | 弹性线程池（空闲线程60秒回收） |
-| `newSingleThreadExecutor()` | 单线程顺序执行 |
-| `newScheduledThreadPool()` | 支持定时/周期任务 |
-
+:::tip 线程池最佳实践
+- 不要使用 Executors 工厂方法，手动创建 ThreadPoolExecutor。
+- 核心参数必须显式指定：core/max 线程数、队列类型与大小、拒绝策略。
+- 给线程命名（通过 ThreadFactory），便于排查问题。
+- 合理关闭线程池：使用 shutdown() + awaitTermination()。
+:::
 
 
 
@@ -1725,14 +1788,14 @@ executor.shutdown();
 - 现代 Java 应用通常以**多线程为主 + 必要时调用外部进程**的混合模式运行。
 :::
 
-#### 线程安全（锁）
+### 线程安全（锁）
 
 锁是用于控制多线程对共享资源访问的同步机制，目的是**防止多个线程同时修改共享数据**而导致数据不一致或竞态条件。
 
 因为多线程的执行调度是随机的，比如正在执行A线程时也可能会在执行B线程。如果涉及访问或修改同一变量时，可能会产生数据不一致问题。
 
 
-#### （1）内置锁（synchronized）
+#### （1）同步代码块（synchronized）
 
 - 是 Java 最早提供的线程同步机制。
 - 每个对象都有一个与之关联的**监视器锁（monitor）**。
@@ -1747,13 +1810,13 @@ public synchronized void method() {
     // 临界区
 }
 
-// 静态方法（锁的是类对象）
+// 静态方法（锁的是类对象，如MyThread.class）
 public static synchronized void staticMethod() {
     // 临界区
 }
 
 // 代码块级
-//这里lockObject为锁对象。锁对象必须保证唯一（即所有线程加锁的逻辑都使用这唯一的锁对象，如果各自用的锁对于不一样，锁就无意义。）
+//这里lockObject为锁对象。锁对象必须保证唯一（即所有线程加锁的逻辑都使用这唯一的锁对象，如果各自用的锁对象不一样，锁就无意义。）
 static Object lockObject = new Object();
 synchronized (lockObject) {
     // 临界区
@@ -1919,14 +1982,9 @@ public class PriceService {
 
 
 
-:::warning 注意事项
-- 使用显式锁（如 ReentrantLock）**必须在 finally 块中释放锁**，否则可能死锁。
-- 避免锁的粒度过大（影响并发）或过小（增加复杂度）。
-- 尽量减少锁的持有时间。
-- 警惕死锁：避免嵌套锁、按固定顺序获取多个锁。
-:::
 
-#### 乐观锁与悲观锁
+
+### 乐观锁与悲观锁
 
 #### 乐观锁：
 
@@ -1952,6 +2010,105 @@ public void increment() {
 }
 ```
 
+### 实现：等待唤醒机制
+
+等待-唤醒机制（Wait-Notify Mechanism） 是线程间协作的核心手段之一，用于实现线程间的条件等待与通知。
+
+它允许一个线程在某个条件不满足时主动等待（wait），直到另一个线程修改了条件并发出通知（notify/notifyAll），从而唤醒等待线程继续执行。
+
+该机制主要通过 Object 类中的三个方法实现：
+
+```java
+public final void wait() throws InterruptedException
+public final void notify()
+public final void notifyAll()
+```
+
+| 方法 | 作用 | 是否释放锁 | 是否可中断 |
+|------|------|-----------|----------|
+| `wait()` | 当前线程进入无限等待状态，释放锁，等待被唤醒 | ✅ 释放 | ✅ 可被 `interrupt()` 中断（抛 `InterruptedException`） |
+| `wait(long timeout)` | 最多等待指定毫秒数，超时自动唤醒 | ✅ 释放 | ✅ |
+| `notify()` | 随机唤醒一个正在该对象上等待的线程 | ❌ 不释放（由被唤醒线程竞争） | ❌ |
+| `notifyAll()` | 唤醒所有在该对象上等待的线程 | ❌ | ❌ |
+
+工作原理：以生产者-消费者模型为例
+
+:::code-group
+```java [传统方案]
+
+public class WaitNotifyExample {
+    private static final Object lock = new Object();
+    private static boolean hasData = false; // 共享状态
+
+    public static void main(String[] args) {
+        // 消费者
+        Thread consumer = new Thread(() -> {
+            synchronized (lock) {
+                while (!hasData) { // 必须用 while 循环检查条件！
+                    try {
+                        System.out.println("消费者: 缓冲区为空，等待...");
+                        lock.wait(); // 释放锁，进入 WAITING
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                }
+                System.out.println("消费者: 消费数据");
+                hasData = false;
+                lock.notifyAll(); // 通知生产者可以继续生产
+            }
+        });
+
+        // 生产者
+        Thread producer = new Thread(() -> {
+            synchronized (lock) {
+                while (hasData) {
+                    try {
+                        System.out.println("生产者: 缓冲区已满，等待...");
+                        lock.wait();
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                }
+                System.out.println("生产者: 生产数据");
+                hasData = true;
+                lock.notifyAll(); // 通知消费者可以消费
+            }
+        });
+
+        consumer.start();
+        try { Thread.sleep(100); } catch (InterruptedException ignored) {}
+        producer.start();
+    }
+}
+
+```
+```java [现代方案（新项目推荐）]
+//用 Condition 替代 wait/notify
+
+ReentrantLock lock = new ReentrantLock();
+Condition notEmpty = lock.newCondition();
+Condition notFull = lock.newCondition();
+
+// 消费者
+lock.lock();
+try {
+    while (queue.isEmpty()) {
+        notEmpty.await(); // 等价于 wait()
+    }
+    // 消费
+    notFull.signal(); // 等价于 notify()
+} finally {
+    lock.unlock();
+}
+```
+:::
+:::warning 等待唤醒机制注意事项
+- `必须在 synchronized 块中调用`，因为 wait/notify 依赖对象的内置锁（monitor）。
+- wait() 会释放锁，notify() 不会
+:::
+
 #### 悲观锁
 **思想**：写时加锁，读写互斥
 
@@ -1959,6 +2116,53 @@ public void increment() {
 
 **经典应用**：限时秒杀库存，银行转账（使用synchronized）
 
+### 死锁
+
+死锁（Deadlock） 是并发编程中一种严重的线程同步问题，指的是`两个或多个线程互相持有对方所需的锁，且都不释放`，导致所有相关线程都无法继续执行，程序陷入永久阻塞状态。
+```java
+public class DeadlockExample {
+    private static final Object lockA = new Object();
+    private static final Object lockB = new Object();
+
+    public static void main(String[] args) {
+        Thread thread1 = new Thread(() -> {
+            synchronized (lockA) {
+                System.out.println("Thread-1: 持有 lockA，尝试获取 lockB");
+                try { Thread.sleep(100); } catch (InterruptedException e) {}
+                synchronized (lockB) {
+                    System.out.println("Thread-1: 同时持有 lockA 和 lockB");
+                }
+            }
+        });
+
+        Thread thread2 = new Thread(() -> {
+            synchronized (lockB) {
+                System.out.println("Thread-2: 持有 lockB，尝试获取 lockA");
+                try { Thread.sleep(100); } catch (InterruptedException e) {}
+                synchronized (lockA) {
+                    System.out.println("Thread-2: 同时持有 lockB 和 lockA");
+                }
+            }
+        });
+
+        thread1.start();
+        thread2.start();
+    }
+}
+
+//执行结果：
+
+Thread-1: 持有 lockA，尝试获取 lockB
+Thread-2: 持有 lockB，尝试获取 lockA
+（程序卡住，无后续输出）
+```
+
+:::warning 线程安全注意事项
+- 使用显式锁（如 ReentrantLock）**必须在 finally 块中释放锁**，否则可能死锁。
+- 避免锁的粒度过大（影响并发）或过小（增加复杂度）。
+- 尽量减少锁的持有时间。
+- 警惕死锁：避免嵌套锁、按固定顺序获取多个锁。
+  :::
 
 ## 模块
 Java 的模块系统是 **Java 9（2017 年）** 引入的一项重大特性。
