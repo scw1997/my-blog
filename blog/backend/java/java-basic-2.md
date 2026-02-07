@@ -1694,15 +1694,15 @@ Java 通过 java.util.concurrent 包提供了强大的线程池支持，核心�
 - 无限制创建线程可能导致系统崩溃。线程池可限制最大并发数，防止资源耗尽。
 - 提供任务队列、拒绝策略、生命周期管理、统计信息等高级功能。
 
-以最常用的线程池实现类`ThreadPoolExecutor`为例：
+以最常用的线程池实现类（自定义线程池）`ThreadPoolExecutor`为例：
 
 其构造参数说明：
 
 ```java
 public ThreadPoolExecutor(
-    int corePoolSize,      // 核心线程数（即使空闲也不会被回收）
+    int corePoolSize,      // 核心线程数（即使空闲也不会被回收销毁）
     int maximumPoolSize,   // 最大线程数
-    long keepAliveTime,    // 非核心线程空闲超时时间
+    long keepAliveTime,    // 非核心线程空闲超时时间（即x时间未工作后就销毁）
     TimeUnit unit,         // 时间单位
     BlockingQueue<Runnable> workQueue, // 任务队列
     ThreadFactory threadFactory,       // 线程工厂（可自定义线程名、优先级等）
@@ -1713,20 +1713,33 @@ public ThreadPoolExecutor(
 
 拒绝策略介绍：
 
-| 策略 | 行为 |
-|------|------|
-| `AbortPolicy`（默认） | 抛出 `RejectedExecutionException` |
-| `CallerRunsPolicy` | 由提交任务的线程自己执行（降低新任务提交速度） |
-| `DiscardPolicy` | 静默丢弃任务 |
-| `DiscardOldestPolicy` | 丢弃队列中最老的任务，重试提交 |
+| 策略 | 行为                                      |
+|------|-----------------------------------------|
+| `AbortPolicy`（默认） | 拒绝提交任务，并抛出 `RejectedExecutionException` |
+| `CallerRunsPolicy` | 由提交任务的线程自己执行（降低新任务提交速度）                 |
+| `DiscardPolicy` | 静默丢弃任务                                  |
+| `DiscardOldestPolicy` | 丢弃队列中最老的任务，重试提交                         |
+
+
+corePoolSize和maximumPoolSize取值策略：
+
+| 任务类型 | 核心线程数 (corePoolSize) | 最大线程数 (maximumPoolSize) | 适用场景 |
+| :--- |:---------------------| :--- | :--- |
+| CPU 密集型 | `CPU核心数 + 1`         | `CPU核心数 * 2` (或等于核心数) | 视频编码、科学计算 |
+| IO 密集型 | `CPU核心数 * 2` (起步)     | 动态计算 (如 `CPU核心数 * 10`) | 数据库操作、远程调用 |
+| 混合型 | 拆分任务或折中处理            | 需通过压测确定 | 既有计算又有IO的复杂业务 |<websource>source_group_web_7</websource>
+> CPU核心数：该值可通过`Runtime.getRuntime().availableProcessors()`获取。如4核8线程的系统，则CPU核心数为8
 
 
 
 :::tip  ThreadPoolExecutor工作流程
+
+提交新任务时：
 - 如果当前线程数 < corePoolSize → 创建新线程执行任务。
-- 如果≥ corePoolSize → 尝试放入 workQueue。
-- 如果队列已满 且 线程数 < maximumPoolSize → 创建新线程（非核心）。
+- 如果当前线程数≥ corePoolSize → 尝试放入队列 workQueue。
+- 如果队列已满 且 线程数 < maximumPoolSize → 创建新线程（临时线程）。
 - 如果队列满 且 线程数 = maximumPoolSize → 触发拒绝策略。
+> 所以任务的执行顺序不一定遵循提交顺序。有可能先提交的线程正在队列中，后提交的线程放入了临时线程进行了执行。
 :::
 
 
