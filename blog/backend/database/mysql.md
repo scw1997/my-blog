@@ -367,7 +367,41 @@ FROM sales;
 ```
 :::
 
-#### 与GROUP BY（分组）配合使用
+### DISTINCT
+
+DISTINCT 是一个用于`去除查询结果中重复行`的关键字。它通常用在 **SELECT** 语句中
+
+基本语法：
+
+```sql
+SELECT DISTINCT column1, column2, ...
+FROM table_name;
+```
+
+| id | name   | department |
+|----|--------|------------|
+| 1  | Alice  | HR         |
+| 2  | Bob    | IT         |
+| 3  | Carol  | HR         |
+| 4  | David  | IT         |
+| 5  | Eve    | HR         |
+
+- **如果只指定一个列，DISTINCT 会去除该列中的重复值。**
+
+```sql
+SELECT DISTINCT department FROM employees;
+```
+
+结果只保留1列(department)2行(HR 和 IT 两个部门)
+
+- **如果指定多个列，DISTINCT 会基于这些列的组合值去重（即只有当所有指定列的值都相同时，才视为重复）。**
+
+```sql
+SELECT DISTINCT name, department FROM employees;
+```
+由于每行 (name, department) 组合本来就是唯一的，**结果和原表一样**
+
+### 与GROUP BY（分组）配合使用
 
 ```sql
 SELECT 
@@ -392,7 +426,7 @@ GROUP BY region;
 - 所有非聚合字段必须出现在 GROUP BY 中。例如`SELECT name, COUNT(*) FROM t（若 name 未 GROUP BY）`会报错
 :::
 
-#### HAVING vs WHERE
+### HAVING vs WHERE
 
 | 特性 | `WHERE` | `HAVING` |
 |------|--------|---------|
@@ -863,6 +897,12 @@ WHERE user_id IS NOT NULL   -- 👈 关键！过滤掉 NULL
 > 如果是`IN`,则`WHERE id IN(x,NULL)`等价于`WHERE id = x OR id = NULL`，此时id=NULL也会被忽略
 
 :::
+
+使用EXISTS比IN更快的原因:
+
+- 如果连接列(id)上建立了索引，那么查询Class_B时不用查实际的表，只需查索引就可以了。
+
+- 如果使用EXISTS，那么只要查到一行数据满足条件就会终止查询，不用像使用IN时一样扫描全表。在这一点上，NOT EXISTS也一样。
 
 
 :::tip 最佳实践
