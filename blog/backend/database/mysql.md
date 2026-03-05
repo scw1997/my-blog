@@ -311,10 +311,48 @@ CREATE TABLE order_items (
 - 避免主键进行更新，因为会导致`索引重建和外键级联更新（可能锁表）`。
 :::
 
+## 通配符和LIKE
 
+通配符主要用于进行`模糊匹配`的字符串查询。它们不能单独使用，**必须配合 LIKE 或 NOT LIKE 使用**。
+
+| 通配符 | 含义                     | 示例                | 匹配结果示例        |
+|--------|--------------------------|---------------------|---------------------|
+| `%`    | 任意长度（0个或多个）字符 | `'A%'`              | `Alice`, `A`, `Alex` |
+| `_`    | 恰好一个任意字符          | `'A_'`              | `Al`, `An`（非 `Ali`）|
+
+
+#### %（百分号）
+```sql
+--匹配以 "A" 开头的所有名字,如：Alice, Alex, A。
+SELECT * FROM users WHERE name LIKE 'A%';
+
+-- 匹配包含 "ar" 的任意位置的名字,如：Sarah, Mark, Barry。
+SELECT * FROM users WHERE name LIKE '%ar%';
+
+
+-- 匹配所有非 NULL 的名字（等价于 IS NOT NULL，但不包括 NULL）
+SELECT * FROM users WHERE name LIKE '%';
+
+
+
+```
+> 注意：`% 不匹配 NULL 值`。NULL LIKE '%' 的结果是 NULL（即不为真）。
+
+#### _（下划线）
+```sql
+
+-- 匹配两个字符、且以 "A" 开头的名字，如：Al, An，但不匹配 Ali（3个字符）或 A（1个字符）。
+SELECT * FROM users WHERE name LIKE 'A_';
+
+-- 匹配三个字符、且第三个字符是 "e" 的名字，如：Joe, Mae。
+SELECT * FROM users WHERE name LIKE '__e';
+
+-- 查找名字中包含实际下划线（使用转义符\）的用户
+SELECT * FROM users WHERE name LIKE '%\_%';
+```
 ## 聚合
 
-MySQL 的聚合函数（Aggregate Functions） 用于对一组值执行计算，并返回单个汇总结果。它们通常与 GROUP BY 子句配合使用，是数据分析、报表统计的核心工具。
+MySQL 的聚合函数（Aggregate Functions） 用于对一组值执行计算，并返回单个汇总结果。它们通常与` GROUP BY` 子句配合使用，是数据分析、报表统计的核心工具。
 
 假设有一张销售表 sales：
 
@@ -1141,3 +1179,132 @@ FROM users u
 LEFT JOIN orders o ON u.id = o.user_id AND o.amount > 100;
 ```
 :::
+
+## 外键
+
+外键（Foreign Key） 是一种用于维护**表与表之间引用完整性**的约束机制。它通过建立两个表之间的“父子关系”，确保子表中的数据必须引用父表中已存在的有效数据，从而防止孤立记录和数据不一致,**保证数据一致性与完整性**。
+
+
+:::tip 外键要求
+- 主表（父表）：包含主键（Primary Key）或唯一键（Unique Key）的表。
+- 从表（子表）：包含外键的表，其外键值必须在主表中存在（或为 NULL，若允许）。
+- 外键列：从表中的一列（或一组列），其值必须匹配主表的主键（或唯一键）值。
+:::
+
+创建表时定义外键：
+
+```sql
+-- 主表：部门表
+CREATE TABLE departments (
+    dept_id INT PRIMARY KEY,
+    dept_name VARCHAR(50)
+);
+
+-- 从表：员工表（含外键）
+CREATE TABLE employees (
+    emp_id INT PRIMARY KEY,
+    name VARCHAR(50),
+    dept_id INT,
+    FOREIGN KEY (dept_id) REFERENCES departments(dept_id)
+);
+```
+在已有表上添加外键：
+
+```sql
+ALTER TABLE employees
+ADD CONSTRAINT fk_dept
+FOREIGN KEY (dept_id) REFERENCES departments(dept_id);
+```
+
+删除外键：
+```sql
+ALTER TABLE employees
+DROP FOREIGN KEY fk_dept;
+```
+
+#### 行为控制
+
+外键可以定义**当主表记录被删除或更新时，从表如何响应**：
+
+| 选项 | 说明 |
+|------|------|
+| `CASCADE` | 级联操作：主表删/改，从表自动删/改对应记录 |
+| `SET NULL` | 主表记录被删/改，从表外键设为 `NULL`（要求外键列允许 `NULL`） |
+| `RESTRICT` / `NO ACTION` | 拒绝操作：如果从表有相关记录，禁止删除或更新主表记录（默认行为） |
+| `SET DEFAULT` | 设为默认值（MySQL 不支持，但某些数据库如 PostgreSQL 支持） |
+
+示例：
+
+```sql
+CREATE TABLE employees (
+    emp_id INT PRIMARY KEY,
+    name VARCHAR(50),
+    dept_id INT,
+    FOREIGN KEY (dept_id) 
+        REFERENCES departments(dept_id)
+        ON DELETE CASCADE --删除一个部门 → 该部门所有员工自动删除；
+        ON UPDATE CASCADE --修改部门 ID → 员工的 dept_id 自动同步更新。
+);
+```
+
+:::warning 注意事项
+
+- 外键列与主键列的数据类型、长度、符号性需一致
+- 在外键列上创建索引可大幅提升 JOIN 和 DELETE/UPDATE 性能。
+- 避免 A 表外键引用 B 表，B 表又外键引用 A 表（可能导致插入失败）
+:::
+
+## 索引
+
+索引（Index） 是一种用于加速数据检索的数据库结构，类似于书籍的目录。它通过**创建额外的数据结构（如 B+ 树、哈希表等），避免全表扫描**，从而显著提升查询性能。
+
+#### 索引意义
+无索引时：数据库执行 SELECT 或 WHERE 查询需逐行扫描整张表（全表扫描），数据量越大越慢。
+
+有索引时：数据库可快速定位到目标数据位置，大幅减少 I/O 操作和比较次数。
+
+
+#### 常见索引类型
+
+:::code-group
+```sql [单列索引]
+CREATE INDEX idx_name ON users(name);
+```
+```sql [复合索引 / 联合索引]
+-- 对多个列组合创建索引，顺序很重要！
+CREATE INDEX idx_name_age ON users(name, age);
+
+-- 支持 WHERE name = 'Alice'
+-- 支持 WHERE name = 'Alice' AND age = 25
+-- 不支持 WHERE age = 25（最左前缀原则）
+-- 最左前缀原则：查询条件必须从索引的最左列开始，且连续使用。
+```
+```sql [唯一索引]
+-- 要求该列的值唯一（允许一个 NULL）
+
+CREATE UNIQUE INDEX idx_email ON users(email);
+```
+```sql [主键索引]
+-- 自动创建，隐式包含 NOT NULL 和 UNIQUE 约束。
+-- 一张表只能有一个主键。
+```
+
+:::
+
+#### 索引底层
+
+以 MySQL InnoDB 为例：
+
+**默认使用 B+ 树（B+ Tree）**
+
+- 所有数据按索引顺序存储（聚簇索引）或指向主键（二级索引）；
+- 支持高效范围查询、排序、分页；
+- 树的高度低（通常 3~4 层），查询快。
+
+
+#### 适合使用索引的场景
+
+- 列经常出现在 WHERE、JOIN、ORDER BY、GROUP BY 中；
+- 列的值范围很大，不确定性高（即唯一值多，如邮箱、手机号）；
+- 表数据量大（小表加索引可能反而更慢）。
+- 列更新不频繁（频繁则维护成本高）
