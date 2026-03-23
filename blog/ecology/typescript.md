@@ -1300,8 +1300,50 @@ import style from './style.module.less'
 import icon from './icon.png'
 ```
 
+## satisfies  <Badge type="info">v4.9.0</Badge>
+
+用于验证一个值是否符合某个类型的同时，保留该值最精确的类型信息。解决了类型验证和类型推断之间的一个常见矛盾。
+
+以前使用传统类型注解：
+
+```ts
+type RGB = [number, number, number];
+
+// 目标类型：一个记录，键是颜色名，值是 string 或 RGB
+const palette: Record<string, string | RGB> = {
+  red: [255, 0, 0],
+  green: "#00ff00",
+  blue: [0, 0, 255]
+};
 
 
+// ❌ 错误: 类型 'string | RGB' 上不存在属性 'toUpperCase'
+// 原因：TypeScript 会将 palette 所有属性的类型都泛化（Widening）为 string | RGB。
+const greenUpper = palette.green.toUpperCase();
+```
+
+
+现在使用satisfies 操作符可以让你在不改变变量推断类型的情况下进行类型验证：
+
+```ts
+type RGB = [number, number, number];
+
+// ✅ 使用 satisfies 进行验证
+const palette = {
+  red: [255, 0, 0],
+  green: "#00ff00",
+  blue: [0, 0, 255]
+} satisfies Record<string, string | RGB>;
+
+
+//此时：TypeScript 能够精确地推断出 palette.green 的类型是字符串字面量 "#00ff00"，而 palette.red 的类型是元组 [255, 0, 0]。
+
+// ✅ 正确：TypeScript 知道 green 是 string
+const greenUpper = palette.green.toUpperCase();
+
+// ✅ 正确：TypeScript 知道 red 是元组，可以使用数组方法
+const redFirst = palette.red.at(0);
+```
 ## 零碎
 
 - 如果想要限制某个组件的prop children必须是某个组件，可以定义该children类型为`ReactElement<ComponentProps<目标组件的props类型>>`
