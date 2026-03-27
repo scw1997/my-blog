@@ -1267,39 +1267,85 @@ CREATE TABLE employees (
 #### 常见索引类型
 
 :::code-group
-```sql [单列索引]
+```sql [普通索引（二级索引）]
 CREATE INDEX idx_name ON users(name);
+
+-- 最普通的索引，允许重复、允许 NULL。
+-- 叶子节点存的是主键值，不是整行数据。所以查非主键字段时，可能要“回表”（先查索引，再用主键查数据）。
+-- 适合高频查询的字段（如 WHERE city = '北京'）建普通索引。
+-- 避免给低区分度字段建索引（比如“性别”只有男/女，建了也快不了多少）。
+
+
 ```
-```sql [复合索引 / 联合索引]
--- 对多个列组合创建索引，顺序很重要！
+```sql [联合索引]
 CREATE INDEX idx_name_age ON users(name, age);
 
--- 支持 WHERE name = 'Alice'
--- 支持 WHERE name = 'Alice' AND age = 25
--- 不支持 WHERE age = 25（最左前缀原则）
+-- 对多个列组合创建索引，顺序很重要！
+-- WHERE name = 'Alice'（索引生效）
+-- WHERE name = 'Alice' AND age = 25（索引生效）
+-- WHERE age = 25（索引失效！最左前缀原则）
 -- 最左前缀原则：查询条件必须从索引的最左列开始，且连续使用。
 ```
 ```sql [唯一索引]
--- 要求该列的值唯一（允许一个 NULL）
-
 CREATE UNIQUE INDEX idx_email ON users(email);
-```
-```sql [主键索引]
--- 自动创建，隐式包含 NOT NULL 和 UNIQUE 约束。
--- 一张表只能有一个主键。
-```
 
+
+-- 要求该列的值不允许出现重复，如邮箱、手机号。
+-- 一张表可以有多个唯一索引，且可以为 NULL。
+
+
+```
+```sql [主键索引（聚簇索引）]
+-- 自动创建，隐式包含 NOT NULL（不能为空） 和 UNIQUE（不能重复） 约束。
+-- 一张表只能有一个主键。
+-- 主键尽量用整数、自增（如 BIGINT AUTO_INCREMENT），避免用字符串或 UUID（会导致插入慢、页分裂）。
+```
+```sql [全文索引]
+-- 对单个字段建全文索引
+CREATE FULLTEXT INDEX idx_content ON articles (content);
+
+-- 对多个字段建联合全文索引
+CREATE FULLTEXT INDEX idx_title_content ON articles (title, content);
+
+-- 只能对 CHAR、VARCHAR、TEXT 类型的列创建全文索引。
+-- 建议只用于大段文本的模糊搜索（如博客、评论）。
+-- 不要用 LIKE '%xxx%' 做全文搜索（性能极差），改用全文索引。
+-- 中文分词需额外处理（MySQL 默认按空格/标点分词，对中文不友好，可配合 Elasticsearch）。
+```
+```sql [前缀索引]
+-- 对 email 的前 15 个字符建索引
+CREATE INDEX idx_email_prefix ON users (email(15));
+
+-- 用于长字符串字段（如 URL、长文本 ID）。
+-- 例子：email 字段很长，但前 10 位已足够区分，可建 INDEX(email(10))。
+-- 不能在前缀上建全文索引。如CREATE FULLTEXT INDEX idx_content ON articles (content(100));  -- 报错
+```
 :::
 
-#### 索引底层
+#### 索引原理
 
-以 MySQL InnoDB 为例：
+以 MySQL InnoDB（存储引擎） 为例，默认`使用 B+ 树（B+ Tree）`作为索引结构，其特点为：
 
-**默认使用 B+ 树（B+ Tree）**
 
-- 所有数据按索引顺序存储（聚簇索引）或指向主键（二级索引）；
-- 支持高效范围查询、排序、分页；
+- 所有数据都存储在叶子节点，非叶子节点只存索引键。
+- 叶子节点之间用双向链表连接，便于范围查询
 - 树的高度低（通常 3~4 层），查询快。
+
+#### 索引优缺点
+
+优点：
+
+- 加快查询速度：尤其对 WHERE、JOIN、ORDER BY、GROUP BY 等操作效果显著。
+- 保证数据唯一性：唯一索引（UNIQUE）可防止重复数据插入。
+- 优化排序和分组：避免临时表和文件排序（Using filesort）。
+- 提升连接性能：JOIN 操作中，被驱动表若有索引可大幅减少匹配次数。
+
+缺点：
+- 占用存储空间：每个索引都需要额外磁盘空间。
+- 降低写入性能：
+  INSERT、UPDATE、DELETE 时需同步维护索引结构（B+树的插入/删除/分裂）。
+  索引越多，写操作越慢。
+- 维护成本高：过多索引增加数据库复杂度，需定期分析和优化。
 
 
 #### 适合使用索引的场景
