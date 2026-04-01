@@ -1180,6 +1180,73 @@ LEFT JOIN orders o ON u.id = o.user_id AND o.amount > 100;
 ```
 :::
 
+## EXPLAIN
+
+EXPLAIN 是 MySQL 中用于 分析 SQL 查询执行计划 的核心工具。
+
+它能告诉你 MySQL 如何执行一条 SELECT（或 UPDATE/DELETE）语句，包括是否使用索引、是否全表扫描、关联顺序等，是**SQL 性能优化**的第一步。
+
+
+输出字段详解：
+
+| 列名 | 说明                                                                                                                                |
+|------|-----------------------------------------------------------------------------------------------------------------------------------|
+| id | 查询序列号。相同表示同一组，越大越先执行（子查询时有用）                                                                                                      |
+| select_type | 查询类型：`SIMPLE`（简单查询）、`PRIMARY`（最外层）、`SUBQUERY`（子查询）、`DERIVED`（派生表）等                                                                |
+| table | 当前行所访问的表名                                                                                                                         |
+| partitions | 匹配的分区（未分区则为 `NULL`）                                                                                                               |
+| type | **访问类型（最重要！）**，性能从好到差：<br>`system` > `const` > `eq_ref` > `ref` > `range` > `index` > `ALL`<br>⚠️ 出现 `ALL` 表示全表扫描，需警惕             |
+| possible_keys | 可能用到的索引                                                                                                                           |
+| key | **实际使用的索引（`NULL` 表示没走索引）**                                                                                                        |
+| key_len | 使用索引的长度（字节），可判断复合索引用了几列                                                                                                           |
+| ref | 与索引比较的列或常量（如 `const` 表示用常量值匹配）                                                                                                    |
+| rows | **预估需要扫描的行数（越小越好）**                                                                                                               |
+| filtered | 按条件过滤后剩余的百分比（估算）                                                                                                                  |
+| Extra | 额外信息，常见值：<br>- `Using index`：覆盖索引（极好）<br>- `Using where`：回表过滤<br>- `Using filesort`：需要额外排序（性能差）<br>- `Using temporary`：用了临时表（性能差） |
+
+示例：
+
+:::code-group
+```sql [命中主键索引]
+EXPLAIN SELECT * FROM users WHERE id = 1;
+
+-- 输出：
+type: const（性能较好）
+key: PRIMARY
+Extra: 
+```
+```sql [全表扫描]
+--假设 name 无索引
+EXPLAIN SELECT * FROM users WHERE name = 'Alice';
+
+-- 输出：
+type: ALL（性能最差）
+key: NULL（没走索引）
+rows: 100000  -- 扫描了 10 万行！
+Extra: Using where
+```
+
+```sql [覆盖索引]
+--假设 (name, id) 有复合索引
+EXPLAIN SELECT id, name FROM users WHERE name = 'Alice';
+
+-- 输出：
+type: ref
+key: idx_name
+Extra: Using index  -- ⭐ 覆盖索引，无需回表
+```
+```sql [出现 Using filesort]
+--若 age 无索引
+EXPLAIN SELECT * FROM users ORDER BY age;
+
+-- 输出：
+Extra: Using filesort  -- ⚠️ 磁盘排序，慢！
+
+--优化：给 age 加索引：
+CREATE INDEX idx_age ON users(age);
+```
+:::
+
 ## 外键
 
 外键（Foreign Key） 是一种用于维护**表与表之间引用完整性**的约束机制。它通过建立两个表之间的“父子关系”，确保子表中的数据必须引用父表中已存在的有效数据，从而防止孤立记录和数据不一致,**保证数据一致性与完整性**。
