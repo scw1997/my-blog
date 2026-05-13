@@ -613,7 +613,7 @@ public class Test {
 ```
 #### protected
 
-**只可被同包中的类或不同包的子类及其实例访问**。用于修饰`类中定义的方法或属性、内部类`，不可修饰外部类。
+**只可被同包中的类及其实例或不同包的子类内部访问**。用于修饰`类中定义的方法或属性、内部类`，不可修饰外部类。
 
 ```java
 // File: com/example/ProtectedExample.java
@@ -638,7 +638,7 @@ public class SamePackageClass {
 }
 
 //下方为不同包的类
-// 不同包的子类可以访问
+// 不同包的子类内部可以访问
 package com.other;
 import com.example.ProtectedExample;
 
