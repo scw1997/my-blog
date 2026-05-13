@@ -49,7 +49,20 @@ Java 集合框架主要由以下几大接口构成：
 - 多线程环境 → 使用 `java.util.concurrent` 包中的并发集合
 
 
+:::tip 技巧：优先通过接口（而不是类）来引用对象
 
+```java
+// 好习惯：使用接口作为类型
+Set<Son> sonSet = new LinkedHashSet<>();
+
+// 坏习惯：使用类作为类型
+LinkedHashSet<Son> sonSet = new LinkedHashSet<>();
+```
+
+使用接口作为类型会使程序更加灵活，如果决定更换实现,所要做的就是改变构造器中的类名(如第一行可改为`Set<Son> sonSet = new HashSet<>()`)。
+
+但也不绝对，如 String 和BigInteger这种值类很少会提供多个实现，它们通常是 final 的, 并且大部分情况下没有相应的接口。此时使用类作为类型也没问题。
+:::
 
 ### List
 
@@ -521,11 +534,11 @@ public class Java9ImmutableCollections {
 ```
 
 :::warning 注意
-- 元素必须唯一（Set 和 Map 的 key 不能重复）。不支持 null 元素。
+- 不可变集合的元素必须唯一（Set 和 Map 的 key 不能重复）。不支持 null 元素。
 - Map.of() 最多支持 10 个键值对（超过需用 Map.ofEntries()）。
 - 返回的是 java.util.ImmutableCollections 内部类，非 ArrayList/HashMap。
+- 与List.of() 不同,`Arrays.asList()` 同样不允许添加和删除元素，但可以修改元素。并且允许有空值null
 :::
-
 ### Stream流
 
 Stream API 是 Java 8 引入的一个强大的函数式数据处理特性，它提供了一种高效且易于理解的方式来处理`集合`数据。

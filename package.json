@@ -3,7 +3,7 @@
     "@types/node": "^24.0.10",
     "ant-design-vue": "^4.2.3",
     "cross-env": "^7.0.3",
-    "vitepress": "^1.1.4"
+    "vitepress": "^1.6.4"
   },
   "packageManager": "pnpm@10.6.0",
   "type": "module",
