@@ -1820,6 +1820,31 @@ executor.shutdown(); // 不再接受新任务，但执行完队列中任务
 
 因为多线程的执行调度是随机的，比如正在执行A线程时也可能会在执行B线程。如果涉及访问或修改同一变量时，可能会产生数据不一致问题。
 
+示例：
+
+```java
+public class Main {
+    private static boolean ready;
+    private static int number;
+    private static class ReaderThread extends Thread{
+        public void run() {
+            //这里读取的ready值可能为false，也可能为true
+          //当ready为true时，读取的number值也不一定为42，也可能为0
+          // 这就是没有同步的变量被多个线程共享时存在的数据不一致问题
+            while (!ready)
+                Thread.yield();
+            System.out.println (number);
+        }
+    }
+    public static void main(String[] args) {
+        //创建读线程来读取ready和number值
+        //当前主线程修改ready和number值
+        new ReaderThread().start();
+        number = 42;
+        ready = true;
+    }
+}
+```
 
 #### （1）同步代码块（synchronized）
 
@@ -2007,9 +2032,142 @@ public class PriceService {
 | 高并发短临界区 | 考虑 `synchronized`（JVM 优化好）或 `StampedLock` |
 
 
+#### 不可变对象一定是线程安全的
+
+`不可变对象 (Immutable Object)`:
+
+不可变对象是指其**状态一旦创建就不能被修改的对象**。要实现真正的不可变性，通常需要满足以下条件：
+
+:::tip
+- **所有字段都是 final 的**：这确保了字段在对象构造完成后不能被重新赋值。
+- **所有字段（包括私有字段）都不能被外部访问到可变对象的引用**：如果一个字段指向一个可变对象（如 ArrayList），那么即使该字段是 final 的，只要外部可以通过该字段拿到 ArrayList 并对其进行修改，整个对象就不是不可变的。
+- **对象本身是 final 的**（或者通过其他方式防止子类化，如使用 private 构造函数和静态工厂方法）：防止子类覆写行为。
+- **构造函数没有“逸出”**：确保在对象构造完成之前，this 引用不会被发布出去，让其他线程看到一个尚未初始化完成的对象。
+:::
+
+`线程安全`：
+
+一个类是线程安全的，意味着在多线程环境下，无论这些线程如何并发执行，也不需要额外的同步措施（如 synchronized），该类都能表现出正确的行为。
+
+> 不管多少线程同时访问，都不会导致对象状态损坏或产生不确定的结果。
 
 
+:::code-group
+```java [正确示例]
+/**
+ * 一个表示二维坐标点的不可变类。
+ */
+public final class ImmutablePoint { // 1. 类声明为 final
+    private final int x; // 2. 所有字段都是 final
+    private final int y;
 
+    public ImmutablePoint(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    // 3. 只提供 getter 方法，不提供 setter 或其他能修改状态的方法
+    public int getX() {
+        return x;
+    }
+
+    public int getY() {
+        return y;
+    }
+
+    @Override
+    public String toString() {
+        return "ImmutablePoint{" +
+               "x=" + x +
+               ", y=" + y +
+               '}';
+    }
+}
+
+// --- 测试 ---
+public class ImmutabilityTest {
+    public static void main(String[] args) throws InterruptedException {
+        // 创建一个不可变对象
+        ImmutablePoint point = new ImmutablePoint(10, 20);
+
+        Runnable readerTask = () -> {
+            // 多个线程可以安全地同时读取
+            for (int i = 0; i < 5; i++) {
+                System.out.println(Thread.currentThread().getName() + " reads: " + point);
+                try {
+                    Thread.sleep(100); // 模拟一些处理时间
+                } catch (InterruptedException e) { /* ignore */ }
+            }
+        };
+
+        Thread t1 = new Thread(readerTask, "Reader-1");
+        Thread t2 = new Thread(readerTask, "Reader-2");
+
+        t1.start();
+        t2.start();
+
+        t1.join();
+        t2.join();
+
+        System.out.println("Main thread sees: " + point);
+        // 输出结果始终一致，因为 point 的状态从未改变。
+        // 例如，所有线程（包括 main）看到的都是 ImmutablePoint{x=10, y=20}
+    }
+}
+```
+```java [错误示例]
+import java.util.Collections;
+import java.util.List;
+import java.util.ArrayList;
+
+public final class ProblematicImmutableClass {
+    private final List<String> items; // 指向一个可变对象
+
+    public ProblematicImmutableClass(List<String> items) {
+        // 危险！直接将外部传入的可变列表赋值给了内部字段
+        // 外部代码仍然持有对这个列表的引用，可以修改它
+        this.items = items; 
+    }
+
+    // 提供一个 getter，外部可以通过它拿到内部的列表
+    public List<String> getItems() {
+        // 更危险！返回了内部可变对象的引用
+        // 返回 Collections.unmodifiableList(this.items) 可以修复部分问题
+        return this.items; 
+    }
+}
+
+// --- 测试 ---
+public class EscapeExample {
+    public static void main(String[] args) throws InterruptedException {
+        List<String> externalList = new ArrayList<>();
+        externalList.add("Initial Item");
+
+        ProblematicImmutableClass obj = new ProblematicImmutableClass(externalList);
+
+        Thread modifierThread = new Thread(() -> {
+            // 从外部修改了传给构造函数的列表
+            externalList.add("Added by External Code");
+        });
+
+        Thread readerThread = new Thread(() -> {
+            // 一个线程在读取
+            System.out.println("Reader sees before modification: " + obj.getItems());
+            try { Thread.sleep(200); } catch (InterruptedException e) { /* ignore */ }
+            System.out.println("Reader sees after modification: " + obj.getItems());
+        });
+
+        readerThread.start();
+        Thread.sleep(100); // 让 readerThread 先执行一部分
+        modifierThread.start();
+
+        readerThread.join();
+        modifierThread.join();
+    }
+}
+```
+
+:::
 ### 乐观锁与悲观锁
 
 #### 乐观锁：
@@ -2189,6 +2347,7 @@ Thread-2: 持有 lockB，尝试获取 lockA
 - 尽量减少锁的持有时间。
 - 警惕死锁：避免嵌套锁、按固定顺序获取多个锁。
   :::
+
 
 ## 模块
 Java 的模块系统是 **Java 9（2017 年）** 引入的一项重大特性。
