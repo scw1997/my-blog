@@ -2028,7 +2028,7 @@ try {
 **StampedLock方式：乐观读 + 降级保护**
 ```java
 public class PriceService {
- //volatile作用：让所有线程（写和读）看到同一个变量的最新值，并且按你写的顺序执行相关操作。   
+ //volatile作用：保障可见性，有序性和原子性
   private volatile double price; // ⚠️ 必须 volatile！
   private final StampedLock sl = new StampedLock();
 
@@ -2357,10 +2357,33 @@ public class DeadlockExample {
 }
 
 //执行结果：
+// Thread-1: 持有 lockA，尝试获取 lockB
+// Thread-2: 持有 lockB，尝试获取 lockA
+//（程序卡住，无后续输出）
+//
+```
 
-Thread-1: 持有 lockA，尝试获取 lockB
-Thread-2: 持有 lockB，尝试获取 lockA
-（程序卡住，无后续输出）
+检测死锁：
+
+```java
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
+
+public class DeadlockDetector {
+    public static void checkForDeadlock() {
+        ThreadMXBean bean = ManagementFactory.getThreadMXBean();
+        long[] threadIds = bean.findDeadlockedThreads(); // 检测死锁
+
+        if (threadIds != null) {
+            System.out.println("Deadlock detected! Thread IDs: " + Arrays.toString(threadIds));
+            // 可以打印线程栈信息进行分析
+            for (long id : threadIds) {
+                ThreadInfo info = bean.getThreadInfo(id);
+                System.out.println(info);
+            }
+        }
+    }
+}
 ```
 
 :::warning 线程安全注意事项
