@@ -343,3 +343,53 @@ public class HelloController {
 - **Controller**：控制层。用于接收请求，调用Service处理业务逻辑，并返回响应数据。
 - **Service**：业务逻辑层。用于处理业务逻辑，调用DAO层获取数据
 - **DAO**：数据访问层，也叫持久层。用于访问数据库（增删改查），获取数据
+
+示例：根据用户ID获取用户信息
+
+:::code-group
+```java [Controller]
+//获取用户信息并返回
+@RestController
+@RequestMapping("/users")
+public class UserController {
+
+    // 通过依赖注入获取业务层（Service层）对象实例
+    @Autowired
+    private UserService userService;
+
+    @GetMapping("/{id}")
+    public User getUserById(@PathVariable Long id) {
+        // 获取用户信息的具体业务逻辑交给Service曾去处理
+        return userService.getUserById(id);
+    }
+}
+```
+```java [Service层]
+@Service
+public class UserService {
+
+    // 注入数据访问层（DAO层）对象实例
+    @Autowired
+    private UserMapper userMapper;
+
+    public User getUserById(Long id) {
+        // 开始处理业务逻辑
+        // 比如：这里可以加入一些业务判断，如果ID小于0则抛出异常等
+        if (id <= 0) {
+            throw new IllegalArgumentException("用户ID不合法");
+        }
+        // 数据库的相关操作交给DAO层
+        return userMapper.findById(id);
+    }
+}
+```
+```java [DAO层]
+@Mapper // 如果是 MyBatis 框架
+public interface UserMapper {
+    //具体的 SQL 可以在 XML 中写，或者用注解
+    @Select("SELECT * FROM user WHERE id = #{id}")
+    User findById(Long id);
+}
+
+```
+:::
