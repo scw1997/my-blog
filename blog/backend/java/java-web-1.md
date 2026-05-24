@@ -393,3 +393,139 @@ public interface UserMapper {
 
 ```
 :::
+
+### 控制反转和依赖注入
+
+在传统的 Java 开发中，如果 A 对象需要用到 B 对象，我们通常会在 A 的代码里手动 new B()。这意味**你主动去创建和管理所有对象，对象之间高度耦合**
+
+`控制反转 (IOC)`：将对象的创建权和控制权，从程序员手中“反转”交给 Spring 容器（IoC 容器）来管理。
+
+`依赖注入（DI）`：对象都交给 Spring 容器管理后，当一个对象（比如 Controller）需要用到另一个对象（比如 Service）时，Spring 容器就会自动把 Service 对象“传递”或“注入”给 Controller。
+
+
+:::code-group
+```java [传统方式]
+@RestController
+public class UserController {
+    // 缺点：直接在代码里 new 对象，Controller 和 UserServiceImpl 强绑定
+    // 如果想换成另一个 UserService 实现，必须修改这里的源码
+    private UserService userService = new UserServiceImpl(); 
+
+    @GetMapping("/user")
+    public String getUser() {
+        return userService.getUser();
+    }
+}
+```
+```java [IOC+DI方式]
+// 1. 定义业务接口
+public interface UserService {
+    String getUser();
+}
+
+// 2. 业务实现类：加上 @Service 注解，告诉 Spring 这是一个需要管理的 Bean
+@Service
+public class UserServiceImpl implements UserService {
+    @Override
+    public String getUser() {
+        return "张三";
+    }
+}
+
+// 3. 控制层：加上 @RestController 注解，交给 Spring 管理
+@RestController
+public class UserController {
+    // 依赖注入：不再手动 new，而是让 Spring 自动把 UserServiceImpl 的实例注入进来
+    private final UserService userService;
+
+    // 构造器注入（Spring 官方最推荐的方式）
+    // Spring 4.3+ 版本后，如果类中只有一个构造器，@Autowired 可以省略
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
+
+    @GetMapping("/user")
+    public String getUser() {
+        return userService.getUser();
+    }
+}
+```
+:::
+SpringBoot中声明Bean类（即表示交给IOC容器管理）的注解：
+
+- `@Controller`：只能用于Controller层
+- `@Service`：只能用于Service层
+- `@Repository`：只能用于DAO层
+- `@Component`：可用于Service，Dao以及非三层架构的类，不可用于Controller层
+
+> 给bean类设置名字，可通过`@Service("userService")`这样格式。没设置则默认为类名首字母小写
+
+
+### 依赖注入的方式
+
+#### 1. 构造器注入（推荐）
+```java
+@Service
+public class OrderService {
+    // 使用 final 关键字，保证依赖一旦注入就不可被修改
+    private final UserService userService;
+    private final PaymentService paymentService;
+
+    // Spring 4.3 之后，如果类中只有一个构造器，@Autowired 可以省略
+    //@AutoWired
+    //构造函数
+    public OrderService(UserService userService, PaymentService paymentService) {
+        this.userService = userService;
+        this.paymentService = paymentService;
+    }
+}
+```
+
+优点：
+
+- **保证不可变性和线程和安全依赖**：依赖字段可以用 final 修饰
+- **强制依赖明确**：对象在实例化时就必须提供所有必需的依赖
+- **防止循环依赖**：如果是构造器注入的循环依赖（A依赖B，B依赖A），Spring 在启动时会直接报错
+- **方便单元测试**
+
+#### 2. Setter 注入（适用于可选依赖）
+
+```java
+@Service
+public class OrderService {
+    private EmailService emailService; // 可选依赖
+
+    @Autowired(required = false) // 标注为可选，即使容器里没有这个 Bean 也不会报错
+    //setter函数
+    public void setEmailService(EmailService emailService) {
+        this.emailService = emailService;
+    }
+}
+```
+特点：它赋予了依赖在运行时被重新配置或替换的灵活性，但无法保证依赖的不可变性。
+
+
+#### 3. 字段注入（不推荐）
+
+```java
+@Service
+public class OrderService {
+    @Autowired // 反模式！
+    private UserService userService;
+}
+```
+
+此种方式虽然写起来省事，但是它存在**隐藏了类之间依赖关系（没有构造函数，不清楚依赖哪些类），无法使用 final 修饰和单元测试极其困难**等缺陷。
+
+
+:::warning 注意
+- 声明Bean类的四大注解要想生效必须要被组件扫描注解`@ComponentScan`注解，不过SpringBoot的启动类注解`@SpringBootApplication`已包含了该注解。所以启动类文件不可被移动到其他路径，必须是service/controller/dao架构的父级路径（父包）
+- 如果一个接口有多个实现类，Spring 不知道该注入哪一个时会报错。此时可以配合以下注解：
+
+  `@Qualifier("beanName")`：指定具体的 Bean 名称进行精确注入。
+
+  `@Primary`：在某个实现类上标注，将其设为默认首选。
+
+  `@Resource(name=beanName)`：指定具体的 Bean 名称进行精确注入。
+:::
+
