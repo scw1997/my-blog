@@ -266,6 +266,8 @@ class CalculatorTest {
 
 ## SpringBoot
 
+Spring Boot是基于 Spring 框架的快速开发脚手架。
+
 通过idea创建SpringBoot项目
 
 基本请求处理示例：
@@ -529,3 +531,310 @@ public class OrderService {
   `@Resource(name=beanName)`：指定具体的 Bean 名称进行精确注入。
 :::
 
+### 对比Spring MVC
+
+Spring MVC 是 Spring Framework 的一个模块，用于构建 Web 应用。
+
+Spring Boot 并不是 Spring MVC 的替代品，而是：
+- 内置了 Spring MVC（通过 spring-boot-starter-web）；
+- 自动配置了 DispatcherServlet、ViewResolver、MessageConverters 等组件；
+- 无需手动写 web.xml 或 spring-mvc.xml。
+>依赖关系：Spring Boot →（自动集成）→ Spring MVC →（依赖）→ Spring Core
+
+
+| 维度 | Spring MVC（传统方式） | Spring Boot |
+|------|------------------------|-------------|
+| 配置方式 | 需手动配置 XML（如 `web.xml`, `spring-mvc.xml`）或 Java Config | 零配置：自动配置 + `application.properties/yml` |
+| 服务器部署 | 需部署到外部 Tomcat、Jetty 等 Servlet 容器 | 内嵌 Tomcat/Jetty/Undertow，直接 `java -jar` 运行 |
+| 依赖管理 | 需手动添加所有 JAR 包（Spring Core、MVC、AOP 等） | 通过 Starter 依赖（如 `spring-boot-starter-web`）一键引入全套 Web 支持 |
+| 开发效率 | 配置繁琐，启动慢 | 快速启动，约定优于配置 |
+| 适用场景 | 老项目维护、需要精细控制配置 | 新项目开发、微服务、快速原型 |
+
+
+## JDBC
+
+JDBC（Java Database Connectivity）是 Java 官方提供的一套统一数据库访问接口（API）。
+
+在实际的企业级开发中，我们通常会使用 MyBatis、JPA（Hibernate）等成熟的框架来操作数据库，但这些框架的底层依然是`基于 JDBC` 封装的。
+
+基本示例：
+
+```java
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+public class JdbcDemo {
+    public static void main(String[] args) {
+        // 数据库连接信息（包含时区、字符集等关键配置）
+        String url = "jdbc:mysql://localhost:3306/your_database?serverTimezone=Asia/Shanghai&characterEncoding=utf8mb4&useSSL=false";
+        String username = "root";
+        String password = "your_password";
+        //        
+        String sql = "SELECT id, username, email FROM users WHERE id > ?";
+
+        // 使用 try-with-resources 自动管理资源（Connection, PreparedStatement, ResultSet）
+        try (Connection conn = DriverManager.getConnection(url, username, password);
+             // 创建 PreparedStatement使用预编译SQL
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            // 设置占位符（?）参数（索引从 1 开始）
+            pstmt.setInt(1, 0);
+
+            // 执行查询并获取结果集
+            try (ResultSet rs = pstmt.executeQuery()) {
+                // 遍历结果集
+                while (rs.next()) {
+                    int id = rs.getInt("id");
+                    String name = rs.getString("username");
+                    String email = rs.getString("email");
+                    System.out.println("ID: " + id + ", Name: " + name + ", Email: " + email);
+                }
+            }
+        } catch (SQLException e) {
+            // 捕获并处理 SQL 异常
+            e.printStackTrace();
+        }
+        // 代码块结束后，rs, pstmt, conn 会被自动按顺序关闭
+    }
+}
+```
+
+:::warning 注意
+- `永远使用数据库连接池`：数据库链接的创建和释放开销非常大，使用数据库连接池可以有效解决这个问题。
+- `永远使用PreparedStatement（预编译），杜绝 SQL 注入，并且支持缓存性能更高`
+  :::code-group
+
+  ```java [静态SQL]
+  // ⚠️ 危险示范：仅用于理解原理，生产环境绝对禁止！
+  String username = "admin' OR '1'='1"; // 模拟恶意用户输入
+  String sql = "SELECT * FROM users WHERE username = '" + username + "'";
+  
+  try (Connection conn = DriverManager.getConnection(url, user, pwd);
+  Statement stmt = conn.createStatement();
+  ResultSet rs = stmt.executeQuery(sql)) { // 每次执行都重新编译
+      while (rs.next()) {
+          System.out.println(rs.getString("username"));
+      }
+  }
+  // 最终执行的SQL变成了: SELECT * FROM users WHERE username = 'admin' OR '1'='1'
+  // 数据库将其解析为可执行命令，导致所有用户数据被查出
+  ```
+  ```java [预编译SQL]
+  // ✅ 安全示范：推荐的标准写法
+  String username = "admin' OR '1'='1"; // 同样的恶意输入
+  String sql = "SELECT * FROM users WHERE username = ?"; // SQL结构固定，?是占位符
+  
+  try (Connection conn = DriverManager.getConnection(url, user, pwd);
+  PreparedStatement pstmt = conn.prepareStatement(sql)) { // 发送SQL到数据库预编译
+  
+      pstmt.setString(1, username); // 参数作为纯数据绑定，不参与SQL解析
+      try (ResultSet rs = pstmt.executeQuery()) {
+          while (rs.next()) {
+              System.out.println(rs.getString("username"));
+          }
+      }
+  }
+  // 数据库将 'admin' OR '1'='1' 视为一个完整的字符串值去匹配
+  // 不会解析为SQL命令，彻底杜绝注入；且相同结构的SQL可复用执行计划
+  ```
+  :::
+:::
+
+
+## MyBatis
+
+MyBatis 是一款优秀的`持久层（DAO层）`框架，它避免了几乎所有的 JDBC 代码和设置参数、获取结果集的过程。用于`简化JDBC`的开发
+
+### 准备工作
+
+1. 使用Idea创建SpringBoot项目，并勾选`Mybatis FrameWork`和`Mysql Driver`等依赖
+2. 配置src/main/resources/application.properties文件,添加如下数据库配置内容：
+```txt
+# 配置数据库链接信息
+spring.datasource.url=jdbc:mysql://localhost:3306/[数据库名称]
+spring.datasource.username=root
+spring.datasource.password=[密码]
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+
+# 配置 MyBatis 的日志输出（可选）
+mybatis.configuration.log-impl=org.apache.ibatis.logging.stdout.StdOutImpl
+```
+
+### 基本使用
+
+需求：查询数据库中所有的用户数据
+
+:::code-group
+```java [User实体类]
+//src/main/java/com.xx/user/User.java
+package com.scw.user;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+
+
+@Data
+@AllArgsConstructor
+
+public class User {
+  private Integer id;
+  private String name;
+  private String password;
+  private String email;
+  private Integer age;
+  private Gender gender;
+  private String created_at;
+  private String updated_at;
+
+}
+
+```
+```java [Gender枚举类]
+//src/main/java/com.xx.user/Gender.java
+package com.scw.user;
+public enum Gender {
+    FEMALE,MALE
+}
+
+```
+```java [Dao层查询数据库的接口类]
+//src/main/java/com.xx/mapper/UserMapper.java
+package com.scw.mapper;
+
+import com.scw.user.User;
+import org.apache.ibatis.annotations.*;
+
+import java.util.List;
+
+//程序运行时会自动创建UserMapper接口的实现类对象实例（代理对象），并自动注入到IOC容器中
+@Mapper //
+public interface UserMapper {
+  @Select("select * from users")
+  public List<User> finAllUser();
+
+  @Delete("delete from users where id=#{id}")
+  public void deleteUserById(Integer id);
+
+  //这里的各个参数取的是传递过来的user对象的对应key的属性值
+  @Insert("insert into users(name,password,email,age,gender) values (#{name},#{password},#{email},#{age},#{gender})")
+  public void addUser(User user);
+
+  //这里的各个参数取的是传递过来的user对象的对应key的属性值
+  @Update("update users set name=#{name},password=#{password},email=#{email},age=#{age},gender=#{gender} where id=#{id}")
+  public void updateUser(User user);
+
+  //通过id和name查询用户
+  @Select("select * from users where id=#{id} and name=#{name}")
+  //需要传递多个参数的情况下，这里通过@Param给参数命名用于匹配
+  //public User findUserByIdAndName(@Param("id") Integer id, @Param("name") String name);
+  
+  //如果是基于SpringBoot官方骨架的项目，则不需要添加@Param,编译时会保留形参名
+  public User findUserByIdAndName(Integer id, String name);
+}
+
+
+```
+```java [测试类]
+//src/test/java/com.xx/mapper/xxxApplicationTests.java
+
+package com.scw;
+
+import com.scw.mapper.UserMapper;
+import com.scw.user.Gender;
+import com.scw.user.User;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+
+import java.util.List;
+
+@SpringBootTest
+class MybatisTestApplicationTests {
+  private final UserMapper userMapper;
+  //依赖注入
+  @Autowired
+  public MybatisTestApplicationTests(UserMapper userMapper) {
+    this.userMapper = userMapper;
+  }
+  @Test
+  public void testFindAllUser() {
+    List<User> userList = userMapper.finAllUser();
+    userList.forEach(System.out::println);
+  }
+  @Test
+  public void testDeleteUser(Integer id) {
+    userMapper.deleteUserById(id);
+  }
+  @Test
+  public void addUser() {
+    User user = new User(null,"scw3","123456","test@qq.com",18, Gender.FEMALE,null,null);
+    userMapper.addUser(user);
+  }
+  @Test
+  public void updateUser() {
+    User user = new User(3,"scw3333","1234563333","test@qq.com",18, Gender.FEMALE,null,null);
+    userMapper.updateUser(user);
+  }
+  @Test
+  public void getUserByIdAndName() {
+    User user = userMapper.findUserByIdAndName(3,"scw3333");
+    System.out.println(user);
+  }
+
+}
+
+
+```
+:::
+
+
+:::warning 注意
+- MyBatis中DAO层文件夹名称建议使用`mapper`
+- MyBatis中关于实体类Enum（如MALE/FEMALE）与数据库数据类型（0|1）的映射转换问题解决：
+  ```text
+  //src/main/resources/application.properties
+  
+  # 例如实体类中某个字段类型为Gender（MALE,FEMALE），数据库中存储的是0|1
+  # MyBatis 默认使用 EnumTypeHandler 来处理枚举映射，它的策略是 按枚举名称匹配（即数据库存的是 "MALE" → 匹配 Gender.MALE）就会匹配不上
+
+  # 配置 MyBatis 枚举类型为按序号映射
+  mybatis.configuration.default-enum-type-handler=org.apache.ibatis.type.EnumOrdinalTypeHandler
+  ```
+- `MyBatis中SQL参数永远使用#{...}而不是${...}`。前者会替换`?`并生成预编译SQL，而后者会直接拼接SQL，可能会导致SQL注入漏洞。  
+
+:::
+
+### 数据库连接池
+
+数据库连接池是个负责分配，管理数据库链接的容器，基于标准`DataSource`接口。
+
+> SpringBoot默认使用`Hikari`数据库连接池，无需配置
+
+作用：
+
+- 它允许应用程序重复使用一个现有的数据库链接，而不是新建一个，有效提升访问效率。
+- 释放空闲时间超过最大空闲时间的链接，避免因为没有释放而引起的数据库链接遗漏
+
+
+示例：在SpringBoot中配置`Druid`数据库连接池
+
+:::code-group
+```xml [添加依赖]
+<!--pom.xml-->
+<dependency>
+  <groupId>com.alibaba</groupId>
+  <artifactId>druid-spring-boot-starter</artifactId>
+  <version>1.1.21</version>
+</dependency>
+```
+```text [修改mybatis配置文件]
+# 配置文件路径：src/main/resources/application.properties
+
+
+//切换数据库连接池
+spring.datasource.type=com.alibaba.druid.pool.DruidDataSource
+```
+:::
