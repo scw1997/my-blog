@@ -1080,83 +1080,7 @@ public class TryWithResourcesExample {
 - 捕获具体异常类型，而非泛化的 Exception。
 :::
 
-## 日志
 
-#### 内置日志系统
-
-日志信息级别从高到低为：**SEVERE > WARNING > INFO > CONFIG > FINE > FINER > FINEST**
-
-:::code-group
-```java [基本使用]
-
-import java.util.logging.Logger;
-import java.util.logging.Level;
-
-public class Main {
-    //创建一个日志记录器，命名可选择类名或包名
-    private static final Logger logger = Logger.getLogger(Main.class.getName());//或com.xx.xxx
-
-    public  static void main(String[] args) {
-        logger.log(Level.SEVERE,"Starting operation...");
-        try {
-            // some logic
-        } catch (Exception e) {
-            //默认情况下，日志输出级别为INFO。所以SEVERE,WARNING，INFO才会输出信息，其他不会输出
-            logger.warning("Operation failed");
-            logger.severe("Operation failed");
-            logger.info("Operation failed");
-        }
-    }
-}
-```
-```java [调整日志级别]
-import java.util.logging.*;
-
-public class Main {
-    public static void main(String[] args) {
-        Logger logger = Logger.getLogger(Main.class.getName());
-
-        // 获取控制台处理器（ConsoleHandler）
-        ConsoleHandler handler = new ConsoleHandler();
-        handler.setLevel(Level.FINE); // 设置处理器级别为 FINE
-
-        // 设置 Logger 的级别
-        logger.setLevel(Level.FINE);
-
-        // 移除默认的 handler
-        logger.setUseParentHandlers(false);
-        logger.addHandler(handler);
-
-        // 测试日志
-        logger.info("INFO 日志");
-        logger.fine("FINE 日志");     // 现在FINE级别消息也会打印了！
-        logger.finer("FINER 日志");
-    }
-}
-```
-:::tip 技巧
-- 修改日志级别时，必须同时设置 Logger 和 Handler 的级别才能生效。
-- 开发阶段可设置日志级别为`FINE`(替换System.out.print)，便于调试。生产环境则设置为`INFO` 或 `WARNING`。
-
-:::
-
-#### SLF4J + Logback(主流推荐)
-
-日志级别从低到高：**TRACE < DEBUG < INFO < WARN < ERROR < FATAL**
-
-```java
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-public class Main {
-    private static final Logger logger = LoggerFactory.getLogger(Main.class);
-    //
-    public static void main(String[] args) {
-        logger.info("使用 SLF4J + Logback 记录日志");
-        logger.debug("用户 {} 登录成功", "张三"); // 支持占位符，避免字符串拼接开销
-    }
-}
-```
 
 ## File
 
@@ -1816,6 +1740,8 @@ executor.shutdown(); // 不再接受新任务，但执行完队列中任务
 
 ### 不可变对象 & 线程安全
 
+
+
 #### `不可变对象 (Immutable Object)`:
 
 不可变对象是指其**状态一旦创建就不能被修改的对象**。要实现真正的不可变性，通常需要满足以下条件：
@@ -1833,6 +1759,7 @@ executor.shutdown(); // 不再接受新任务，但执行完队列中任务
 
 > 不管多少线程同时访问，都不会导致对象状态损坏或产生不确定的结果。
 
+`不可变对象一定是线程安全的。`
 
 ### 原子性 & 可见性 & 有序性
 

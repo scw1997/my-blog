@@ -451,6 +451,50 @@ ArrayList<String> list = new ArrayList<String>();
 - 表示状态机（如订单状态：PENDING, SHIPPED, DELIVERED）
 - 选项配置（如日志级别：INFO, WARN, ERROR）
 - 替代魔法字符串或整数常量
+
+### 枚举的自我校验
+
+
+场景：枚举类Gender中定义了多个值，如果传递输入的值（如接口请求时未进入Controller的JSON 反序列化阶段）不在枚举类中定义，则返回错误信息。
+```java
+package com.scw.bean;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+
+public enum Gender {
+    FEMALE(0),
+    MALE(1);
+
+    private final int code;
+
+    Gender(int code) {
+        this.code = code;
+    }
+
+    @JsonValue
+    public int getCode() {
+        return code;
+    }
+
+    @JsonCreator
+    public static Gender fromValue(int value) {
+        for (Gender g : Gender.values()) {
+            if (g.code == value) {
+                return g;
+            }
+        }
+        throw new IllegalArgumentException("无效的性别编码: " + value + "，有效值为 0(FEMALE) 或 1(MALE)");
+    }
+}
+
+```
+:::tip 序列化 & 反序列化
+- 序列化（Serialization）：**将内存中的 Java 对象转换为字节序列（byte stream）的过程**。
+常见场景有持久化存储（写入文件/数据库）、网络传输（RPC/HTTP）、缓存（Redis）。
+
+- 反序列化（Deserialization）：**将字节序列恢复为内存中 Java 对象的过程**。常见场景有读取存储的数据、接收网络请求的参数、从缓存加载对象。
+:::
 ## 面向对象
 
 ### javabean类

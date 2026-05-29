@@ -337,7 +337,7 @@ public class HelloController {
 ```
 :::
 :::tip 说明
-- `@RestController`表示当前类是一个请求处理类，该类中所有方法返回的数据直接作为响应数据返回给调用方（如果返回数据为对象，则将`对象转为JSON`数据返回给调用方）
+- `@RestController`表示当前类是一个请求处理类，该类中所有方法返回的数据直接作为响应数据返回给调用方（`@ResponseBody`）。如果返回数据为对象，则将`对象转为JSON`数据返回给调用方。
 :::
 
 ### 三层架构
@@ -354,11 +354,12 @@ public class HelloController {
 @RestController
 @RequestMapping("/users")
 public class UserController {
-
     // 通过依赖注入获取业务层（Service层）对象实例
     @Autowired
     private UserService userService;
 
+    //表示处理GET请求，url为/users/{id} 
+    //同理还有PostMapping，PutMapping，DeleteMapping...
     @GetMapping("/{id}")
     public User getUserById(@PathVariable Long id) {
         // 获取用户信息的具体业务逻辑交给Service曾去处理
@@ -393,6 +394,55 @@ public interface UserMapper {
     User findById(Long id);
 }
 
+```
+:::
+
+### Controller获取请求参数
+
+根据场景不同，共有以下几种方式可供选择
+
+:::code-group
+```java [@PathVariable]
+//此种方式适合用于获取 RESTful 风格 URL 中 {} 占位符的值。
+// GET /users/1001/orders/2024
+@GetMapping("/users/{userId}/orders/{orderId}")
+public Order getOrder(
+        @PathVariable Long userId,
+       // 属性名和接收参数名不一样时
+       // @PathVariable("orderId") String orderid)
+        @PathVariable String orderId) {
+    // userId = 1001, orderId = "2024"
+}
+```
+```java [@RequestParam]
+//此种方式适合用于获取 GET 请求的 query 参数（?key=value）。
+// GET /users?page=1&size=10&keyword=张三
+@GetMapping("/users")
+public List<User> listUsers(
+        @RequestParam(defaultValue = "1") Integer page,
+        @RequestParam(defaultValue = "10") Integer size,
+        @RequestParam(required = false) String keyword) {
+    // 支持默认值、是否必填等配置（不设置则默认为必填，前端请求没传参数会报错）
+}
+
+//注意：如果请求的参数名和@RequestParam中接收的形参名一致，则可省略@RequestParam
+// GET /users?page=1&size=10&keyword=张三
+@GetMapping("/users")
+public List<User> listUsers(
+       Integer page,
+        Integer size,
+       String keyword) {
+  // 支持默认值、是否必填等配置（不设置则默认为必填，前端请求没传参数会报错）
+}
+```
+```java [@RequestBody]
+// 这种方式适合用于获取 POST 请求的JSON格式 body 参数。
+// POST /users  Body: {"name":"张三","age":25}
+@PostMapping("/users")
+// 注意：此方式要求body的字段名和User的属性名一致
+public User createUser(@RequestBody User user ) {
+  // user.name = 张三, user.age = 25
+}
 ```
 :::
 
@@ -704,7 +754,6 @@ public class JdbcDemo {
   // 不会解析为SQL命令，彻底杜绝注入；且相同结构的SQL可复用执行计划
   ```
   :::
-:::
 
 
 
@@ -756,11 +805,110 @@ public class User {
 }
 
 ```
-```java [Gender枚举类]
-//src/main/java/com/xxx.user/Gender.java
-package com.scw.user;
-public enum Gender {
-    FEMALE,MALE
+```java [User Controller]
+//src/main/java/com/xxx/controller/UserController.java
+package com.scw.controller;
+
+import com.scw.bean.RequestRes;
+import com.scw.bean.User;
+import com.scw.service.UserService;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+//设置处理请求的url公共路径
+@RequestMapping("/users")
+public class UserController {
+
+  private final UserService userService;
+
+  public UserController(UserService userService) {
+    this.userService = userService;
+  }
+
+  @GetMapping
+  public RequestRes getUserList() {
+    List<User> data =  userService.getUserList();
+
+    return RequestRes.success(data);
+  }
+  //表示处理url地址为/users/delete
+  @PostMapping("/delete")
+  public RequestRes deleteUser(@RequestBody User user) {
+    //注意：如果前端传的id是字符串数字"1",这里就不会拦截报错，直接转换为int
+    Integer id = user.getId();
+    if(id==null){
+      return RequestRes.error("id不能为空",-1);
+    }
+    userService.deleteUser(user.getId());
+    return RequestRes.success();
+  }
+  @PostMapping("/add")
+  public RequestRes addUser(@RequestBody User user) {
+    int gender = user.getGender();
+    if(gender!=0 && gender!=1){
+      return RequestRes.error("性别错误",-1);
+    }
+    userService.addUser(user);
+    return RequestRes.success();
+  }
+  @PostMapping("/update")
+  public RequestRes updateUser(@RequestBody  User user) {
+    //注意：如果前端传的id是字符串数字"1",这里就不会拦截报错，直接转换为Integer
+    Integer id = user.getId();
+    int gender = user.getGender();
+    if(id==null){
+      return RequestRes.error("id不能为空",-1);
+    }
+    if(gender!=0 && gender!=1){
+      return RequestRes.error("性别错误",-1);
+    }
+    userService.updateUser(user);
+    return RequestRes.success();
+
+  }
+  @GetMapping("/get")
+  public RequestRes getUserByIdAndName(Integer id, String name) {
+    User data =  userService.getUserByIdAndName(id,name);
+    return RequestRes.success(data);
+  }
+}
+
+```
+```java [User Service]
+//src/main/java/com/xxx/service/UserService.java
+package com.scw.service;
+
+import com.scw.bean.User;
+import com.scw.mapper.UserMapper;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class UserService  {
+    private final UserMapper userMapper;
+    //依赖注入
+    public UserService(UserMapper userMapper){
+        this.userMapper = userMapper;
+    }
+
+    public List<User> getUserList() {
+        return  userMapper.finAllUser();
+    }
+    public void deleteUser(Integer id) {
+        userMapper.deleteUserById(id);
+    }
+    public void addUser(User user) {
+        userMapper.addUser(user);
+    }
+    public void updateUser(User user) {
+        userMapper.updateUser(user);
+    }
+    public User getUserByIdAndName(Integer id, String name) {
+        return  userMapper.findUserByIdAndName(id,name);
+    }
 }
 
 ```
@@ -797,6 +945,29 @@ public interface UserMapper {
   
   //如果是基于SpringBoot官方骨架的项目，则不需要添加@Param,编译时会保留形参名
   public User findUserByIdAndName(Integer id, String name);
+}
+
+
+```
+
+```java [全局JSON序列化异常捕捉类]
+//src/main/java/com/xxx/controller/GlobalExceptionHandler.java
+package com.scw.controller;
+
+import com.scw.bean.RequestRes;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+//添加此注解则会自动全局生效，捕获Controller层的JSON序列化异常（捕捉后不会进入Controller层业务代码）
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+  @ExceptionHandler(HttpMessageNotReadableException.class)
+  public RequestRes handleJsonParseError(HttpMessageNotReadableException ex) {
+//        String message = ex.getMessage();
+    return RequestRes.error("请求参数格式错误: " + ex.getMostSpecificCause().getMessage(), -1);
+  }
 }
 
 
@@ -868,8 +1039,33 @@ class MybatisTestApplicationTests {
   mybatis.configuration.default-enum-type-handler=org.apache.ibatis.type.EnumOrdinalTypeHandler
   ```
 - `MyBatis中SQL参数永远使用#{...}而不是${...}`。前者会替换`?`并生成预编译SQL，而后者会直接拼接SQL，可能会导致SQL注入漏洞。  
+- 当实体类字段（通常为驼峰命名 userName）与数据库列名（通常为下划线命名 user_name）不一致时，MyBatis 无法自动完成映射，导致查询结果中对应字段为 null，解决方案(任选一种)：
 
-:::
+  :::code-group
+  ```sql [1.sql使用as别名]
+   SELECT user_name AS userName, 
+             create_time AS createTime
+      FROM t_user 
+      WHERE id = #{id}
+  ```
+  ```java [2.使用@Results注解]
+  @Select("SELECT u_nm, crt_tm FROM t_user WHERE id = #{id}")
+  @Results({
+      @Result(column = "u_nm", property = "userName"),
+      @Result(column = "crt_tm", property = "createTime")
+  })
+  User selectUser(Long id);
+  ```
+  
+  ```yml [3.开启自动映射]
+  # application.yml (Spring Boot)
+  # 注意：仅限于 user_name ↔ userName 这种标准的下划线转驼峰关系
+  mybatis:
+    configuration:
+      map-underscore-to-camel-case: true
+  ```
+  :::
+
 
 ### 数据库连接池
 
@@ -984,3 +1180,180 @@ mybatis.mapper-locations=classpath:com/scw/mapper/*.xml
 ```
 
 > 推荐IDEA插件：MyBatisX（用于XML映射文件和Mapper接口的快速跳转）
+
+
+### 日志
+
+#### Java内置日志系统（JUL）
+
+日志信息级别从高到低为：**SEVERE > WARNING > INFO > CONFIG > FINE > FINER > FINEST**
+
+:::code-group
+```java [基本使用]
+
+import java.util.logging.Logger;
+import java.util.logging.Level;
+
+public class Main {
+    //创建一个日志记录器，命名可选择类名或包名
+    private static final Logger logger = Logger.getLogger(Main.class.getName());//或com.xx.xxx
+
+    public  static void main(String[] args) {
+        logger.log(Level.SEVERE,"Starting operation...");
+        try {
+            // some logic
+        } catch (Exception e) {
+            //默认情况下，日志输出级别为INFO。所以SEVERE,WARNING，INFO才会输出信息，其他不会输出
+            logger.warning("Operation failed");
+            logger.severe("Operation failed");
+            logger.info("Operation failed");
+        }
+    }
+}
+```
+```java [调整日志级别]
+import java.util.logging.*;
+
+public class Main {
+    public static void main(String[] args) {
+        Logger logger = Logger.getLogger(Main.class.getName());
+
+        // 获取控制台处理器（ConsoleHandler）
+        ConsoleHandler handler = new ConsoleHandler();
+        handler.setLevel(Level.FINE); // 设置处理器级别为 FINE
+
+        // 设置 Logger 的级别
+        logger.setLevel(Level.FINE);
+
+        // 移除默认的 handler
+        logger.setUseParentHandlers(false);
+        logger.addHandler(handler);
+
+        // 测试日志
+        logger.info("INFO 日志");
+        logger.fine("FINE 日志");     // 现在FINE级别消息也会打印了！
+        logger.finer("FINER 日志");
+    }
+}
+```
+:::
+
+:::tip 技巧
+- 修改日志级别时，必须同时设置 Logger 和 Handler 的级别才能生效。
+- 开发阶段可设置日志级别为`FINE`(替换System.out.print)，便于调试。生产环境则设置为`INFO` 或 `WARNING`。
+  :::
+
+#### SLF4J + Logback(主流推荐)
+
+SLF4J + Logback 是 Java 生态中事实上的日志标准组合。理解它们的关系是正确使用的前提：
+
+`SLF4J`：日志门面（Facade），只定义 API，不实现任何日志功能。
+
+`Logback`：日志实现（Implementation），由 SLF4J 作者亲自开发，天生无缝对接。
+
+日志级别从低到高：**TRACE < DEBUG < INFO < WARN < ERROR < FATAL**
+
+```java
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class UserService {
+  //声明 Logger
+  // ✅ 推荐：使用当前类作为 logger 名称
+  private static final Logger log = LoggerFactory.getLogger(UserService.class);
+  //Lombok 用户可直接用 @Slf4j 注解替代上面两行
+  
+  //日志级别与输出
+  log.trace("方法入参: userId={}", userId);      // 最细粒度调试，使用较少
+  log.debug("查询结果: {}", result);             // 开发调试
+  log.info("用户创建成功: userId={}", userId);   // 关键业务流程
+  log.warn("缓存未命中, 降级查库: key={}", key); // 潜在问题
+  log.error("订单支付失败: orderId={}", orderId, e); // 异常+堆栈
+}
+```
+:::warning 注意
+- 核心原则：代码中永远只依赖 SLF4J API，绝不直接引用 Logback 类。这样未来切换实现（如换到 Log4j2）时，业务代码零修改。
+- Spring Boot Starter Web 已内置 spring-boot-starter-logging（包含 SLF4J + Logback），无需额外添加
+  :::
+
+#### logback配置文件
+
+Spring Boot 推荐使用`logback-spring.xml`（而非 logback.xml），以支持 `<springProfile>` 等扩展标签
+
+配置模板示例（以Spring Boot项目为例）
+
+```xml
+<!--src/main/resources/logback-spring.xml-->
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <!-- 引用 Spring Boot 默认配置（包含 CONSOLE_LOG_PATTERN 等变量） -->
+  <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+  <property name="LOG_PATH" value="./logs"/>
+  <property name="APP_NAME" value="my-service"/>
+
+  <!-- 设置日志通过控制台输出（开发环境） -->
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <!--设置日志输出的格式：%d表示时间，%thread表示线程名，%-5level表示日志级别（使用5位宽度），%logger{36}表示日志记录器的名称（最多显示36位，超过则自动简化），%msg表示日志消息，%n表示换行符 -->         -->
+      <pattern> %d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n</pattern>
+      <!--            <pattern>${CONSOLE_LOG_PATTERN}</pattern>-->
+    </encoder>
+  </appender>
+
+  <!-- 设置日志通过文件输出 + 滚动策略 -->
+  <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>${LOG_PATH}/${APP_NAME}.log</file>
+    <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+      <!-- 设置日志文件名格式，%d{yyyy-MM-dd}表示按天滚动，%i表示日志文件编号 -->
+      <fileNamePattern>${LOG_PATH}/${APP_NAME}.%d{yyyy-MM-dd}.%i.gz</fileNamePattern>
+      <maxFileSize>100MB</maxFileSize>      <!-- 单文件上限，超过则滚动到新文件 -->
+      <maxHistory>30</maxHistory>           <!-- 保留天数 -->
+      <totalSizeCap>10GB</totalSizeCap>     <!-- 总大小上限 -->
+    </rollingPolicy>
+    <encoder>
+      <pattern>${FILE_LOG_PATTERN}</pattern>
+    </encoder>
+  </appender>
+
+  <!-- 异步写入（生产必配，避免IO阻塞业务线程） -->
+  <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
+    <queueSize>1024</queueSize>
+    <discardingThreshold>0</discardingThreshold> <!-- 队列满时不丢弃 -->
+    <neverBlock>true</neverBlock>                <!-- 永不阻塞调用线程 -->
+    <appender-ref ref="FILE"/>
+  </appender>
+
+  <!-- 按环境区分日志配置 -->
+  <!--  开发环境-->
+  <springProfile name="dev">
+    <!--  设置日志级别（大于等于此级别的日志才会被输出）    -->
+    <root level="INFO">
+      <appender-ref ref="STDOUT"/>
+    </root>
+  </springProfile>
+  <!--  生产环境-->
+  <springProfile name="prod">
+    <!--  设置日志级别（大于等于此级别的日志才会被输出）    -->
+    <root level="INFO">
+      <!-- 引用上面的通过异步写入输出的配置         -->
+      <appender-ref ref="ASYNC_FILE"/>
+    </root>
+    <!-- 降低框架噪音 -->
+    <logger name="org.springframework" level="WARN"/>
+    <logger name="com.zaxxer.hikari" level="WARN"/>
+  </springProfile>
+</configuration>
+```
+配置日志模板后还需在application.yml中`激活profile环境`
+```yaml 
+# src/main/resources/application.yml
+spring :
+  profiles:
+    active: dev
+```
+:::warning 日志使用注意
+- **禁止字符串拼接（应使用占位符代替）**，如：`log.info("用户创建成功: userId={}", userId);`）：使用了字符串则无论当前日志级别是否开启都会执行字符串拼接，导致性能下降
+- **异常日志不要使用toString()**：此举会丢失堆栈信息，并且 异常对象必须作为最后一个独立参数（如：`log.error("订单支付失败: orderId={}", orderId, e);`）
+- **生产环境必须用 `AsyncAppender`**
+  :::

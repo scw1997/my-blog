@@ -95,8 +95,8 @@ CREATE TABLE users (
     age TINYINT UNSIGNED,                   -- 0～255 足够
     balance DECIMAL(12,2) DEFAULT 0.00,     -- 金额，最大 999亿
     status TINYINT(1) DEFAULT 1,            -- 1=active, 0=disabled
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     profile JSON
 ) COMMENT [描述];
 ```
@@ -139,8 +139,8 @@ CREATE TABLE users (
 
 | 类型 | 最大长度 | 存储特点                   | 适用场景                |
 |-----|--------|------------------------|---------------------|
-| `CHAR(n)` | 255 字符 | 固定长度，不足补空格             | 短且长度固定（如国家代码 `'CN'`） |
-| `VARCHAR(n)` | 65,535 字节 | 可变长度，节省空间，n表示最多占用的字符空间 | 最常用（用户名、标题等）        |
+| `CHAR(n)` | 255 字符 | `固定长度`，不足补空格             | 短且长度固定（如国家代码 `'CN'`） |
+| `VARCHAR(n)` | 65,535 字节 | `可变长度`，节省空间，n表示最多占用的字符空间 | 最常用（用户名、标题等）        |
 | `TINYTEXT` | 255 字节 | —                      |          —           |
 | `TEXT` | 65,535 字节（≈64KB） | —                      |  博客正文、评论                   |
 | MEDIUMTEXT | 16MB | —                      | —                   |
@@ -155,13 +155,19 @@ CREATE TABLE users (
 
 #### （4）日期和时间
 
-| 类型 | 格式 | 范围 | 精度 | 说明 |
-|------|------|------|------|------|
-| `DATE` | YYYY-MM-DD | 1000-01-01 ～ 9999-12-31 | 天 | 仅日期 |
-| TIME | HH:MM:SS | -838:59:59 ～ 838:59:59 | 秒 | 仅时间（可表示时长） |
-| `DATETIME` | YYYY-MM-DD HH:MM:SS | 1000-01-01 00:00:00 ～ 9999-12-31 23:59:59 | 秒（支持微秒） | 常用，与时区无关 |
-| TIMESTAMP | 同上 | 1970-01-01 00:00:01 UTC ～ 2038-01-19 03:14:07 UTC | 秒（支持微秒） | 自动转时区，受系统时区影响 |
+| 类型 | 格式 | 范围                                                | 精度 | 说明             |
+|------|------|---------------------------------------------------|------|----------------|
+| `DATE` | YYYY-MM-DD | 1000-01-01 ～ 9999-12-31                           | 天 | 仅日期            |
+| TIME | HH:MM:SS | -838:59:59 ～ 838:59:59                            | 秒 | 仅时间（可表示时长）     |
+| `DATETIME` | YYYY-MM-DD HH:MM:SS | 1000-01-01 00:00:00 ～ 9999-12-31 23:59:59         | 秒（支持微秒） | 常用，与时区无关       |
+| `TIMESTAMP` | YYYY-MM-DD HH:MM:SS | `1970-01-01 00:00:01 UTC ～ 2038-01-19 03:14:07 UTC` | 秒（支持微秒） | 自动转时区，受系统时区影响） |
 
+:::warning 注意
+- `系统审计字段首选 TIMESTAMP`
+  created_at、updated_at、login_time 等记录"事件发生时刻"的字段，几乎总是应该用 TIMESTAMP。它们天然需要时区感知，且不会超出2038年。
+- `业务日期字段首选 DATETIME`
+  生日、纪念日、节假日、每日统计快照日期等"日历概念"，与时区无关，用 DATETIME（或纯 DATE）。
+:::
 
 常见约束字段：
 
@@ -242,7 +248,7 @@ CREATE TABLE order_items (
   :::
 ### 外键Foreign Key
 
-外键（Foreign Key） 是一种用于维护**表与表之间引用完整性**的约束机制。它通过建立两个表之间的“父子关系”，确保子表中的数据必须引用父表中已存在的有效数据，从而防止孤立记录和数据不一致,**保证数据一致性与完整性**。
+外键（Foreign Key）又称`物理外键`。 是一种用于维护**表与表之间引用完整性**的约束机制。它通过建立两个表之间的“父子关系（`一对多`）”，确保子表中的数据必须引用父表中已存在的有效数据，从而防止孤立记录和数据不一致,**保证数据一致性与完整性**。
 
 
 :::tip 外键要求
@@ -272,8 +278,8 @@ CREATE TABLE employees (
 
 ```sql
 ALTER TABLE employees
-ADD CONSTRAINT fk_dept
-FOREIGN KEY (dept_id) REFERENCES departments(dept_id);
+ADD CONSTRAINT fk_dept --外键名称
+FOREIGN KEY (dept_id) REFERENCES departments(id);
 ```
 
 删除外键：
@@ -289,8 +295,8 @@ DROP FOREIGN KEY fk_dept;
 | 选项 | 说明 |
 |------|------|
 | `CASCADE` | 级联操作：主表删/改，从表自动删/改对应记录 |
-| `SET NULL` | 主表记录被删/改，从表外键设为 `NULL`（要求外键列允许 `NULL`） |
-| `RESTRICT` / `NO ACTION` | 拒绝操作：如果从表有相关记录，禁止删除或更新主表记录（默认行为） |
+| `SET NULL` | 主表记录被删/改，从表外键设为 NULL（要求外键列允许 NULL） |
+| `RESTRICT` / `NO ACTION` | 拒绝操作：如果从表有相关记录，禁止删除或更新主表记录（`默认行为`） |
 | `SET DEFAULT` | 设为默认值（MySQL 不支持，但某些数据库如 PostgreSQL 支持） |
 
 示例：
@@ -308,12 +314,101 @@ CREATE TABLE employees (
 ```
 
 :::warning 注意事项
-
 - 外键列与主键列的数据类型、长度、符号性需一致
 - 在外键列上创建索引可大幅提升 JOIN 和 DELETE/UPDATE 性能。
 - 避免 A 表外键引用 B 表，B 表又外键引用 A 表（可能导致插入失败）
-  :::
+:::
 
+:::tip `用逻辑外键代替物理外键`
+
+虽然物理外键（Foreign Key）可以**保证数据完整一致性和级联操作，避免了脏数据的出现**。
+
+但在`高并发`场景下，物理外键存在以下缺点：
+
+- **性能开销大**：每次 INSERT/UPDATE/DELETE 都需要检查约束，且容易导致锁表（A表和B表互相外键引用）。
+- **分库分表障碍**：拆分数据库，必须先删除所有外键，迁移成本极高。
+- **耦合度过高**：当业务规则变更（例如允许软删除、历史数据归档）时，物理外键的刚性约束反而成为阻碍。
+- **调试困难**：报错信息通常是通用的 Cannot add or update a child row: a foreign key constraint fails，难以定位具体是哪个业务环节出了问题。
+
+使用`逻辑外键`方案：
+
+即在表中保留 user_id 等关联字段，建立普通索引以加速查询，但不定义 FOREIGN KEY 约束。每次数据库表操作时，在代码层面（Service/DAO 层）实现完整性检查。
+
+如插入子表前先查父表是否存在；删除父表前先查子表是否有关联（建议通过封装统一的方法实现）。
+:::
+
+### 多表关系
+
+#### 1. 一对一关系
+
+特点：A表中的每一行与B表中的某一行相关联
+
+场景：用户基本信息与用户隐私信息分离，订单与订单详情，公民与身份证
+
+实现方式：`在任一方表中添加另一方的主键作为外键并添加UNIQUE约束`。
+
+示例：
+
+```sql
+-- 用户表
+CREATE TABLE users (
+    id BIGINT PRIMARY KEY,
+    name VARCHAR(50)
+);
+
+-- 用户资料表
+CREATE TABLE user_profiles (
+    id BIGINT PRIMARY KEY,
+    user_id BIGINT NOT NULL UNIQUE,  -- UNIQUE 保证一对一
+    bio TEXT,
+    avatar_url VARCHAR(255),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+```
+
+#### 2. 一对多关系
+
+特点：A表中的每一行与B表中的多行相关联
+
+场景：用户与角色，班级与学生，部门与员工
+
+实现方式：`在从表（如员工）中添加主表（如部门）的主键作为外键`。
+
+示例见：[外键Foreign Key](/backend/database/mysql.html#外键foreign-key)
+
+#### 3. 多对多关系
+
+特点：A表中的每一行与B表中的多行相关联
+
+场景：学生与课程，文章与标签，老师和学生
+
+实现方式：`创建一个中间表，将两个表的主键作为外键关联起来`。
+
+示例：
+
+```sql
+-- 学生表
+CREATE TABLE students (
+    id INT PRIMARY KEY,
+    name VARCHAR(50)
+);
+-- 课程表 
+CREATE TABLE courses (
+    id INT PRIMARY KEY,
+    course_name VARCHAR(100)
+);
+
+-- 中间表（总体的学生课程表）
+CREATE TABLE student_courses (
+    student_id INT NOT NULL,
+    course_id INT NOT NULL,
+    enrolled_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (student_id, course_id),  -- 联合主键防重复
+    FOREIGN KEY (student_id) REFERENCES students(id),
+    FOREIGN KEY (course_id) REFERENCES courses(id)
+);
+
+```
 ## DML（表数据更新）
 
 
