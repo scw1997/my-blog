@@ -200,7 +200,7 @@ const routes =  [
                         link: '/backend/java/java-basic-2'
                     },
                     {
-                        text:'Java Web（上）',
+                        text:'Java Web',
                         link: '/backend/java/java-web-1'
                     },
                 ]
