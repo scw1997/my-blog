@@ -434,6 +434,17 @@ public List<User> listUsers(
        String keyword) {
   // 支持默认值、是否必填等配置（不设置则默认为必填，前端请求没传参数会报错）
 }
+
+// 如果参数过多，可以将参数封装成一个实体类
+public class UserQuery {
+  private Integer page =1;
+  private Integer size = 10;
+  private String keyword;
+}
+
+//...
+@GetMapping("/users")
+public List<User> listUsers(UserQuery query) {}
 ```
 ```java [@RequestBody]
 // 这种方式适合用于获取 POST 请求的JSON格式 body 参数。
@@ -1038,7 +1049,14 @@ class MybatisTestApplicationTests {
   # 配置 MyBatis 枚举类型为按序号映射
   mybatis.configuration.default-enum-type-handler=org.apache.ibatis.type.EnumOrdinalTypeHandler
   ```
-- `MyBatis中SQL参数永远使用#{...}而不是${...}`。前者会替换`?`并生成预编译SQL，而后者会直接拼接SQL，可能会导致SQL注入漏洞。  
+- `MyBatis中SQL参数永远使用#{...}而不是${...}`。前者的内容会被替换`?`并生成预编译SQL，而后者会直接拼接SQL，可能会导致SQL注入漏洞。  
+- MyBatis中SQL中如果在`引号里（如like '%${name}%'）使用了#{}被替换成?`，那么直接变成了字符串形式的`?`则后续占位符参数无法匹配，此时需要使用`concat` 函数拼接字符串。
+  ```sql
+  -- 错误
+  SELECT * FROM t_user WHERE name LIKE '%${name}%'
+  -- 正确
+  SELECT * FROM t_user WHERE name LIKE concat('%',#{name},'%')
+  ```
 - 当实体类字段（通常为驼峰命名 userName）与数据库列名（通常为下划线命名 user_name）不一致时，MyBatis 无法自动完成映射，导致查询结果中对应字段为 null，解决方案(任选一种)：
 
   :::code-group
@@ -1180,6 +1198,114 @@ mybatis.mapper-locations=classpath:com/scw/mapper/*.xml
 ```
 
 > 推荐IDEA插件：MyBatisX（用于XML映射文件和Mapper接口的快速跳转）
+
+
+### 动态SQL
+MyBatis 的动态 SQL 是其最强大的特性之一，它允许你根据传入参数的值，在`运行时动态拼接 SQL 语句`。这彻底解决了传统 JDBC 中手动拼接字符串带来的繁琐与安全风险。
+
+
+:::code-group
+```sql [if]
+-- 用于按需拼接 WHERE 子句或 SET 字段。
+<select id="searchUsers" resultType="User">
+    SELECT * FROM users
+    WHERE status = 'ACTIVE'
+    <if test="name != null and name != ''">
+        AND name LIKE CONCAT('%', #{name}, '%')
+    </if>
+    <if test="email != null">
+        AND email = #{email}
+    </if>
+</select>
+```
+```sql [where]
+-- 解决 <if> 拼接时多余的 AND/OR 问题。
+-- 当内部有内容时才生成 WHERE 关键字，并自动去除开头的 AND/OR。
+<select id="findOrders" resultType="Order">
+    SELECT * FROM orders
+    <where>
+        <if test="userId != null">AND user_id = #{userId}</if>
+        <if test="status != null">AND status = #{status}</if>
+        <if test="startDate != null">AND created_at >= #{startDate}</if>
+    </where>
+</select>
+```
+```sql [set]
+-- 用于 UPDATE 语句，自动处理末尾多余的逗号，且只更新非空字段。
+<update id="updateUser">
+    UPDATE users
+    <set>
+        <if test="name != null">name = #{name},</if>
+        <if test="email != null">email = #{email},</if>
+        <if test="phone != null">phone = #{phone},</if>
+        updated_at = NOW()  <!-- 固定更新的字段放在最后，无需逗号 -->
+    </set>
+    WHERE id = #{id}
+</update>
+```
+```sql [choose]
+-- 等价于 Java 的 switch-case，只会命中一个分支。
+<select id="sortBy" resultType="Product">
+    SELECT * FROM products
+    ORDER BY
+    <choose>
+        <when test="sortField == 'price'">price ASC</when>
+        <when test="sortField == 'sales'">sales_count DESC</when>
+        <otherwise>created_at DESC</otherwise>
+    </choose>
+</select>
+```
+```sql [foreach]
+-- 常用于 IN 查询和批量插入/更新。
+<!-- IN 查询 -->
+<select id="findByIds" resultType="User">
+    SELECT * FROM users
+    WHERE id IN
+    <foreach collection="ids" item="id" open="(" separator="," close=")">
+        #{id}
+    </foreach>
+</select>
+
+<!-- 批量插入 -->
+<insert id="batchInsert">
+    INSERT INTO users (name, email) VALUES
+    <foreach collection="list" item="user" separator=",">
+        (#{user.name}, #{user.email})
+    </foreach>
+</insert>
+```
+```sql [bind]
+-- 将 OGNL 表达式的结果绑定为变量，避免重复计算
+<select id="fuzzySearch" resultType="User">
+    <bind name="pattern" value="'%' + keyword + '%'" />
+    SELECT * FROM users WHERE name LIKE #{pattern}
+</select>
+
+```
+:::
+
+:::warning 动态sql注意事项
+
+-  对于数值类型（Integer/Long），判断空值只需判断 != null；对于 String 类型，则务必加上 `!= ''` 检查
+  ```sql
+  <!-- ❌ 危险：如果 name 是空字符串 ""，仍会拼入 SQL -->
+  <if test="name != null">
+  
+  <!-- ✅ 安全：同时排除 null 和空字符串 -->
+  <if test="name != null and name != ''">
+  ```
+- `<where>` 去除OR 开头的坑：
+    ```sql
+    <!-- ⚠️ 如果只有第二个 if 命中，生成: WHERE OR status = ? （语法错误）-->
+    <where>
+        <if test="name != null">name = #{name}</if>
+        <if test="status != null">OR status = #{status}</if>
+    </where>
+    
+    ```
+:::
+
+
 
 
 ### 日志
