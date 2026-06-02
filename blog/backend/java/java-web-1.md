@@ -849,6 +849,8 @@ public class UserController {
   public RequestRes deleteUser(@RequestBody User user) {
     //注意：如果前端传的id是字符串数字"1",这里就不会拦截报错，直接转换为int
     Integer id = user.getId();
+    // 通过CollectionUtils.isEmpty()可以对字段进行空值校验（同时校验null和空集合）
+    //等价于 xxx==null  || xxx.size()==0
     if(id==null){
       return RequestRes.error("id不能为空",-1);
     }
@@ -869,6 +871,7 @@ public class UserController {
     //注意：如果前端传的id是字符串数字"1",这里就不会拦截报错，直接转换为Integer
     Integer id = user.getId();
     int gender = user.getGender();
+    
     if(id==null){
       return RequestRes.error("id不能为空",-1);
     }
@@ -923,7 +926,7 @@ public class UserService  {
 }
 
 ```
-```java [Dao层查询数据库的接口类]
+```java [Mapper层查询数据库的接口类]
 //src/main/java/com/xxx/mapper/UserMapper.java
 package com.scw.mapper;
 
@@ -942,6 +945,8 @@ public interface UserMapper {
   public void deleteUserById(Integer id);
 
   //这里的各个参数取的是传递过来的user对象的对应key的属性值
+  //@Options用于告诉MyBatis，插入数据后，将主键值回填到user对象中（即作为方法的返回值），keyProperty指定回填的属性名
+  @Options(useGeneratedKeys = true, keyProperty = "id")
   @Insert("insert into users(name,password,email,age,gender) values (#{name},#{password},#{email},#{age},#{gender})")
   public void addUser(User user);
 
