@@ -426,12 +426,13 @@ public List<User> listUsers(
 }
 
 //注意：如果请求的参数名和@RequestParam中接收的形参名一致，则可省略@RequestParam
-// GET /users?page=1&size=10&keyword=张三
+// GET /users?page=1&size=10&keyword=张三&list=1,2,3
+//1,2,3这种参数形式可以用数组或者集合接收（集合接收必须使用@RequestParam，不可省略）
 @GetMapping("/users")
 public List<User> listUsers(
        Integer page,
         Integer size,
-       String keyword) {
+       String keyword,Integer[] list) {
   // 支持默认值、是否必填等配置（不设置则默认为必填，前端请求没传参数会报错）
 }
 
@@ -592,7 +593,7 @@ public class OrderService {
   `@Resource(name=beanName)`：指定具体的 Bean 名称进行精确注入。
 :::
 
-### 配置文件
+### application配置文件
 
 `YAML` 和 `Properties` 是 Spring Boot 支持的两种核心配置格式。
 
@@ -655,6 +656,96 @@ app.upload.max-sizes[2]=100MB
 
 :::
 
+
+#### 参数配置化
+
+可将一些业务代码中需要**灵活变化的参数**可配置在application.yml文件中，然后通过`@Value`注解获取参数值。
+
+:::code-group
+```yml [配置示例]
+# aliyun oss对象存储配置
+aliyun:
+  oss:
+  endpoint: oss-cn-beijing.aliyuncs.com
+  access-key-id: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  access-key-secret: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+```java [获取配置参数]
+// src/main/java/com/scw/bean/AliyunOSSUtils.java
+//工具bean类
+public class AliyunOSSUtils {
+    @Value("${aliyun.oss.endpoint}")
+    private String endpoint;
+    @Value("${aliyun.oss.access-key-id}")
+    private String accessKeyId;
+    @Value("${aliyun.oss.access-key-secret}")
+    private String accessKeySecret;
+}
+
+```
+:::
+如果参数配置较多，还可以通过`@ConfigurationProperties`注解统一注入获取参数值。
+
+```java
+// src/main/java/com/scw/bean/AliyunOSSUtils.java
+//工具bean类
+@Data
+@Slf4j
+@Component
+//此注解可直接把对应属性的值注入到当前类中,prefix为配置文件中的属性名
+@ConfigurationProperties(prefix = "aliyun.oss")
+public class AliyunOSSUtils {
+    private String endpoint;
+    private String accessKeyId;
+    private String accessKeySecret;
+}
+```
+
+
+### 文件上传
+
+:::code-group
+```java [基本上传逻辑]
+package com.scw.controller;
+
+import com.scw.bean.RequestRes;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.File;
+import java.io.IOException;
+
+@RestController
+@RequestMapping("files")
+@Slf4j
+public class FileController {
+  @PostMapping("/upload")
+  //前端必须传递formData类型的请求体
+  public RequestRes upload(String name, MultipartFile file) throws IOException {
+    log.info("name:{},file:{}",name,file);
+    //获取文件名
+    String fileName = file.getOriginalFilename();
+    //保存文件到指定路径（路径文件夹必须已存在，否则报错）
+    //配置UUID生成最终文件名保证唯一
+    file.transferTo(new File("C:/upload/"+ UUID.randomUUID()+"-"+fileName));
+    return RequestRes.success();
+  }
+}
+
+```
+```yml [设置文件大小限制]
+# application.yml
+servlet:
+  multipart:
+      # 最大单个文件大小
+      max-file-size: 10MB
+      # 最大请求大小
+      max-request-size: 100MB
+
+```
 ### 事务
 
 Spring 会在`Service层`方法入口（使用`@Transactional`）开启事务，正常返回时 commit，抛出指定异常时 rollback。开发者无需关心 SqlSession 的获取与释放。
@@ -765,6 +856,58 @@ public class AuditLogService {
 - @Transactional可用于Service层的`方法，类（表示此类所有方法都要开启事务），接口（表示实现此接口的所有类的方法都要开启事务）`
 - 默认情况下，@Transactional`只会在出现运行时异常（RuntimeException）时回滚事务`，但可以通过设置属性`rollbackFor`来指定哪些异常触发回滚。
 :::
+
+### 全局异常处理
+
+Spring Boot的接口发生异常时会有内置返回报错格式，但希望可以跟接口成功时的返回格式一致，便于统一风格。
+
+在 Spring Boot 中，全局异常处理器的核心机制是 `@ControllerAdvice + @ExceptionHandler`。它基于 AOP 思想，将散落在各个 Controller 中的 try-catch 逻辑抽离到统一位置，实现异常处理与业务代码的彻底解耦。
+
+```java
+package com.scw.controller;
+
+
+import com.scw.bean.RequestRes;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import java.util.stream.Collectors;
+//全局异常处理的类文件可以放在bean类文件夹下
+//此注解表示定义全局异常处理类，并自动序列化返回值
+@RestControllerAdvice
+@Slf4j
+public class GlobalExceptionHandler {
+  // 参数校验异常（@Valid / @Validated）
+  @ExceptionHandler(MethodArgumentNotValidException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  public RequestRes handleValidation(MethodArgumentNotValidException e) {
+    String msg = e.getBindingResult().getFieldErrors().stream()
+            .map(f -> f.getField() + ": " + f.getDefaultMessage())
+            .collect(Collectors.joining("; "));
+    return RequestRes.error(msg,400);
+  }
+
+  // ✅ 缺失请求参数
+  @ExceptionHandler(MissingServletRequestParameterException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  public RequestRes handleMissingParam(MissingServletRequestParameterException e) {
+    return RequestRes.error("缺少必要参数: " + e.getParameterName(),400 );
+  }
+
+  // ✅ 兜底异常（最低优先级）
+  @ExceptionHandler(Exception.class)
+  @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+  public RequestRes handleUnknown(Exception e) {
+    log.error("未预期异常", e);  // ⚠️ 完整堆栈只在这里打印
+    return RequestRes.error("系统繁忙，请稍后重试",500);
+  }
+}
+```
+
 ### 日志
 
 #### Java内置日志系统（JUL）
@@ -847,6 +990,7 @@ public class UserService {
   //Lombok 用户可直接用 @Slf4j 注解替代上面两行
   
   //日志级别与输出
+  //用{}表示占位符
   log.trace("方法入参: userId={}", userId);      // 最细粒度调试，使用较少
   log.debug("查询结果: {}", result);             // 开发调试
   log.info("用户创建成功: userId={}", userId);   // 关键业务流程
@@ -1448,6 +1592,22 @@ XML文件规则：
         update users set name=#{name},password=#{password},email=#{email},age=#{age},gender=#{gender} where id=#{id}
     </update>
 </mapper>
+
+<!--还可以自定义结果映射（当mapper的返回数据类型不止一个实体类时可以 使用）-->
+<!--id表示结果映射的id，用于resultMap字段的值；type表示要添加到定义的哪个bean类-->
+<resultMap id="userResultMap" type="com.scw.user.User">
+  <id property="id" column="id"/>
+  <result property="name" column="name"/>
+  <result property="password" column="password"/>
+  <result property="email" column="email"/>
+  <result property="age" column="age"/>
+  <result property="gender" column="gender"/>
+  <collection property="posts" ofType="com.scw.post.Post">
+    <id property="id" column="id"/>
+    <result property="title" column="title"/>
+    <result property="content" column="content"/>
+  </collection>
+</resultMap>
 ```
 ```java [Mapper接口]
 //src/main/java/com/scw/mapper/UserMapper.java
