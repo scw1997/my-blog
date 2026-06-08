@@ -640,4 +640,4 @@ div {
 - 宽/高度相关属性值产生冲突时的优先级: `min-(width/height) > max-(width/height) > width/height`。
 
 
-[BFC]:/core/html-css/bfc
+[BFC]:/frontend/html-css/bfc

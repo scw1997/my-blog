@@ -441,4 +441,4 @@ onBlur={() => document.body.removeEventListener("touchmove", stopMove)
 
 
 
-[Cookie]:/advance/cookie-session#cookie
+[Cookie]:/frontend/cookie-session#cookie

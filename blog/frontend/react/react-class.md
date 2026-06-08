@@ -448,7 +448,7 @@ export default class extends React.PureComponent {
 
 hook写法通过使用useState来进行更新state，由于是函数组件，跟class的机制完全不同。
 
-详见：[深入React Hooks > useState](/core/react/react-hooks#usestate)
+详见：[深入React Hooks > useState](/frontend/react/react-hooks#usestate)
 ## 其他答疑
 
 **1. componentDidMount和componentWillMount那个适合用于执行初始网路数据请求?**
@@ -483,7 +483,7 @@ export default class extends React.PureComponent {
 }
 ```
 
-**首先需要明确，js代码中this指向是由函数真正被调用时决定的，而非声明时。详见[JS This绑定机制](/core/js/this-bind)**
+**首先需要明确，js代码中this指向是由函数真正被调用时决定的，而非声明时。详见[JS This绑定机制](/frontend/js/this-bind)**
 
 由上述例子：
 

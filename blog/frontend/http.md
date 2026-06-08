@@ -260,7 +260,7 @@ HTTPS 是超文本传输安全协议，即`HTTP + SSL/TLS`。
 - HTTP是`明文传输`，不安全的，HTTPS是`加密传输`，安全的多。
 - HTTP标准端口是`80`，HTTPS标准端口是`443`。
 - HTTP不用认证证书免费，HTTPS需要`认证证书要钱`。
-- 连接方式不同，HTTP三次握手，HTTPS中会在三次握手基础上新增TLS四次握手，详见[这里](/advance/browser-render.html#网络请求)。
+- 连接方式不同，HTTP三次握手，HTTPS中会在三次握手基础上新增TLS四次握手，详见[这里](/frontend/browser-render.html#网络请求)。
 - HTTP在OSI网络模型中是在`应用层`，而HTTPS的TLS是在`传输层`。
 - HTTP是`无状态`的，HTTPS是`有状态`的（涉及身份验证）。
 - HTTP网页无法访问HTTPS资源，反之可以（但有安全提示）。
@@ -295,8 +295,8 @@ HTTPS 是超文本传输安全协议，即`HTTP + SSL/TLS`。
   - 低实时性需求 → **短轮询/长轮询**（兼容老旧系统）。
 :::
 
-[三次握手]:/advance/browser-render#网络请求
-[四次挥手]:/advance/browser-render#断开连接
-[Cache-Control]:/advance/browser-cache#cache-control
-[Expires]:/advance/browser-cache#cache-control
-[协商缓存]:/advance/browser-cache.html#协商缓存
+[三次握手]:/frontend/browser-render#网络请求
+[四次挥手]:/frontend/browser-render#断开连接
+[Cache-Control]:/frontend/browser-cache#cache-control
+[Expires]:/frontend/browser-cache#cache-control
+[协商缓存]:/frontend/browser-cache.html#协商缓存

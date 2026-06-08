@@ -8,15 +8,17 @@ Cookie是浏览器实现的一种数据存储技术。
 
 ### 特点
 
-- cookie存储在**客户端（浏览器）**，发送请求时自动携带放在请求头中。
+- cookie存储在`客户端（浏览器）`，发送请求时自动携带放在请求头中。
 
-- cookie只能以文本的方式保存**字符串**类型的数据。
+- cookie只能以文本的方式保存`字符串`类型的数据。
 
-- 单个cookie保存的数据不能超过**4KB**。
+- 单个cookie保存的数据不能超过`4KB`。
 
-- cookie的**安全性不高**，别人可以分析存放在本地的cookie并进行cookie欺骗。
+- cookie的`安全性不高`，别人可以分析存放在本地的cookie并进行cookie欺骗。
 
-- cookie**默认不可跨域**，可通过特殊的操作如**设置withCredentials属性为true**实现跨域（跨域介绍详见[这里](/advance/cross-origin)）。
+- cookie`默认不可跨域`，可通过特殊的操作如`设置withCredentials属性为true`实现跨域（跨域介绍详见[这里](/frontend/cross-origin)）。
+
+- cookie`安全性弱`，可被客户端修改或禁用。
 
 ### 属性
 
@@ -57,7 +59,7 @@ document.cookie = "name=xiaoming; age=12 "
 
 - 不要存储敏感数据，比如用户密码，账户余额
 - 使用 httpOnly 在一定程度上提高安全性
-- 移动端对 cookie 的支持不是很好，而 session 需要基于 cookie 实现，所以移动端常用的是 token
+- 移动端(App)对 cookie 的支持不是很好，而 session 需要基于 cookie 实现，所以移动端常用的是 token
 :::
 
 ## Session
@@ -77,15 +79,17 @@ session 是另一种记录服务器和客户端会话状态的机制，并且`se
 
 ### 特点
 
-- Session 是基于 cookie 实现，cookie失效或删除则session也无法获取。
+- Session 是`基于 cookie` 实现，cookie失效或删除则session也无法获取。
 
-- Session 是存储在服务器端，所以安全性比cookie高。
+- Session 是存储在`服务器端`，所以安全性比cookie高。
 
-- Session 可以存任意数据类型。
+- Session 可以存`任意数据类型`。
 
 - Session的默认生效时间是30分钟。只要在生效时间内，即使该session值已被修改，依然可通过旧有Cookie访问到旧有Session值。
 
 - Session 可存储数据的容量远高于 Cookie，但是当访问量过多，会占用过多的服务器资源。
+
+- 在`集群服务器`场景下，Session无法使用。因为`Session无法在集群服务器之间共享`。
 
 ## Token
 
@@ -117,6 +121,8 @@ Token 使服务端无状态化，不会存储会话信息。
 - token签发后存储在客户端，不占用服务器资源，可减轻服务器压力。
 
 - 使用token无需担心跨域问题，可自由使用。
+
+- 避免了Session的集群无法共享问题
 
 ## Json Web Token
 

@@ -6,7 +6,7 @@ const routes =  [
     },
 
     {
-        text:'核心',
+        text:'前端',
         items:[
             {
                 text:'HTML/CSS',
@@ -15,31 +15,31 @@ const routes =  [
 
                     {
                         text:'CSS变量',
-                        link:'/core/html-css/css-var'
+                        link:'/frontend/html-css/css-var'
                     },
                     {
                         text:'BFC块级格式化上下文',
-                        link:'/core/html-css/bfc'
+                        link:'/frontend/html-css/bfc'
                     },
                     {
                         text:'文档流 & 元素类型',
-                        link:'/core/html-css/doc-flow'
+                        link:'/frontend/html-css/doc-flow'
                     },
                     {
                         text:'CSS选择器优先级',
-                        link:'/core/html-css/selector-priority'
+                        link:'/frontend/html-css/selector-priority'
                     },
                     {
                         text:'伪类 & 伪元素',
-                        link:'/core/html-css/fake'
+                        link:'/frontend/html-css/fake'
                     },
                     {
                         text:'移动端适配',
-                        link:'/core/html-css/fit'
+                        link:'/frontend/html-css/fit'
                     },
                     {
                         text:'HTML/CSS零碎',
-                        link:'/core/html-css/fragment'
+                        link:'/frontend/html-css/fragment'
                     }
                 ]
 
@@ -50,31 +50,31 @@ const routes =  [
                 items:[
                     {
                         text:'Iterator & Generator',
-                        link:'/core/js/generator'
+                        link:'/frontend/js/generator'
                     },
                     {
                         text:'原型链',
-                        link:'/core/js/prototype'
+                        link:'/frontend/js/prototype'
                     },
                     {
                         text:'JS类型检测',
-                        link:'/core/js/type-check'
+                        link:'/frontend/js/type-check'
                     },
                     {
                         text:'JS This绑定机制',
-                        link:'/core/js/this-bind'
+                        link:'/frontend/js/this-bind'
                     },
                     {
                         text:'JS事件循环机制',
-                        link:'/core/js/event-loop'
+                        link:'/frontend/js/event-loop'
                     },
                     {
                         text:'JS手写实现',
-                        link:'/core/js/hand'
+                        link:'/frontend/js/hand'
                     },
                     {
                         text:'JS零碎',
-                        link:'/core/js/fragment'
+                        link:'/frontend/js/fragment'
                     },
 
                 ]
@@ -85,23 +85,23 @@ const routes =  [
                 items:[
                     {
                         text:'React Class组件',
-                        link:'/core/react/react-class'
+                        link:'/frontend/react/react-class'
                     },
                     {
                         text:'深入React Hooks',
-                        link:'/core/react/react-hooks'
+                        link:'/frontend/react/react-hooks'
                     },
                     {
                         text:'React 原理',
-                        link:'/core/react/react-principle'
+                        link:'/frontend/react/react-principle'
                     },
                     {
                         text:'React 架构',
-                        link:'/core/react/react-architecture'
+                        link:'/frontend/react/react-architecture'
                     },
                     {
                         text:'React 零碎',
-                        link:'/core/react/fragment'
+                        link:'/frontend/react/fragment'
                     },
 
                 ]
@@ -112,78 +112,75 @@ const routes =  [
                 items:[
                     {
                         text:'Vue 原理',
-                        link:'/core/vue/vue-principle'
+                        link:'/frontend/vue/vue-principle'
                     },
                     {
                         text:'Vue 零碎',
-                        link:'/core/vue/fragment'
+                        link:'/frontend/vue/fragment'
                     },
                 ]
-            }
+            },
+                    {
+                        text:'Node.js',
+                        link:'/frontend/node'
+                    },
+                    {
+                        text:'TypeScript',
+                        link:'/frontend/typescript'
+                    },
+                    {
+                        text:'前端工程化',
+                        link:'/frontend/engine'
+                    },
+                    {
+                        text:'微信小程序',
+                        link:'/frontend/weixin-micro'
+                    },
+                   {
+                        text:'浏览器渲染机制',
+                        link:'/frontend/browser-render'
+                    },
+                    {
+                        text:'浏览器缓存机制',
+                        link:'/frontend/browser-cache'
+                    },
+                    {
+                        text:'HTTP协议',
+                        link:'/frontend/http'
+                    },
+                    {
+                        text:'Cookie & Session & Token',
+                        link:'/frontend/cookie-session'
+                    },
+                    {
+                        text:' 浏览器跨域',
+                        link:'/frontend/cross-origin'
+                    },
+                    {
+                        text:'前端安全攻防',
+                        link:'/frontend/safety'
+                    },
+
+                    {
+                        text:'数据结构和算法',
+                        link:'/frontend/algorithm'
+                    },
+                    {
+                        text:'设计模式',
+                        link:'/frontend/design-mode'
+                    },
+                    {
+                        text: '常用工具类/函数',
+                        link:'/frontend/tools'
+                    },
+                    {
+                        text: '其他',
+                        link:'/frontend/others'
+                    },
+
         ]
     },
-    {
-        text:'生态',
-        items:[
-            {
-                text:'Node.js',
-                link:'/ecology/node'
-            },
-            {
-                text:'TypeScript',
-                link:'/ecology/typescript'
-            },
-            {
-                text:'前端工程化',
-                link:'/ecology/engine'
-            },
-            {
-                text:'微信小程序',
-                link:'/ecology/mini'
-            }
-        ]
-    },
-    {
-        text:'进阶',
-        items:[
 
-            {
-                text:'浏览器渲染机制',
-                link:'/advance/browser-render'
-            },
-            {
-                text:'浏览器缓存机制',
-                link:'/advance/browser-cache'
-            },
-            {
-                text:'HTTP协议',
-                link:'/advance/http'
-            },
-            {
-                text:'Cookie & Session & Token',
-                link:'/advance/cookie-session'
-            },
-            {
-                text:' 浏览器跨域',
-                link:'/advance/cross-origin'
-            },
-            {
-                text:'前端安全攻防',
-                link:'/advance/safety'
-            },
-
-            {
-                text:'数据结构和算法',
-                link:'/advance/algorithm'
-            },
-            {
-                text:'设计模式',
-                link:'/advance/design-mode'
-            },
-
-
-        ],
-    },
     {
         text: '后端',
         items:[
@@ -201,7 +198,7 @@ const routes =  [
                     },
                     {
                         text:'Java Web',
-                        link: '/backend/java/java-web-1'
+                        link: '/backend/java/java-web'
                     },
                 ]
             },
@@ -218,14 +215,7 @@ const routes =  [
 
         ]
     },
-    {
-        text: '其他',
-        link:'/others'
-    },
-    {
-        text: '常用工具类/函数',
-        link:'/tools'
-    },
+
 
     ...(process.env.NODE_ENV === 'dev' ?[   {
         text: '测试题',
