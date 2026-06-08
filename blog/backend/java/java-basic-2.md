@@ -2845,4 +2845,4 @@ IP地址是设备在网络中的唯一标识，用于定位网络中的主机。
 | HTTP | 超文本传输协议 | 应用层、基于TCP | 网页浏览 |
 | WebSocket | 套接字协议 | 全双工通信 | 实时聊天、推送 |
 
-详情查看：[进阶 > HTTP协议](/advance/http.html)
+详情查看：[进阶 > HTTP协议](/frontend/http.html)
