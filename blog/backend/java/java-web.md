@@ -746,6 +746,199 @@ servlet:
       max-request-size: 100MB
 
 ```
+
+### 过滤器 Filter
+
+过滤器是`Servlet`规范中的一种组件，用于拦截请求，在请求处理之前执行。
+
+
+使用示例：
+:::code-group
+```java [启动类]
+package com.scw;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.web.servlet.ServletComponentScan;
+
+//开启对Servlet组件的扫描
+@ServletComponentScan //[!code ++]
+@SpringBootApplication
+public class MybatisTestApplication {
+
+  public static void main(String[] args) {
+    SpringApplication.run(MybatisTestApplication.class, args);
+  }
+
+}
+
+```
+```java [定义filter bean类]
+//src/main/java/com/scw/bean/MyFilter.java
+package com.scw.bean;
+
+import jakarta.servlet.*;
+import jakarta.servlet.annotation.WebFilter;
+
+import java.io.IOException;
+
+//配置拦截路径，/* 表示拦截所有请求
+package com.scw.bean;
+
+import jakarta.servlet.*;
+import jakarta.servlet.annotation.WebFilter;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
+import java.io.IOException;
+
+//配置拦截路径，/** 表示拦截所有请求
+@WebFilter(urlPatterns = "/**")
+public class MyFilter implements Filter {
+  //初始化，服务器启动时执行
+  @Override
+  public void init(FilterConfig filterConfig) throws ServletException {
+    //调用父接口的默认具体方法
+//        Filter.super.init(filterConfig);
+    System.out.println("init");
+  }
+
+  //每拦截到一次请求就会执行
+  @Override
+  public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
+    System.out.println("doFilter 拦截到了请求");
+    HttpServletRequest request = (HttpServletRequest) servletRequest;
+    HttpServletResponse response = (HttpServletResponse) servletResponse;
+    //获取请求地址
+    String reqUrl = request.getRequestURI();
+    if(reqUrl.contains("/login")){
+      //登录请求则不校验token
+      //表示放行，将请求传递给下一个过滤器或者目标资源
+      filterChain.doFilter(servletRequest,servletResponse);
+      return;
+    }
+    //获取token
+    String token = request.getHeader("token");
+    if(token==null || token.isEmpty()){
+      //没有token则返回错误信息
+      response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+      return;
+    }
+    //token存在则校验token
+    //校验通过则正常返回数据
+    //...
+    filterChain.doFilter(servletRequest,servletResponse);
+  }
+
+  @Override
+  public void destroy() {
+    //调用父接口的默认具体方法
+//        Filter.super.destroy();
+    System.out.println("destroy");
+  }
+}
+
+```
+:::
+
+![过滤器链.png](/java_web_filters.png)
+
+:::warning 注意
+- 如果`doFilter`方法中执行放行逻辑后还有代码，则该代码依然会在对应请求逻辑执行完之后执行。
+- 支持定义`多个过滤器`，多个过滤器按照过滤器的类名的自然顺序执行
+:::
+
+### 拦截器 Interceptor
+
+拦截器是`SpringMVC`规范中一种组件，用于拦截请求，在请求处理之前执行（**执行过程机制大体和过滤器一致**）。
+
+使用示例：
+
+:::code-group
+```java [定义拦截器bean类]
+package com.scw.bean;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.ModelAndView;
+
+//spring提供的拦截器则加入IOC容器管理
+@Component
+@Slf4j
+//实现HandlerInterceptor接口
+public class MyInterceptor implements HandlerInterceptor {
+
+    //目标资源方法执行前执行，返回值表示是否放行
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        log.info("preHandle");
+        String reqUrl = request.getRequestURI();
+        if(reqUrl.contains("/login")){
+            return true;
+        }
+        //无token则返回401
+        String token = request.getHeader("token");
+        if(token==null || token.isEmpty()){
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return false;
+        }
+        //校验token通过则返回正常数据
+        return true;
+    }
+    //目标资源方法执行后执行
+    @Override
+    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView){
+        log.info("postHandle");
+    }
+    //视图渲染完毕后执行，最后执行（前后端分离项目则忽略此方法）
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex){
+        log.info("afterCompletion");
+    }
+}
+
+```
+```java [注册拦截器]
+package com.scw.bean;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+//此注解表示配置类
+@Configuration
+public class WebConfig implements WebMvcConfigurer {
+  //依赖注入
+  //注入多个则表示可定义多个拦截器
+  @Autowired
+  private MyInterceptor myInterceptor;
+
+  @Override
+  public void addInterceptors(InterceptorRegistry registry) {
+    //注册拦截器并设置拦截/不拦截哪些请求
+    registry.addInterceptor(myInterceptor).addPathPatterns("/**").excludePathPatterns("login");
+  }
+}
+
+```
+:::
+
+#### 拦截器 vs 过滤器
+![过滤器vs 拦截器.png](/java_web_filters_vs_interceptor.png)
+
+| 维度 | 过滤器 (Filter)                                      | 拦截器 (Interceptor)                                          |
+| :--- |:--------------------------------------------------|:-----------------------------------------------------------|
+| 规范归属 | 属于 Java Servlet 官方规范，由 Web 容器（如 Tomcat）管理生命周期。    | 属于 Spring Framework 框架规范，由 Spring 容器管理生命周期。                |
+| 执行时机 | `最早执行。位于请求进入容器后、Servlet/Controller 执行前`。           | `晚于 Filter。位于请求进入 DispatcherServlet 后、Controller 方法执行前后`。   |
+| 拦截范围 | 拦截所有进入容器的 HTTP 请求（包括静态资源、JSP、HTML 等），粒度较粗。        | 仅拦截被 DispatcherServlet 分发的请求（`通常是 Controller 接口`），不拦截静态资源。 |
+| 依赖注入 | 默认`无法直接注入 Spring Bean`，仅能操作原生的 Request/Response 对象。 | `原生支持依赖注入`，可自由获取 Spring 上下文、HandlerMethod 及 ModelAndView。    |
+| 异常处理 | 抛出的异常无法被 Spring 全局异常处理器捕获，需手动写入响应。                | 抛出的异常可与 Spring 全局异常处理器无缝集成，`统一返回格式`。                         |
+
+
 ### 事务
 
 Spring 会在`Service层`方法入口（使用`@Transactional`）开启事务，正常返回时 commit，抛出指定异常时 rollback。开发者无需关心 SqlSession 的获取与释放。
