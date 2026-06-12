@@ -515,7 +515,7 @@ public class UserController {
 }
 ```
 :::
-SpringBoot中声明Bean类（即表示交给IOC容器管理）的注解：
+SpringBoot中声明Bean类（即`表示交给IOC容器管理`）的注解：
 
 - `@Controller`：只能用于Controller层
 - `@Service`：只能用于Service层
@@ -524,6 +524,43 @@ SpringBoot中声明Bean类（即表示交给IOC容器管理）的注解：
 
 > 给bean类设置名字，可通过`@Service("userService")`这样格式。没设置则默认为类名首字母小写
 
+
+:::tip 扩展
+- Spring中的bean类`默认都是单例`的，并在项目启动时创建会将创建其实例然后保存在IOC容器中。可通过在配置类中添加`@Scope("prototype")`注解来修改为多例模式。
+ 
+  单例模式的Bean通常是**无状态**的即线程安全的（如Controller，Service层），需要存储状态或信息的Bean（非线程安全）需要使用多例模式。
+
+- 第三方Bean类默认是无法使用`@Component`注解来交给IOC容器管理的，需要在`启动类`中添加`@Bean`注解
+```java
+//启动类
+package com.scw;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.web.servlet.ServletComponentScan;
+
+    @SpringBootApplication
+    public class MybatisTestApplication {
+
+      public static void main(String[] args) {
+        SpringApplication.run(MybatisTestApplication.class, args);
+      }
+
+      // 方法名默认作为 Bean 的名称
+      //Spring 会将该方法的返回值注册为 Bean。
+      @Bean
+      public DruidDataSource dataSource() {
+        DruidDataSource ds = new DruidDataSource();
+        ds.setUrl("jdbc:mysql://localhost:3306/test");
+        ds.setUsername("root");
+        ds.setPassword("123456");
+        // 可以灵活调用任意 setter/构造器进行初始化
+        return ds;
+
+    }
+
+```
+:::
 
 ### 依赖注入的方式
 
@@ -583,7 +620,7 @@ public class OrderService {
 
 
 :::warning 注意
-- 声明Bean类的四大注解要想生效必须要被组件扫描注解`@ComponentScan`注解，不过SpringBoot的启动类注解`@SpringBootApplication`已包含了该注解。所以启动类文件不可被移动到其他路径，必须是service/controller/dao架构的父级路径（父包）
+- 声明Bean类的四大注解要想生效必须要被组件扫描注解`@ComponentScan`注解，不过SpringBoot的启动类注解`@SpringBootApplication`已包含了该注解。所以启动类文件不可被移动到其他路径，必须和service，controller，mapper架构属于同一层级。
 - 如果一个接口有多个实现类，Spring 不知道该注入哪一个时会报错。此时可以配合以下注解：
 
   `@Qualifier("beanName")`：指定具体的 Bean 名称进行精确注入。
@@ -651,6 +688,7 @@ app.upload.max-sizes[2]=100MB
 :::warning 注意
 
 - 新项目推荐使用`yml（yaml）格式`，yml格式比properties格式更简洁
+- 如果同时存在`yml`和`properties`两种格式文件时，`properties`文件优先级更高。如果使用了`命令行参数`，则其优先级最高。
 - yml格式中的字段值前面必须添加`空格`，否则会识别报错
 - yml格式中的字段值以`0开头`的数值会被识别为八进制值，请修改为字符串类型。
 
@@ -927,6 +965,11 @@ public class WebConfig implements WebMvcConfigurer {
 ```
 :::
 
+:::tip 扩展
+- @Configuration作用：告诉 Spring IoC 容器“这个类是一个配置源”，容器会解析该类中`@Bean`方法，并将返回值注册为受管理的 Bean（即交给IOC容器管理）。
+
+:::
+
 #### 拦截器 vs 过滤器
 ![过滤器vs 拦截器.png](/java_web_filters_vs_interceptor.png)
 
@@ -934,11 +977,149 @@ public class WebConfig implements WebMvcConfigurer {
 | :--- |:--------------------------------------------------|:-----------------------------------------------------------|
 | 规范归属 | 属于 Java Servlet 官方规范，由 Web 容器（如 Tomcat）管理生命周期。    | 属于 Spring Framework 框架规范，由 Spring 容器管理生命周期。                |
 | 执行时机 | `最早执行。位于请求进入容器后、Servlet/Controller 执行前`。           | `晚于 Filter。位于请求进入 DispatcherServlet 后、Controller 方法执行前后`。   |
-| 拦截范围 | 拦截所有进入容器的 HTTP 请求（包括静态资源、JSP、HTML 等），粒度较粗。        | 仅拦截被 DispatcherServlet 分发的请求（`通常是 Controller 接口`），不拦截静态资源。 |
+| 拦截范围 | `拦截所有进入容器的 HTTP 请求（包括静态资源、JSP、HTML 等）`，粒度较粗。        | 仅拦截被 DispatcherServlet 分发的请求（`通常是 Controller 接口`），不拦截静态资源。 |
 | 依赖注入 | 默认`无法直接注入 Spring Bean`，仅能操作原生的 Request/Response 对象。 | `原生支持依赖注入`，可自由获取 Spring 上下文、HandlerMethod 及 ModelAndView。    |
 | 异常处理 | 抛出的异常无法被 Spring 全局异常处理器捕获，需手动写入响应。                | 抛出的异常可与 Spring 全局异常处理器无缝集成，`统一返回格式`。                         |
 
+### Spring AOP
 
+Spring AOP 是`Spring`提供的一种`面向切面`的编程方式，允许开发者在代码中插入切面逻辑，如**日志记录、权限验证、事务处理**等。
+
+| 术语               | 说明                                                              |
+|:-----------------|:----------------------------------------------------------------|
+| 切面 (Aspect)      | 横切关注点的模块化封装，通常是一个被 `@Aspect` 注解的类。                              |
+| 连接点 (Join Point) | 程序执行过程中可被拦截的点（`通常为你需要拦截的那些方法`）。Spring AOP 仅支持方法级别的连接点。          |
+| 切入点 (Pointcut)   | 定义哪些连接点需要被拦截的表达式（如 `execution(* com.example.service.*.*(..))`）。 |
+| 通知 (Advice)      | 在切入点匹配的方法执行前后要执行的逻辑，分为**前置、后置、返回、异常和环绕**五种类型。                   |
+| 目标对象 (Target)    | 通常为你需要拦截的那些方法所属的对象。Spring 默认采用运行时动态代理。                          |
+
+其中，通知类型分为以下几种
+
+| 通知类型 | 注解 | 执行时机  | 能否获取返回值/异常    | 典型应用场景 |
+| :--- | :--- | :--- |:--------------| :--- |
+| 前置通知 | `@Before` | 目标方法执行之前 | ❌ 均不能         | 参数校验、权限检查、日志记录入参 |
+| 后置通知 | `@After` | 目标方法执行之后（无论正常返回还是抛异常） | ❌ 均不能         | 资源清理、ThreadLocal 移除、关闭连接 |
+| 返回通知 | `@AfterReturning` | 目标方法正常返回后 | ✅ 可获取并修改返回值   | 结果脱敏、响应格式化、缓存写入 |
+| 异常通知 | `@AfterThrowing` | 目标方法抛出异常后 | ✅ 可获取异常对象     | 统一异常日志、告警通知、异常转换 |
+| 环绕通知 | `@Around` | 包裹目标方法，手动控制执行前后逻辑 | ✅ 均可获取和处理     | 性能监控、事务管理、缓存命中直接返回、重试机制 |
+
+> @Around通知需要手动调用`ProceedingJoinPoint.proceed()`方法来让原始方法执行，其他通知则不需要考虑。
+
+
+示例：记录service下方法的运行时长
+
+:::code-group
+
+```java [定义aop切面类]
+//src/main/java/com/scw/bean/RecordTimeAop.java
+package com.scw.bean;
+
+import lombok.extern.slf4j.Slf4j;
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.*;
+import org.springframework.stereotype.Component;
+
+@Slf4j
+@Aspect
+@Component
+public class RecordTimeAop {
+
+  //使用@PointCut将重复的切入表达式提取出来
+  
+  //拦截service下的所有方法
+  @Pointcut("execution(* com.scw.service.*.*(..))")
+  public void pc(){}
+
+  //拦截所有带 @LogExecutionTime 注解的方法
+  @Pointcut("@annotation(com.example.annotation.LogExecutionTime)")
+  public void logPointcut() {}
+
+  //监听service下的所有方法
+  //使用提取的公共PointCut
+  @Around("pc()")
+  public Object recordTime(ProceedingJoinPoint pjp) throws Throwable{
+    //获取原始方法的对象
+    Object target = pjp.getTarget();
+    //获取原始方法的所属类名
+    String className = target.getClass().getName();
+    //获取原始方法名
+    String methodName = pjp.getSignature().getName();
+    //获取原始方法的参数
+    Object[] args = pjp.getArgs();
+
+
+    //记录方法执行的开始时间
+    long start = System.currentTimeMillis();
+    log.info("记录方法执行时间");
+
+    //执行原始方法
+    Object result = pjp.proceed();
+
+    //记录方法执行的结束时间
+    long end = System.currentTimeMillis();
+    log.info("方法执行耗时：{}ms",end-start);
+
+    return result;
+  }
+
+  @Before("pc()")
+  public void before(JoinPoint joinPoint){
+    log.info("原始方法执行前");
+    //获取原始方法的对象
+    Object target = joinPoint.getTarget();
+    //获取原始方法的所属类名
+    String className = target.getClass().getName();
+    //获取原始方法名
+    String methodName = joinPoint.getSignature().getName();
+    //获取原始方法的参数
+    Object[] args = joinPoint.getArgs();
+
+
+  }
+
+  @Around("logPointcut()")
+  public void after(){
+    log.info("原始方法执行后执行（无论是否出现异常）");
+  }
+
+  @AfterReturning("execution(* com.scw.service.*.*(..))")
+  public void afterReturning(){
+    log.info("原始方法执行后执行（出现异常则不执行）");
+  }
+
+  @AfterThrowing("execution(* com.scw.service.*.*(..))")
+  public void afterThrowing(){
+    log.info("原始方法执行后出现异常时执行");
+  }
+}
+
+
+```
+```java [@LogExecutionTime自定义注解]
+@Target(ElementType.METHOD)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface LogExecutionTime {
+    String value() default "";
+}
+```
+```xml [添加aop依赖]
+<!--pom.xml-->
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-aop</artifactId>
+</dependency>
+```
+:::
+
+:::warning 注意
+- 当定义了多个切面时，如果是目标方法前执行的通知方法，则切面类字母排名靠前的先执行；如果是目标方法后执行的通知方法，则切面类字母排名靠后的先执行。
+
+  可通过在切面类上添加`@Order(n)`注解来指定执行顺序。如果是目标方法前执行的通知方法，则n小的先执行；如果是目标方法后执行的通知方法，则n大的先执行。
+- 切入点表达式中`*`表示单个独立的任意字符，`..`表示多个连续的任意字符
+:::
+
+  
 ### 事务
 
 Spring 会在`Service层`方法入口（使用`@Transactional`）开启事务，正常返回时 commit，抛出指定异常时 rollback。开发者无需关心 SqlSession 的获取与释放。
@@ -1277,6 +1458,177 @@ spring :
 - **异常日志不要使用toString()**：此举会丢失堆栈信息，并且 异常对象必须作为最后一个独立参数（如：`log.error("订单支付失败: orderId={}", orderId, e);`）
 - **生产环境必须用 `AsyncAppender`**
   :::
+
+### ThreadLocal
+
+在 Spring 框架中，ThreadLocal是线程的局部变量，而是`为每个使用它的线程提供独立、隔离的专属变量副本`，具有线程隔离性。
+
+主要用于在同一个线程/请求中，进行数据共享。
+
+
+#### 场景1：Web 请求链路中的用户上下文传递
+
+问题：在一个 HTTP 请求中，Controller、Service、DAO 等多个层级都需要用到当前登录用户的 ID。如果通过方法参数层层传递，代码会非常臃肿且耦合度高。
+
+解决：利用 ThreadLocal 作为“全局变量”，在同一线程内任意位置直接获取。
+
+```java
+// 1. 封装一个专门管理上下文的 Holder工具 类
+public class UserContextHolder {
+    // 声明为 static final，避免重复创建
+    private static final ThreadLocal<LoginUser> USER_HOLDER = new ThreadLocal<>();
+
+    public static void setUser(LoginUser user) { USER_HOLDER.set(user); }
+    public static LoginUser getUser() { return USER_HOLDER.get(); }
+    
+    // ⚠️ 核心防线：用完必须清理
+    public static void clear() { USER_HOLDER.remove(); } 
+}
+
+// 2. 在拦截器类中统一设置和清理（结合你之前了解的 Interceptor）
+public class AuthInterceptor implements HandlerInterceptor {
+    @Override
+    public boolean preHandle(HttpServletRequest request, ...) {
+        // 解析 Token，将用户信息存入 ThreadLocal
+        LoginUser user = tokenService.parseToken(request.getHeader("Authorization"));
+        UserContextHolder.setUser(user); 
+        return true;
+    }
+
+    @Override
+    public void afterCompletion(...) {
+        // 请求处理完毕后，强制清理，防止线程池复用导致的数据串用或内存泄漏
+        UserContextHolder.clear(); 
+    }
+}
+
+// 3. 业务层直接使用，无需传参
+@Service
+public class OrderService {
+    public void createOrder(OrderRequest req) {
+        // 直接从 ThreadLocal 拿到当前用户
+        LoginUser currentUser = UserContextHolder.getUser(); 
+        System.out.println("下单用户: " + currentUser.getUsername());
+    }
+}
+```
+
+#### 场景2：支撑声明式事务管理（保证连接一致性）
+
+问题：Spring 的 @Transactional 注解是如何做到让同一个事务内的多条 SQL 使用同一个数据库连接的？
+
+解决：Spring 内部大量使用了 TransactionSynchronizationManager，其底层就是基于 ThreadLocal。
+
+```java
+// 模拟 Spring 事务管理的简化流程
+//效果：无论你在 Service 层调用多少次 Mapper，只要还在同一个事务方法内，拿到的都是 beginTransaction 时绑定的那个唯一连接。
+public class TransactionManager {
+    // Spring 内部真实存在的一个 ThreadLocal Map，用于绑定资源
+    private static final ThreadLocal<Map<Object, Object>> resources = new ThreadLocal<>();
+
+    // 开启事务时：从连接池获取连接，并绑定到当前线程
+    public static void beginTransaction(DataSource ds) {
+        Connection conn = ds.getConnection();
+        Map<Object, Object> map = resources.get();
+        if (map == null) { map = new HashMap<>(); resources.set(map); }
+        
+        map.put(ds, conn); // 将连接缓存起来
+    }
+
+    // 执行 DAO 操作时：优先从 ThreadLocal 获取连接，而不是重新去连接池拿
+    public static Connection getConnection(DataSource ds) {
+        Map<Object, Object> map = resources.get();
+        return (Connection) map.get(ds); 
+    }
+
+    // 事务提交/回滚后：释放连接并清理 ThreadLocal
+    public static void commitOrRollback() {
+        // ... 提交或回滚逻辑 ...
+        resources.remove(); // ⚠️ 事务结束，必须清理！
+    }
+}
+
+```
+
+#### 场景3：解决非线程安全工具类的并发问题
+问题：SimpleDateFormat 不是线程安全的。如果在多线程下共用一个实例会导致日期解析错乱；但如果每次格式化都 new SimpleDateFormat()，又会带来巨大的对象创建开销。
+
+解决方案：使用 ThreadLocal 为每个线程分配独立的格式化实例。
+```java
+public class DateUtils {
+    // 每个线程独享一个 SimpleDateFormat 实例
+    private static final ThreadLocal<SimpleDateFormat> SDF_HOLDER = 
+        ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"));
+
+    public static String format(Date date) {
+        try {
+            // 获取当前线程专属的实例，绝对线程安全
+            return SDF_HOLDER.get().format(date);
+        } finally {
+            // 最佳实践：用完即清
+            SDF_HOLDER.remove(); 
+        }
+    }
+}
+```
+>注：JDK8+ 环境下推荐使用原生线程安全的 DateTimeFormatter，但此场景非常适合用来理解 ThreadLocal 隔离变量的思想
+
+:::warning ThreadLocal使用注意
+- `必须显式调用 remove()`：用完即清是唯一可靠的防线。强烈建议配合 try-finally 结构块使用，确保无论业务逻辑是否抛出异常，都能执行清理操作：
+- `声明为 static final`：避免在方法内部反复创建 ThreadLocal 实例，延长其生命周期，减少哈希冲突。
+- `警惕异步任务丢失上下文`：如果你在 Controller 里设置了 UserContext，然后**调用了 @Async 异步方法或提交了线程池任务，子线程是无法获取父线程的 ThreadLocal 数据的**。遇到这种跨线程场景，需要使用阿里开源的 TransmittableThreadLocal (TTL) 来替代。
+:::
+
+### 自动配置原理
+
+Spring Boot 的自动配置的本质是：根据你 classpath 下引入的依赖（JAR包），结合条件注解，自动推断并注册相关的 Bean 到 IoC 容器中，从而免去繁琐的手动 XML 或 Java Config 配置。
+
+#### 实现方案1：@ComponentScan
+
+场景1：从外引入的第三方包（包含多个bean类）将其自动交给Spring IOC容器（只添加@Component注解肯定是不行的）
+```java
+//启动类
+package com.scw;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
+
+@SpringBootApplication
+//默认会扫描与启动类同级目录下的包，如果还需要扫描其他包，则需要添加 @ComponentScan配置扫描路径（此时默认扫描路径会失效）
+//别忘了还要在第三方包bean类添加@Component注解
+@ComponentScan(basePackages = {"com.scw","com.xxx"}) //[!code ++]
+public class MybatisTestApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(MybatisTestApplication.class, args);
+    }
+
+}
+
+```
+
+#### 实现方案2：@Import
+```java
+package com.scw;
+
+import com.scw.bean.WebConfig;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Import;
+
+@SpringBootApplication
+//@Import可导入普通类，配置类（@Configuration）。导入后会被Spring注入到IOC容器种
+@Import({WebConfig.class,XXX.class}) //[!code ++]
+public class MybatisTestApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(MybatisTestApplication.class, args);
+    }
+
+}
+
+```
 
 ### 对比Spring MVC
 
