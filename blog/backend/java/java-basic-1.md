@@ -1820,7 +1820,7 @@ record Point(int x, int y) {}
 
 - **equals()**：用于比较两个对象之间的地址值是否一致，类似于==。如果想要比较对象的属性值则需重写。
 - **toString()**：返回对象的字符串表示（默认输出 类名@地址值）。如果不想打印地址值则需重写。
-- **clone()**：创建并返回当前对象的**浅拷贝**（**一般需要重写，因为Object的clone方法为protected，不可直接调用**）。
+- **clone()**：创建并返回当前对象的**浅拷贝**（**一般需要重写，因为Object的clone方法为protected，不可被不同包的字类实例直接调用**）。
 ```java
 //clonable表示当前类的对象可被克隆，做类型检查用
 class Person implements Cloneable {

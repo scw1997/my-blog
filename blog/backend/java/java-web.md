@@ -1579,14 +1579,32 @@ public class DateUtils {
 - `警惕异步任务丢失上下文`：如果你在 Controller 里设置了 UserContext，然后**调用了 @Async 异步方法或提交了线程池任务，子线程是无法获取父线程的 ThreadLocal 数据的**。遇到这种跨线程场景，需要使用阿里开源的 TransmittableThreadLocal (TTL) 来替代。
 :::
 
+### 起步依赖原理
+
+#### 1. 依赖聚合
+
+Starter 本质上是一个“功能导向”的依赖包。**它将某个特定功能模块所需的所有相关依赖（包括 Spring 核心库、第三方工具类以及默认配置）打包在一起**。
+
+例如，当你需要构建 Web 应用时，无需手动引入 spring-webmvc、嵌入式 Tomcat、Jackson（JSON处理）等多个依赖并确保它们兼容，只需引入一个 spring-boot-starter-web，即可获得该功能模块的完整支持，实现开箱即用。
+
+
+#### 2. 统一版本管理机制
+
+在使用 Starter 时，开发者通常会继承 `spring-boot-starter-parent`。这个父项目并不直接提供代码，而是引入了底层的 spring-boot-dependencies。
+
+在这个底层文件中，通过 `<properties>` 标签对项目中常用的技术框架（如 Tomcat、ActiveMQ、AspectJ 等）进行了`严格的版本号统一管理`。这意味着当你在项目中引入由 Spring Boot 管理的 Starter 或依赖时，不需要再手动指定版本号，从根本上避免了 JAR 包之间的版本冲突。
+
 ### 自动配置原理
 
-Spring Boot 的自动配置的本质是：根据你 classpath 下引入的依赖（JAR包），结合条件注解，自动推断并注册相关的 Bean 到 IoC 容器中，从而免去繁琐的手动 XML 或 Java Config 配置。
+自动配置：Spring Boot项目启动时，一些配置类，Bean对象就**自动存入了IOC容器管理中**，不需要我们手动声明，简化了开发，省去繁琐配置。
 
-#### 实现方案1：@ComponentScan
 
-场景1：从外引入的第三方包（包含多个bean类）将其自动交给Spring IOC容器（只添加@Component注解肯定是不行的）
-```java
+#### 自动配置常见实现方案
+
+:::code-group
+
+```java [方案1：@ComponentScan]
+//场景：从外引入的第三方包（包含多个bean类）将其自动交给Spring IOC容器（此时添加@Component注解是不行的，因为还缺少组件扫描配置）
 //启动类
 package com.scw;
 
@@ -1607,9 +1625,8 @@ public class MybatisTestApplication {
 }
 
 ```
-
-#### 实现方案2：@Import
-```java
+```java [方案2：@Import]
+//启动类
 package com.scw;
 
 import com.scw.bean.WebConfig;
@@ -1619,7 +1636,9 @@ import org.springframework.context.annotation.Import;
 
 @SpringBootApplication
 //@Import可导入普通类，配置类（@Configuration）。导入后会被Spring注入到IOC容器种
+
 @Import({WebConfig.class,XXX.class}) //[!code ++]
+
 public class MybatisTestApplication {
 
     public static void main(String[] args) {
@@ -1628,8 +1647,171 @@ public class MybatisTestApplication {
 
 }
 
+
+//此外，还可以通过@Import导入ImportSelect接口的实现类来实现批量导入（返回一个类名的数组）
+//示例：ImportSelector实现类
+public class MyImportSelector implements ImportSelector {
+    @Override
+    public String[] selectImports(AnnotationMetadata importingClassMetadata) {
+        return new String[]{"com.scw.bean.WebConfig"};
+    }
+}
+
+
+//上面这些方式需要开发者知道要导入的依赖类名来完成自动配置，对开发人员来说不友好。客观来讲，这些信息应该是依赖的提供者更加清楚。
+// 所以一般依赖的提供者可以通过自定义`@EnableXXX` 注解来封装上面这些@Import注解。
+// 示例：自定义@EnableXXX注解来封装@Import注解来导入依赖类名
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+@Import(MyImportSelector.class)
+public @interface EnableMyAutoConfig {}
+```
+:::
+
+#### SpringBoot自动配置实现方案
+
+```java
+//@SpringBootApplication是启动类的注解，其源码如下
+
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Inherited
+@SpringBootConfiguration
+@EnableAutoConfiguration
+@ComponentScan(excludeFilters = { @Filter(type = FilterType.CUSTOM, classes = TypeExcludeFilter.class),
+        @Filter(type = FilterType.CUSTOM, classes = AutoConfigurationExcludeFilter.class) })
+public @interface SpringBootApplication {
+    //....
+}
+
 ```
 
+:::tip 详细分析
+- **@Target(ElementType.TYPE) / @Retention(RetentionPolicy.RUNTIME) / @Documented / @Inherited**
+
+  这四个注解为修饰注解的源注解，不用过多关注
+
+- **@SpringBootConfiguration**
+
+  此注解封装了@Configurations说明其为配置类，可声明第三方@Bean类。所以**启动类本质上也是一个配置类**。
+
+- **@EnableAutoConfiguration**
+
+  此注解表示开启自动配置开关，里面封装了`@Import(AutoConfigurationImportSelector.class)`注解来导入依赖类名。
+
+  其中`AutoConfigurationImportSelector`实现了@ImportSelector来批量导入依赖类。利用 Spring Factories 机制，扫描所有 jar 包中 `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`（2.7版本之前为META-INF/spring.factories） 配置文件，获取文件中定义的自动配置类从而导入到Spring IOC容器中。
+
+  但是这些自动配置类并非全都会被自动导入。每个自动配置类上都标注了各种条件注解（基于`@Condition`父注解派生），这种注解可加在方法或类上，先判断类的条件符合，再判断方法的条件符合才导入该方法返回的Bean）
+
+  比如：**@ConditionalOnClass(name="xxx")**（当前环境中有对应字节码文件才导入），**@ConditionalOnMissingBean**（当前环境中没有对应 Bean 才导入），**@ConditionalOnProperty(name=xxx,havingValue=yyy)**（application配置文件有对应属性和值才导入）。
+  
+- **@ComponentScan**
+
+  此注解用于扫描组件，并加入到Spring容器中
+
+:::
+
+Spring Boot 的自动配置的本质：
+
+> 根据你 classpath 下引入的依赖（JAR包），结合条件注解，自动推断并注册相关的 Bean 到 IoC 容器中，从而免去繁琐的手动 XML 或 Java Config 配置。
+
+
+#### 自定义Starter
+
+在实际开发中，经常会定义一些公共组件，提供给各个项目团队使用。而在SpringBoot的项目中，一般会将这些公共组件封装为SpringBoot 的starter(包含了起步依赖和自动配置的功能)。
+
+![spring-boot-starter](/spring_boot_starter.png)
+
+> 引入依赖时只需引入starter,而autoconfigure会默认被starter引入
+
+自定义Starter示例步骤：
+
+场景：假设我们要为公司内部的短信服务封装一个 Starter，让其他同事只需引入依赖 + 写两行配置就能发短信。
+
+1. **创建starter模块**：在Maven项目中新建一个Module（基于spring-boot）,设置好artifactId（即包名，例如sms-spring-boot-starter）和公司名称，无需添加其他依赖，创建后只保留pom.xml文件即可。
+2. **创建configure模块**：同理再新建一个Module（基于spring-boot），设置好artifactId（例如sms-spring-boot-starter-autoconfigure），无需添加其他依赖，创建后只保留pom.xml文件和src文件夹即可。
+3. **引入模块依赖**：在starter模块中添加configure模块的依赖，并在configure模块中添加所需依赖（如aliyun-oss相关依赖）。
+4. **编写属性配置+核心业务类**：在configure模块中的src/main/java/com/xxx下创建相关java类文件，并实现核心业务逻辑。
+    :::code-group
+     ```java [定义属性类]
+     //这里定义的属性字段是用于其他项目引用你的starter时在application.yml配置
+     //@ConfigurationProperties用于配置属性名称结构   
+     @ConfigurationProperties(prefix = "corp.sms")
+     public class SmsProperties {
+       /** 短信网关地址 */
+       private String endpoint;
+       /** API密钥 */
+       private String apiKey;
+       /** 发送超时时间(秒) */
+       private int timeout = 5;
+  
+       // getter/setter 省略...
+     }
+    ```
+    ```java [核心业务类]
+    //定义提供给使用者的功能类，注意不能加@Component
+   public class SmsService {
+     private final SmsProperties properties;
+
+     public SmsService(SmsProperties properties) {
+        this.properties = properties;
+     }
+
+     public void send(String phone, String content) {
+        System.out.println("向 " + phone + " 发送短信: " + content 
+            + " [网关:" + properties.getEndpoint() + "]");
+     }
+   }
+    ```
+    :::
+5. **编写自动配置类**：创建SmsAutoConfiguration类，并添加相关必要注解。
+    ```java
+    //src/main/java/com/xxx/SmsAutoConfiguration.java
+    @AutoConfiguration  // Spring Boot 3.x 专用注解，2.x 用 @Configuration
+    @ConditionalOnClass(SmsService.class)      // classpath 下有 SmsService 才生效
+    @EnableConfigurationProperties(SmsProperties.class) // 绑定 yml 属性
+    @ConditionalOnMissingBean(SmsService.class) // 用户没自己定义时才兜底创建
+    public class SmsAutoConfiguration {
+    
+        @Bean
+        public SmsService smsService(SmsProperties properties) {
+            return new SmsService(properties);
+        }
+    }
+    ```
+6. **编写imports配置文件**：在configure模块的resources下创建META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports
+    ```txt
+    //注册相关自动配置类
+    com.example.sms.SmsAutoConfiguration
+    ```
+7. **在其他项目使用你的Starter**
+   :::code-group
+    ```xml [引入依赖]
+    <!-- 1. 引入你的 Starter -->
+    <dependency>
+        <groupId>com.example</groupId>
+        <artifactId>sms-spring-boot-starter</artifactId>
+        <version>1.0.0</version>
+    </dependency>
+    ```
+    ```yml [配置依赖属性] 
+     # application.yml
+    corp:
+      sms:
+        endpoint: https://sms-api.corp.com
+        api-key: sk-xxxxx
+    ```
+    ```java [注入使用]
+    @Autowired
+    private SmsService smsService;
+    ```
+   :::
+
+:::warning 自定义starter注意事项
+- 永远加 `@ConditionalOnMissingBean`：把控制权留给使用者。如果别人想用自己的实现替换你的默认 Bean，你的自动配置必须能优雅退让。
+- 业务类不要加 `@Component`：避免自动扫描（虽然因为路径限制，大部分情况下不会扫描到），导致重复注册
+:::
 ### 对比Spring MVC
 
 Spring MVC 是 Spring Framework 的一个模块，用于构建 Web 应用。
