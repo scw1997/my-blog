@@ -170,7 +170,7 @@ const routes =  [
                         link:'/frontend/design-mode'
                     },
                     {
-                        text: '常用工具类/函数',
+                        text: '常用工具函数',
                         link:'/frontend/tools'
                     },
                     {
@@ -200,6 +200,10 @@ const routes =  [
                         text:'Java Web',
                         link: '/backend/java/java-web'
                     },
+                    {
+                        text:'常用工具类',
+                        link: '/backend/java/tools'
+                    },
                 ]
             },
             {
@@ -211,7 +215,11 @@ const routes =  [
                         link: '/backend/database/mysql'
                     }
                 ]
-            }
+            },
+            {
+                text: '运维',
+                link: '/backend/operation'
+             }
 
         ]
     },
