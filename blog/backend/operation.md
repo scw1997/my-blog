@@ -76,7 +76,7 @@
 
 以下是常用软件安装步骤:
 
-#### Java
+#### Java安装
 
 - 从 Oracle 官网下载Linux系统对应版本的`.tar.gz` 压缩包。
 - 解压并移动到指定目录（如 /usr/local/java），例如：`tar -zxvf jdk-17.0.19_linux-x64_bin.tar.gz -C /usr/local/java`。
@@ -88,7 +88,7 @@
 - 使配置生效：`source /etc/profile`
 - 验证安装：`java -version`,若输出版本号则说明安装成功。
 
-#### MySql
+#### MySql安装
 - 卸载系统中自带的mysql，mariadb（另一种数据库）安装包，否则会安装失败
   ```shell
   # 卸载mysql
@@ -140,7 +140,7 @@
   # 如果发现链接不上，可能是防火墙问题，请检查防火墙
   ```
 
-#### Nginx
+#### Nginx安装
 
 - 安装nginx运行时所需依赖
   ```shell
@@ -150,9 +150,15 @@
 - 解压到当前目录例如：`tar -zxvf nginx-1.20.1.tar.gz`。
 - 进入解压目录并配置nginx安装路径：`./configure --prefix=/usr/local/nginx`
 - 编译源码并安装：`make && make install`
+- 配置环境变量：编辑 `/etc/profile`文件，在末尾添加：
+  ```shell
+  export NGINX_HOME=/usr/local/nginx
+  export PATH=NGINX_HOME/bin:$PATH
+  ```
+- 使环境变量配置生效：`source /etc/profile`
 - 进入安装目录&启动nginx：`cd /usr/local/nginx/sbin` 和`sbin /nginx`
 
-#### Node
+#### Node安装
 
 ## Nginx
 
@@ -172,125 +178,86 @@ Nginx 是目前互联网领域使用最广泛的高性能**反向代理服务器
 ├── temp        # 临时文件
 ```
 
-### 配置技巧
-
-#### 1. 基础高性能调优
-
+### 配置文件解析
 ```nginx
-# nginx.conf 全局块
-worker_processes auto;           # 自动匹配CPU核心数
-worker_rlimit_nofile 65535;      # 单worker最大打开文件数
-events {
-    worker_connections 4096;     # 单worker最大并发连接数
-    use epoll;                   # Linux下必选epoll模型
-    multi_accept on;             # 一次accept多个新连接
-}
-```
+# conf/nginx.conf 
 
-#### 2.反向代理与负载均衡（最常用场景）
-
-```nginx
-upstream backend_api {
-    least_conn;                  # 最少连接算法，比轮询更均衡
-    server 10.0.1.10:8080 weight=5 max_fails=3 fail_timeout=30s;
-    server 10.0.1.11:8080 weight=3 max_fails=3 fail_timeout=30s;
-    server 10.0.1.12:8080 backup; # 备用节点，仅当其他节点全挂时启用
-    keepalive 64;                # ⭐ 保持长连接池，大幅减少TCP握手开销
-}
-
-server {
-    listen 80;
-    server_name api.example.com;
-
-    location /api/ {
-        proxy_pass http://backend_api;
+server { 
+    # 监听80端口(默认)
+     listen 80;
+     server_name localhost; #生产环境请修改为实际域名
+     # 下面设置路径匹配规则
+     
+     # 当浏览器访问/时
+     location / {
+         #设置访问/时的根路径，配置html等价于/user/local/nginx/html    
+         root html; 
+         #默认首页   
+         index index.html index.htm;
+         #静态资源不存在时，尝试访问index.html（核心兜底策略）
+         try_files $uri $uri/ /index.html; 
+     }
+     
+     # 当浏览器访问/api时（通常为接口请求）
+     location ^~ /api/ {
+          # 代理转发接口请求
+          proxy_pass http://127.0.0.1:8080/;
         
-        # ⭐ 必加的代理头，否则后端拿不到真实IP和协议
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        
-        # 超时设置，避免慢请求拖垮Nginx
-        proxy_connect_timeout 5s;
-        proxy_read_timeout 60s;
-        proxy_send_timeout 30s;
-    }
-}
-```
-
-#### 3.静态资源缓存与 Gzip 压缩
-
-```nginx
-# 全局开启Gzip
-gzip on;
-gzip_vary on;
-gzip_min_length 1024;
-gzip_types text/plain application/json application/javascript text/css image/svg+xml;
-
-server {
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|woff2)$ {
-        root /var/www/static;
-        expires 30d;              # 强缓存30天
-        add_header Cache-Control "public, immutable"; # 配合hash文件名使用
-        access_log off;           # ⭐ 静态资源关闭日志，减少IO
-    }
-}
-```
-:::warning 注意事项
-- `location` 和 `proxy_pass` 要么都带尾部斜杠，要么都不带。混合使用几乎必然导致路径错乱。修改后务必用`curl -v`验证实际转发路径。
-- nginx配置变更后，请务必用`nginx -s reload`重新加载，不要用`nginx -s stop`重启。
-:::
-
-### 项目部署示例
-
-#### 前端项目部署
-
-1. 将前端打包构建后的静态资源上传至 Nginx安装目录下的 静态资源目录，例如 `/user/local/nginx/html`。
-2. 在配置文件目录`config/nginx.conf`中配置反向代理服务器和路径重写规则：
-  ```nginx
-  server { 
-      # 监听80端口(默认)
-       listen 80;
-       server_name localhost; #生产环境请修改为实际域名
-       # 下面设置路径匹配规则
-       
-       # 当浏览器访问/时
-       location / {
-           #设置访问/时的根路径，配置html等价于/user/local/nginx/html    
-           root html; 
-           #默认首页   
-           index index.html index.htm;
-           #静态资源不存在时，尝试访问index.html（核心兜底策略）
-           try_files $uri $uri/ /index.html; 
-       }
-       
-       # 当浏览器访问/api时（通常为接口请求）
-       location ^~ /api/ {
-           # 代理转发接口请求
-           proxy_pass http://127.0.0.1:8080/;
+          #⭐ 必加的代理头，否则后端拿不到真实IP和协议
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
           
-       }
-  }
-  ```
-3. 执行nginx安装目录下`sbin`的nginx命令启动/重载/停止Nginx服务：`sbin/nginx`（启动）或`sbin/nginx -s reload`（重新加载）或`sbin/nginx -s quit`（停止）
+          # 超时设置，避免慢请求拖垮Nginx
+          proxy_connect_timeout 5s;
+          proxy_read_timeout 60s;
+          proxy_send_timeout 30s;
+     }
+     location ~* \.(js|css)$ {
+          expires 1y;
+          add_header Cache-Control "public, immutable";
+      }
+     location ~* \.(js|css|png|jpg|jpeg|gif|ico|woff2)$ {
+          root /var/www/static;
+          expires 30d;              # 强缓存30天, 如果值为-1则等效于 Cache-Control: no-cache（不用强缓存，使用协商缓存）
+          add_header Cache-Control "public, immutable"; # 配合hash文件名使用
+          access_log off;           # 静态资源关闭日志，减少IO
+     }
+     
+     
+}
+http {
+    gzip on;                          # 1. 开启 Gzip 压缩
+    gzip_comp_level 5;                # 2. 压缩级别（推荐 4-6，平衡 CPU 与压缩率）
+    gzip_min_length 1024;             # 3. 最小压缩阈值（小于 1KB 不压缩，避免越压越大）
+    gzip_vary on;                     # 4. 添加 Vary 头，防止 CDN 缓存错乱
+    gzip_proxied any;                 # 5. 对经过代理的请求也启用压缩
+    gzip_types                        # 6. 指定需要压缩的 MIME 类型
+        text/plain 
+        text/css 
+        application/json 
+        application/javascript 
+        text/xml 
+        application/xml;
+}
+```
+常用命令：
+- `nginx`：启动
+- `nginx -s quit`：停止（待所有请求处理完毕后，工作进程再正常退出。适用于生产环境中的常规维护、版本升级）
+- `nginx -s stop`：停止（立即终止所有的工作进程。适用于紧急故障处理、服务无响应。）
+- `nginx -s reload`：重新加载
+- `nginx -t`：检查配置文件
+- `nginx -V`：查看nginx版本及编译参数
 
 :::warning 注意事项
-
-- location和proxy_pass末尾是否带斜杠决定路径是否会被重写
-  | location |proxy_pass| 客户端请求 | 后端实际接收到的 URI
-  | :--- | :--- | :--- | :--- |
-  |  `/api` |`http://backend` | `/api/users` | `/api/users` |
-  | /api/|  http://backend | /api/users | /api/users |
-  | `/api/` |`http://backend/` | `/api/users` | `/users` |
-  | `/api/` |`http://backend/v1/` | `/api/users` | `/v1/users` |
-  | /api/| http://backend/v1 | /api/users | /v1users |
-  | /api|http://backend/ | /api/users | //users |
-
-  最佳实践：`location和proxy_pass末尾斜杠行为保持一致`
+- `expires` 的判断依据是浏览器本地时间，而非服务器时间。如果用户手动改了系统时间，可能导致缓存失效或误命中。
+- `不要压缩图片/视频`：Gzip 只对文本类数据（HTML/CSS/JS/JSON/XML）有效。对于 JPG、PNG 等已经压缩过的二进制文件，开启 Gzip 不仅无效，反而会白白消耗 CPU 资源。
+- nginx配置变更后，请务必用`nginx -s reload`重新加载。
+- `生产环境退出nginx首选quit而不是stop`，前者能够确保现有连接不被中断，对用户操作完全无感，保证了服务和数据的完整性。
 :::
 
-##### location匹配逻辑规则
+### location 匹配规则
 ```nginx 
 server {
     listen 80;
@@ -323,10 +290,61 @@ server {
 3. 如果前缀没有 ^~，则继续按顺序检查正则匹配（`~` 或 `~*`）。
 4. 如果正则也没有命中，才回退使用之前记录的最长普通前缀匹配。
 :::
-#### 后端项目部署
 
-1. 将后端项目编译（执行`package`生命周期打包）后的可执行文件(jar包)上传至 Nginx安装目录下的 bin 目录，例如 `/user/local/nginx/bin`。
-2. 后台运行服务进程并设置日志路径（避免直接通过java启动服务后Linux终端被关闭而停止服务）：`nohup java -jar xxx.jar &> xxx.log &`
-3. 查看进程运行状态：`ps -ef | grep xxx.jar`
+### location与alias/root
+
+在 Nginx 配置中，root 和 alias 的核心区别在于路径拼接逻辑。
+
+示例：客户端请求 http://example.com/static/images/logo.png
+
+- root 的核心逻辑是：**最终路径 = root路径 + 请求URI**
+
+| location  | root                  | 客户端请求 URI | Nginx 实际查找的文件路径 |
+| :--- |:----------------------| :--- | :--- |
+| /static/ | /var/www/html;      | /static/images/logo.png | /var/www/html/static/images/logo.png| 
+| /static | /var/www/html;      | /static/images/logo.png | /var/www/html/static/images/logo.png |
+| /static/ | /var/www/html/;     | /static/images/logo.png | /var/www/html//static/images/logo.png |
+
+- alias 的核心逻辑是：**最终路径 = alias路径 + 去除 location 前缀后的剩余URI**
+
+| location  | alias                   | 客户端请求 URI | Nginx 实际查找的文件路径 | 
+| :--- |:--------------------------| :--- | :--- |
+| /static/ | /var/www/assets/;       | /static/images/logo.png | /var/www/assets/images/logo.png | 
+| /static/ | /var/www/assets;  | /static/images/logo.png | /var/www/assetsimages/logo.png | 
+| /static | /var/www/assets/; | /static/images/logo.png | /var/www/assets//images/logo.png | 
+
+:::tip 最佳实践
+- `root` 的尾部斜杠是可选的；但 `alias` 的尾部斜杠是必须的，否则极易引发路径粘连导致的 404 错误。
+- 在同一个 location 块中，千万`不要同时使用 root 和 alias`，这会导致路径被重复拼接或产生不可预期的行为。
+:::
+
+### location与proxy_pass
+
+location和proxy_pass末尾是否带斜杠决定路径是否会被重写
+
+| location |proxy_pass| 客户端请求 | 后端实际接收到的 URI
+| :--- | :--- | :--- | :--- |
+|  `/api` |`http://backend` | `/api/users` | `/api/users` |
+| /api/|  **http://backend** | /api/users | /api/users |
+| `/api/` |`http://backend/` | `/api/users` | `/users` |
+| `/api/` |`http://backend/v1/` | `/api/users` | `/v1/users` |
+| /api/| http://backend/v1 | /api/users | /v1users |
+| /api|http://backend/ | /api/users | //users |
+
+> 最佳实践：`location和proxy_pass末尾斜杠行为保持一致`，想要重写就都添加斜杠，否则都不添加斜杠
+
+### 项目部署示例
+
+#### 前端部署
+
+1. 将前端打包构建后的静态资源上传至 Nginx安装目录下的 静态资源目录，例如 `/user/local/nginx/html`。
+2. 在配置文件目录`config/nginx.conf`中配置反向代理服务器和路径重写规则：
+3. 执行nginx命令启动Nginx服务
+
+#### 后端部署
+
+1. 将后端项目编译（执行`package`生命周期打包）后的可执行文件(jar包)上传至 Nginx安装目录下的 bin 目录，例如 `/user/local/nginx/java/[项目名]`。
+2. 进入上面的目录，后台运行服务进程并设置日志路径（避免直接通过java启动服务后Linux终端被关闭而停止服务）：`nohup java -jar [包名].jar &> [包名].log &`
+3. 查看进程运行状态：`ps -ef | grep [包名].jar`
 
 
