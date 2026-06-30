@@ -458,7 +458,7 @@ Maven 的继承机制是其多模块工程管理的基石，它允许**子模块
 
 ## SpringBoot
 
-Spring Boot是基于 Spring 框架的快速开发脚手架。
+Spring Boot是基于 Spring 框架的快速开发脚手架。启动时默认端口为`8080`
 
 通过idea创建SpringBoot项目
 

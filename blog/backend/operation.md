@@ -334,7 +334,7 @@ location和proxy_pass末尾是否带斜杠决定路径是否会被重写
 
 > 最佳实践：`location和proxy_pass末尾斜杠行为保持一致`，想要重写就都添加斜杠，否则都不添加斜杠
 
-### 项目部署示例
+### 项目部署
 
 #### 前端部署
 
@@ -408,10 +408,11 @@ sudo curl -fsSL https://gitee.com/tech-shrimp/docker_installer/releases/download
 - 退出已进入的容器：`exit`
 - 删除容器：`docker rm [容器名]`
 - 查看某容器的日志：`docker logs [容器名]`
+- 查看某容器的详情（例如容器ip地址）：`docker inspect [容器名]`
 
 
 
-### 常用应用镜像安装
+### 镜像安装和容器运行
 
 Docker中的应用安装均基于镜像。镜像不仅包含应用本身，还包含应用运行所需要的环境、配置、系统函数库。
 
@@ -431,8 +432,8 @@ mysql:8.0
 - docker run：表示创建并运行一个容器，
 - -d：表示后台运行，
 - --name：表示容器名称，
-- -p 3307:3306：表示容器的端口映射到宿主机的端口（3307为`宿主机端口`，3306为`容器端口`。创建容器时，**外部无法直接访问容器的端口，只能访问映射后的宿主机端口**），
-- -v：表示数据卷映射，
+- `-p [a]:[b]`：表示容器的端口映射到宿主机的端口（[a]为`宿主机端口`，[b]为`容器端口`。创建容器时，**外部无法直接访问容器的端口，只能访问映射后的宿主机端口**），
+- `-v [a]:[b]`：表示数据卷映射，[a]为宿主机目录，[b]为容器目录，
 - -e：表示环境变量
 - mysql:8.0：表示要下载的镜像名称和版本。
 :::
@@ -475,8 +476,261 @@ docker run -d --name node22 -p 3000:3000 node:22
 
 Docker 引入了数据卷（Volume）机制。数据卷将**数据存储在容器外部（宿主机或外部存储系统）**，使其生命周期独立于容器。即使容器被删除，数据依然安全保留，同时还能实现容器与宿主机之间的数据共享与实时同步。
 
-数据卷(volume)是一个虚拟目录，是 容器内目录 与 宿主机目录 之间映射的桥梁。
+> 数据卷(volume)是一个虚拟目录，是 容器内目录 与 宿主机目录 之间映射的桥梁。通过此映射，数据卷可以通过修改宿主机的文件从而同步修改了容器内的数据，并**实现数据持久化**。
 
 
 #### 数据挂载
 
+Docker 提供了三种主要的数据挂载方式，其中最常用的是`命名卷`（Volume）和`绑定挂载`（Bind Mount）：
+
+1. **命名卷（生产环境首选）**
+
+由 Docker 完全管理，数据默认存储在 /var/lib/docker/volumes/ 下。用户无需关心底层路径，可移植性强。
+```bash
+docker volume create [数据卷名称]       # 创建数据卷
+docker volume ls                  # 列出所有卷
+docker volume inspect [数据卷名称]      # 查看卷详情（包含实际存储路径）
+docker volume rm [数据卷名称]           # 删除卷
+docker volume prune               # 删除所有未使用的卷
+```
+挂载使用：
+```bash
+# mydata为数据卷名称（不存在则创建），/var/lib/mysql为容器内的目录
+docker run -d -v mydata:/var/lib/mysql --name db mysql:8.0
+```
+**2. 绑定挂载**
+
+直接在创建并运行容器时，将宿主机上的任意路径文件直接映射到容器中。
+
+```bash
+# /home/user/myapp为宿主机目录，/app为容器内目录
+# 宿主机目录可以使用绝对路径/xxx，也可以使用相对路径./xxx
+docker run -d -v /home/user/myapp:/app --name dev node:18
+```
+:::warning 注意
+- `务必使用命名卷或绑定挂载`：如果仅指定 -v /var/lib/mysql 而不加本地路径或卷名，会**创建匿名卷**。部分 Docker 环境在重启或清理时可能会将匿名卷一并删除，导致数据丢失。
+- 如果-v后面的值没有以/或者./开头，则会被识别为数据卷的名称（采用第一种命名卷方式），而不是本地绑定挂载的宿主机路径
+:::
+
+3. **临时卷（tmpfs）**
+
+数据仅存储在宿主机的内存中，不写入磁盘。容器停止后数据立即消失，适合存储密码、会话等敏感临时数据。
+
+### 自定义镜像
+
+我们可以直接使用 Docker Hub 上的官方镜像，但在实际项目中，往往需要在基础镜像上安装额外软件、配置环境变量或打包自己的代码。
+
+这时就需要通过编写 `Dockerfile` 来构建自定义镜像。
+
+
+示例：基于 Spring Boot 的 Java 应用自定义镜像
+
+1. 在本地创建一个项目目录，准备以下文件：
+```text
+- jdk17.tar.gz（jdk安装压缩包）
+- app.jar（java应用程序包）
+- Dockerfile（构建指令文件）
+```
+
+2. 编写Dockerfile 文件：
+```dockerfile
+# 使用 CentOS 7 作为基础镜像
+FROM centos:7
+
+# 复制JDK安装压缩包到 到容器指定路径中
+COPY jdk17.tar.gz /usr/local/
+# 解压压缩包并删除压缩包
+RUN tar -xzf /usr/local/jdk17.tar.gz -C /usr/local/ &&  rm /usr/local/jdk17.tar.gz
+
+# 设置环境变量（注意这里的jdk-17.0.10是压缩包内根路径的名称即解压后的文件夹名称）
+ENV JAVA_HOME=/usr/local/jdk-17.0.10
+ENV PATH=$JAVA_HOME/bin:$PATH
+
+# 创建应用目录
+RUN mkdir -p /app
+# 切换至该目录
+WORKDIR /app
+
+# 复制应用 JAR 文件到容器的/app应用目录
+COPY app.jar app.jar
+
+# 暴露端口
+EXPOSE 8080
+
+# 设置容器启动时的运行命令
+ENTRYPOINT ["java","-jar","/app/app.jar"]
+```
+:::tip dockerfile 语法
+
+Dockerfile 是一个纯文本文件，包含了构建镜像所需的所有命令。以下是几个最常用的指令及其作用：
+
+- **FROM**：指定基础镜像（Dockerfile 的第一个命令）。例如 FROM python:3.8-slim。
+- **WORKDIR**：设置容器中的工作目录，后续的 RUN、COPY 等命令都会在此目录下执行。
+- **COPY**：将宿主机（本地）的文件或目录复制到容器中。
+- **RUN**：在容器构建阶段执行命令行指令，常用于安装软件包或执行编译操作。
+- **ENV**：设置环境变量，方便在容器内或后续指令中使用。
+- **EXPOSE**：声明容器在运行时监听的端口，供外界访问。
+- **ENTRYPOINT**：定义容器启动时默认执行的命令，通常用于启动应用程序。
+:::
+
+3. 在包含 Dockerfile 的目录下执行镜像构建
+
+```shell
+#my-java-app为镜像名称，1.0为镜像版本, .为Dockerfile文件所在路径（示例为当前目录）
+
+docker build -t my-java-app:1.0 .
+```
+
+
+4. 创建并运行容器
+
+```shell
+docker run -d --name my-java-app -p 8080:8080 my-java-app:1.0
+```
+
+### 网络机制
+
+Docker默认 会在宿主机上创建一个名为 docker0 的**虚拟网桥**，容器启动时通过 veth pair 接入该网桥。
+
+**容器拥有独立的 IP 地址**，容器间通过`网桥`进行二层通信，访问外网则通过 iptables 进行 NAT 地址转换。
+
+#### 自定义网络
+
+使用 `docker network create` 命令可以创建自定义网络。如果不指定驱动，Docker 默认会创建`桥接`网络。
+
+:::code-group
+```shell [基础方式]
+docker network create my-network
+```
+```shell [自定义方式]
+docker network create \
+  --driver bridge \
+  --subnet=172.25.0.0/16 \
+  --gateway=172.25.0.1 \
+  --ip-range=172.25.50.0/24 \
+  my-custom-network
+```
+:::
+
+使用创建的Docker网络：
+
+```shell 
+# 场景1：启动容器时绑定网络
+docker run -d --network my-custom-network --name web nginx:latest
+
+# 场景2：为运行中的容器动态连接网络
+docker network connect my-custom-network existing-container
+
+# 场景3：容器之间可以直接通过容器名称进行互相访问
+# 创建网络并启动数据库
+docker network create webapp
+docker run -d --network webapp --name database mysql:8.0
+
+# 启动后端服务
+# 进入backend 容器内，可以直接通过 database 这个主机名来访问 MySQL 服务
+docker run -d --network webapp --name backend node-app:latest
+```
+
+常用Docker网络命令：
+- `docker network create [网络名称]`：创建一个自定义网络。
+- `docker network inspect [网络名称]`：查看指定网络的详细信息。
+- `docker network connect [网络名称] [容器名称] `：将容器连接到一个网络。
+- `docker network disconnect 网络名称] [容器名称] `：将容器从网络中分离。
+- `docker network rm [网络名称]`：删除一个自定义网络。
+- `docker network ls`：列出所有网络。
+- `docker network prune`：删除所有未使用的网络。
+
+
+### 项目部署
+
+#### 前端
+
+1. 在Linux服务器端的宿主机上先创建好nginx必要目录（如.conf配置文件和静态资源目录）
+2. 将打包后的前端静态资源和写好的nginx配置文件上传至宿主机上创建的nginx目录上
+3. 创建并运行一个nginx容器（命令卷挂载）并设置好与宿主机端的nginx目录映射（使用绑定挂载）
+
+#### 后端
+
+以SpringBoot + MySql项目为例：
+
+1. 在Linux服务器端先创建并运行一个mysql容器（命令卷挂载）并创建好表结构
+2. 修改SpringBoot项目配置文件，将数据库连接信息改为docker中mysql的连接信息（可使用docker自定义网络名称代替ip地址），以及修改logback日志路径，最后打执行package生命周期打jar包
+3. 编写dockerFile文件并与jar包放在同一目录下，执行构建自定义镜像相关命令并运行容器
+
+#### DockerCompose
+
+随着微服务架构的兴起，一个完整的应用往往由多个容器（如 Web 服务、数据库、缓存等）协同工作。如果仅使用原生的 Docker 命令，开发者需要为每个服务手动执行 docker run，并繁琐地配置端口映射、环境变量、网络和数据卷。这种方式不仅极易出错，而且难以保证开发、测试和生产环境的一致性。
+
+Docker Compose允许用户通过一个 `YAML 配置文件(docker-compose.yml)定义整个应用栈`，并使用简单的命令一键启动或停止所有关联服务，极大简化了多容器应用的部署和管理流程。
+
+1. **创建一个项目目录如app，准备以下文件**：
+
+```text
+- mysql（mysql相关配置目录）
+- nginx（nginx相关配置目录，包含conf和html目录）
+- jdk17.tar.gz（jdk安装压缩包）
+- app.jar（java应用程序包）
+- Dockerfile（构建指令文件）
+- docker-compose.yml
+```
+
+其中docker-compose.yml编写示例：
+
+```yaml
+# docker-compose.yml
+services:
+  # mysql镜像容器配置
+  mysql:
+    image: mysql:8
+    container_name: mysql
+    ports:
+      - "3307:3306"
+    environment:
+      TZ: Asia/Shanghai
+      MYSQL_ROOT_PASSWORD: 123
+    volumes:
+      - "/usr/local/app/mysql/conf:/etc/mysql/conf.d"
+      - "/usr/local/app/mysql/data:/var/lib/mysql"
+      - "/usr/local/app/mysql/init:/docker-entrypoint-initdb.d"
+    networks:
+      - my-net
+  # java-app镜像的容器配置    
+  java-app:
+    # build表示使用Dockerfile文件进行自定义构建镜像，而不是拉取镜像或使用已有镜像
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: java-app
+    ports:
+      - "8080:8080"
+    networks:
+      - my-net
+    # 配置依赖关系，确保mysql容器配置运行成功后再运行java-app容器
+    depends_on:
+      - mysql
+  # nginx镜像的容器配置    
+  nginx:
+    image: nginx:1.20.2
+    container_name: my-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - "/usr/local/app/nginx/conf/nginx.conf:/etc/nginx/nginx.conf"
+      - "/usr/local/app/nginx/html:/usr/share/nginx/html"
+    # 配置依赖关系，确保java-app容器配置运行成功后再运行nginx容器
+    depends_on:
+      - java-app
+    networks:
+      - my-net
+#网络定义      
+networks:
+  my-net:
+    name: my-net-name
+```
+2. **通过docker-compose`相关命令管理此项目目录（需进入此目录）**
+- 后台运行所有容器：`docker-compose up -d`。
+- 停止并移除容器、网络：`docker-compose down`
+- 查看所有容器的运行状态：`docker-compose ps`
+- 查看实时日志输出：`docker-compose logs -f`
+- 重新构建并启动(例如dockerfile有修改时)：`docker-compose up -d --build`
+- 进入指定容器内部执行命令：`docker-compose exec [service-name] /bin/bash`
