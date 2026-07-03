@@ -968,10 +968,27 @@ WHERE salary > (SELECT AVG(salary) FROM employees);
 ```
 ```sql [列子查询]
 -- 返回单列多行。通常配合 IN、ANY、ALL、SOME 使用。
+
 -- 查询所有有订单的客户的姓名（先查有订单的客户ID列表，再查匹配的客户姓名）
 SELECT name
 FROM customers
 WHERE id IN (SELECT DISTINCT customer_id FROM orders);
+
+
+--找出薪资高于“研发部”中所有员工的员工（等价于salary > 研发部最高薪资）
+SELECT name, salary 
+FROM employees 
+WHERE salary > ALL (
+    SELECT salary FROM employees WHERE department_id = (SELECT id FROM departments WHERE name = '研发部')
+);
+
+
+-- 找出薪资高于“研发部”中任意一名员工的员工（等价于salary > 研发部最低薪资）。
+SELECT name, salary 
+FROM employees 
+WHERE salary > ANY (
+    SELECT salary FROM employees WHERE department_id = (SELECT id FROM departments WHERE name = '研发部')
+);
 ```
 ```sql [行子查询]
 -- 返回单行多列
@@ -1091,86 +1108,73 @@ WHERE user_id IS NOT NULL   -- 👈 关键！过滤掉 NULL
 
 ### 常用函数
 
-- 字符串：CONCAT, SUBSTRING, REPLACE
-- 数值：ROUND, ABS, RAND
-- 日期：NOW, DATE_FORMAT, DATE_ADD
-- 逻辑：IF, CASE, COALESCE
-- 聚合：COUNT, SUM, AVG
+- 字符串：CONCAT, SUBSTRING, LOWER,UPPER，TRIM，LENGTH
+- 数值：ROUND, ABS, CEIL，FLOOR
+- 日期：NOW, CURDATE, DATE_ADD
+- 逻辑：IF, CASE, IFNULL
+- 聚合：COUNT, SUM, AVG,MAX, MIN
 
 
 示例：
 
 :::code-group
 ```sql [字符串]
--- 生成完整姓名
-SELECT CONCAT(first_name, ' ', last_name) AS full_name 
-FROM users;
+-- 将名和姓拼接成一个完整的名字
+SELECT CONCAT(first_name, ' ', last_name) AS full_name FROM employees;
 
--- 拼接 URL
-SELECT CONCAT('https://example.com/user/', id) AS profile_url
-FROM users;
+-- 提取手机号的前3位（通常用于判断运营商）
+SELECT SUBSTRING(phone_number, 1, 3) AS operator_code FROM users;
 
+-- 将邮箱全部转换为小写，防止大小写敏感导致匹配失败
+SELECT LOWER(email) FROM users;
 
--- 隐藏手机号中间4位：138****1234
-SELECT CONCAT(LEFT(phone, 3), '****', RIGHT(phone, 4)) AS masked_phone
-FROM users;
+-- 筛选出密码长度小于8位的不安全账号
+SELECT username FROM users WHERE LENGTH(password) < 8;
 
--- 提取文件扩展名
-SELECT SUBSTRING_INDEX(filename, '.', -1) AS ext FROM files;
-
--- 清理脏数据：把中文逗号换成英文
-UPDATE products SET tags = REPLACE(tags, '，', ',');
-
--- 移除空格
-SELECT REPLACE(description, ' ', '') FROM products;
+-- 清理用户输入时不小心带入的前后空格
+SELECT TRIM(user_input) AS cleaned_text FROM logs;
 ```
 ```sql [数值]
 -- 显示2位小数的价格。四舍五入（保留小数）
 SELECT name, ROUND(price, 2) AS price FROM products;
 
--- 百分比（如 0.875 → 87.5%）
-SELECT CONCAT(ROUND(ratio * 100, 1), '%') AS percent FROM stats;
+-- 计算需要多少个箱子才能装下所有商品（向上取整）
+SELECT CEIL(total_items / 10.0) AS boxes_needed FROM orders;
+
+-- 计算账户余额与目标余额的绝对差值
+SELECT ABS(current_balance - target_balance) AS diff FROM accounts;
 ```
 ```sql [日期]
--- 插入带时间戳的记录
-INSERT INTO logs (message, created_at) 
-VALUES ('用户登录', NOW());
+-- 插入数据时自动记录当前操作时间
+INSERT INTO logs (message, created_at) VALUES ('系统启动', NOW());
 
--- 查询今天的数据
+-- 只获取今天的日期来查询今日订单
 SELECT * FROM orders WHERE DATE(order_time) = CURDATE();
 
--- 显示“2026年01月29日”
-SELECT DATE_FORMAT(NOW(), '%Y年%m月%d日') AS today;
+-- 统计2024年注册的总人数
+SELECT COUNT(*) FROM users WHERE YEAR(register_date) = 2024;
 
--- 按月统计订单
-SELECT DATE_FORMAT(order_time, '%Y-%m') AS month, COUNT(*)
-FROM orders
-GROUP BY month;
-
--- 查询7天内注册的用户。日期加减（避免直接用 + -）
-SELECT * FROM users 
-WHERE reg_time >= DATE_SUB(NOW(), INTERVAL 7 DAY);
-
--- 会员到期时间（注册+1年）
-SELECT name, DATE_ADD(reg_time, INTERVAL 1 YEAR) AS expire_date
-FROM users;
+-- 计算订单的预计最晚发货时间（下单后3天内）
+SELECT order_id, DATE_ADD(order_time, INTERVAL 3 DAY) AS deadline FROM orders;
 ```
 ```sql [逻辑]
--- 用户状态显示。简单条件判断（类似三元运算符）
-SELECT name, IF(is_vip, 'VIP', '普通') AS user_type FROM users;
+-- 根据库存状态打标签
+SELECT product_name, IF(stock > 0, '有货', '缺货') AS status FROM products;
 
--- 安全除法（避免除零）
-SELECT IF(total > 0, success / total, 0) AS rate FROM metrics;
+-- 如果用户没有填写备注，则显示“无”
+SELECT username, IFNULL(remark, '无') AS remark FROM users;
 
--- 订单状态分类
+-- 根据分数划分成绩等级
 SELECT 
-    order_id,
+    student_name, 
+    score,
     CASE 
-        WHEN status = 'paid' THEN '已支付'
-        WHEN status = 'shipped' THEN '已发货'
-        ELSE '其他'
-    END AS status_desc
-FROM orders;
+        WHEN score >= 90 THEN '优秀'
+        WHEN score >= 80 THEN '良好'
+        WHEN score >= 60 THEN '及格'
+        ELSE '不及格'
+    END AS grade_level
+FROM exam_results;
 ```
 ```sql [聚合]
 -- 总用户数
@@ -1179,17 +1183,17 @@ SELECT COUNT(*) FROM users;
 -- 有填写手机号的用户数
 SELECT COUNT(phone) FROM users;  -- 自动忽略 NULL
 
--- 总销售额
-SELECT SUM(amount) FROM orders;
+-- 计算每个用户的总消费金额
+SELECT user_id, SUM(amount) AS total_spent FROM orders GROUP BY user_id;
 
 -- 平均订单金额（只算有效订单）
 SELECT AVG(amount) FROM orders WHERE amount > 0;
 
--- 每个部门的员工姓名列表
-SELECT dept, GROUP_CONCAT(name SEPARATOR ', ') AS members
-FROM employees
-GROUP BY dept;
--- 结果: "研发部 | 张三, 李四"
+-- 统计每个部门的员工人数
+SELECT department_id, COUNT(*) AS emp_count FROM employees GROUP BY department_id;
+
+-- 查找每个部门薪资最高和最低的员工
+SELECT department_id, MAX(salary) AS max_sal, MIN(salary) AS min_sal FROM employees GROUP BY department_id;
 ```
 :::
 
@@ -1300,7 +1304,7 @@ COMMIT;
 > 步骤1成功（A 扣了100），但步骤2失败（B 没收到）→ 钱凭空消失！<br/>
 > 事务确保：要么两人账都对，要么都不变。
 
-#### 事务隔离
+### 事务隔离
 
 假如有以下场景：
 
@@ -1309,13 +1313,13 @@ COMMIT;
 - 你（事务 A）：在 ATM 机上查询余额 → 准备取 500 元
 - 配偶（事务 B）：同时在手机银行转账 600 元给朋友
 
-两个操作几乎同时发生（多个事务同时执行），可能引发以下问题：
+两个操作几乎同时发生（多个事务同时执行即**并发事务**），可能引发以下问题：
 
-| 问题        | 描述 | 场景示例                                                             |
-|-----------|------|------------------------------------------------------------------|
-| **脏读**    | 读到另一个事务未提交的数据 | 事务 B 执行后（未commit），事务A此时读到了余额400，以为钱少了。而后B因为网络异常rollback恢复为1000元。 |
-| **不可重复读** | 同一事务内，两次读同一行，结果不同（因被其他事务修改并提交） | 事务 A 第一次查询余额为1000，而后事务B执行完，A再次查询余额为400,前后不一致。                    |                                  |
-| **幻读**    | 同一事务内，两次查询返回的行数不同（因其他事务插入/删除了符合条件的行） | 事务A查询了最近的交易数量，事务B执行完交易流程后，A再次查询则数量+1，前后不一致。                      |
+| 问题        | 描述                                                   | 场景示例                                                             |
+|-----------|------------------------------------------------------|------------------------------------------------------------------|
+| **脏读**    | 当前事务读到另一个事务未提交的数据                                    | 事务 B 执行后（未commit），事务A此时读到了余额400，以为钱少了。而后B因为网络异常rollback恢复为1000元。 |
+| **不可重复读** | 同一事务内，两次读取同一条记录，结果不同（因被其他事务修改并提交）                    | 事务 A 第一次查询余额为1000，而后事务B执行完，A再次查询余额为400,前后不一致。                    |                                  |
+| **幻读**    | 同一事务内，初始查询某一记录时没有数据，后续再插入该数据发现已存在（因其他事务插入/删除了符合条件的行） | 事务A查询了最近的交易数量，事务B执行完交易流程后，A再次查询则数量+1，前后不一致。                      |
 
 四种隔离级别对比：
 
@@ -1334,7 +1338,7 @@ COMMIT;
 -- 查看当前隔离级别
 SELECT @@transaction_isolation;
 
--- 设置会话级别
+-- 设置隔离级别
 SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 ```
 
@@ -1351,8 +1355,175 @@ SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 
 
 
+## 性能优化
 
-## EXPLAIN
+### 存储引擎
+
+MySQL 的核心设计理念是`分层架构与插件式存储引擎`。这种设计将 **SQL 语句的处理逻辑与数据的物理存储分离**，使其能够根据不同的业务场景灵活调整。
+
+MySQL 的整体架构自上而下主要分为三大核心层：
+
+- **连接层**：主要为客户端和连接服务，负责连接处理和授权认证等工作。
+- **服务层**：主要是核心功能。负责 SQL接口，缓存管理，SQL优化等
+- **存储引擎层**：负责数据的物理存储、提取、索引管理和事务处理。
+
+常见存储引擎：
+
+| 对比维度 | InnoDB (**MySQL 5.5+ 默认**) | MyISAM           | MEMORY           | ARCHIVE |
+| :--- |:---------------------------|:-----------------|:-----------------| :--- |
+| 事务支持 | ✅ 支持（ACID）                 | ❌ 不支持            | ❌ 不支持            | ❌ 不支持 |
+| 锁机制 | 行级锁（高并发友好）                 | 表级锁（写操作易阻塞）      | 表级锁              | 行级锁 |
+| 外键约束 | ✅ 支持                       | ❌ 不支持            | ❌ 不支持            | ❌ 不支持 |
+| 崩溃恢复 | ✅ 支持（依赖 Redo/Undo Log）     | ❌ 不支持（宕机易损坏）     | ❌ 不支持（重启数据丢失）    | ✅ 支持 |
+| 存储介质 | 磁盘                         | 磁盘               | 内存               | 磁盘（高压缩比） |
+| 适用场景 | **核心业务、高并发、金融交易**          | **纯读、低并发、非核心统计** | **临时数据、缓存、中间结果** | 历史数据归档、日志记录 |
+
+
+
+
+
+
+
+### 索引
+
+索引(index)是**帮助MySQL高效获取数据的数据结构(有序)**。
+
+在数据之外，数据库系统还维护着满足特定查找算法的数据结构，这些数据结构以某种方式引用(指向)数据，这样就可以在这些数据结构上实现高级查找算法，这种数据结构就是索引。
+
+#### 索引意义
+无索引时：数据库执行 SELECT 或 WHERE 查询需逐行扫描整张表（全表扫描），数据量越大越慢。
+
+有索引时：数据库可快速定位到目标数据位置，大幅减少 I/O 操作和比较次数。
+
+#### 索引原理
+
+以 MySQL `InnoDB`（存储引擎） 为例，`默认使用 B+ 树（B+ Tree）`作为索引结构：
+
+B树结构：
+![b树](/b_tree.png)
+
+:::tip B树特点
+- 所有节点（包括非叶子节点和叶子节点）`都存储了索引键值和对应的真实数据`。
+- 叶子节点之间是`相互独立`的，没有直接的指针连接。
+- 因为每个节点都存了真实数据,节点占用空间大,一个磁盘页（Page）能容纳的节点数变少。树会变得“高瘦”。查询时需要的磁盘 I/O 次数较多。
+  :::
+
+B+树结构：
+![b+树](/b+_tree.png)
+
+:::tip B+树特点
+- `所有数据都只存储在叶子节点，非叶子节点(即根节点和内部节点)只存索引键值和指向子节点的指针`。
+- 叶子节点之间用`双向链表`连接，便于范围查询
+- 非叶子节点不存数据，只存索引，一个节点可以容纳极多的索引键值，树变得非常“矮胖”。通常 3 到 4 层的 B+ 树就能存储上千万条数据，每次查询最多只需 3 到 4 次磁盘 I/O，效率极高。
+  :::
+  :::warning 数据库索引结构为什么不使用哈希索引和二叉树索引结构？
+- **哈希索引结构**：
+
+  哈希索引就是采用一定的hash算法，将键值换算成新的hash值，映射到对应的槽位上，然后存储在hash表中。
+
+  哈希索引只适合等值查询（如=，in），不适合范围查询（如between,>,like），且数据量较大时，索引效率会下降。
+
+  如果两个(或多个)键值，映射到一个相同的槽位上，他们就产生了hash冲突(也称为hash碰撞)，可以通过链表来解决。但是链表遍历会导致额外的磁盘读取，性能急剧下降。
+
+- **二叉树索引结构**：
+
+  二叉树每个节点最多只有 2 个子节点。如果查询量过大则树高度可能过高，磁盘I/O负担太重。
+
+  如果插入的数据是有序的（如 1, 2, 3, 4...），普通的二叉搜索树会退化成一条单链表，查询性能极差。
+
+  虽然使用红黑树等平衡二叉树可以解决单链表问题，但它们是“二叉”的，依然无法解决树高过高和磁盘 I/O 频繁的问题
+  :::
+
+
+#### 常见索引类型
+
+:::code-group
+```sql [innodb中按索引存储形式划分]
+-- 1.聚集索引
+-- 通常直接通过关键字PRIMARY自动创建，隐式包含 NOT NULL（不能为空） 和 UNIQUE（不能重复） 约束，一张表只能有一个主键。
+-- 聚集索引（b+树）下的叶子节点通常存储的是数据表中某一行的数据，所以通常比使用了二级索引的SQL查询快
+
+id INT PRIMARY KEY AUTO_INCREMENT
+
+
+
+-- 2.二级索引
+-- 二级索引的叶子节点存储的是索引列的值 + 主键值（即所属那行数据的主键ID）。查询时通常需要“回表查询”（拿到主键后再去聚簇索引查完整的行数据），比使用了聚集索引的SQL查询慢。
+-- 适用查询：SELECT * FROM users WHERE email = 'test@example.com';
+-- 执行流程：先在 idx_email 找到对应的主键 id，再回表查完整数据。
+-- 适合高频查询的字段（如 WHERE city = '北京'）建普通索引。
+-- 避免给低区分度字段建索引（比如“性别”只有男/女，建了也快不了多少）。
+
+CREATE INDEX idx_email ON users(email);
+
+```
+
+
+```sql [按逻辑功能划分]
+-- 1.主键索引
+--唯一且非空，相当于InnoDB 中聚集索引。
+
+id INT PRIMARY KEY AUTO_INCREMENT
+
+
+-- 2.唯一索引
+-- 通常直接通过关键字UNIQUE自动创建。要求该列的值不允许出现重复，如邮箱、手机号。
+-- 一张表可以有多个唯一索引，且可以为 NULL。
+
+CREATE UNIQUE INDEX idx_email ON users(email);
+
+-- 3.联合索引
+-- 对多个列组合创建索引，顺序很重要！
+-- WHERE name = 'Alice'（索引生效）
+-- WHERE name = 'Alice' AND age = 25（索引生效）
+-- WHERE age = 25（索引失效！最左前缀原则）
+-- 最左前缀原则：查询条件必须从索引的最左列开始，且连续使用。
+
+CREATE INDEX idx_name_age ON users(name, age);
+
+
+-- 4.全文索引
+-- 只能对 CHAR、VARCHAR、TEXT 类型的列创建全文索引。
+-- 建议只用于大段文本的模糊搜索（如博客、评论）。
+-- 不要用 LIKE '%xxx%' 做全文搜索（性能极差），改用全文索引。
+-- 中文分词需额外处理（MySQL 默认按空格/标点分词，对中文不友好，可配合 Elasticsearch）。
+-- 对单个字段建全文索引
+CREATE FULLTEXT INDEX idx_content ON articles (content);
+
+-- 对多个字段建联合全文索引
+CREATE FULLTEXT INDEX idx_title_content ON articles (title, content);
+
+
+```
+
+:::
+
+
+#### 索引优缺点
+
+优点：
+
+- **加快查询速度**：尤其对 WHERE、JOIN、ORDER BY、GROUP BY 等操作效果显著。
+- **保证数据唯一性**：唯一索引（UNIQUE）可防止重复数据插入。
+- **优化排序和分组**：避免临时表和文件排序（Using filesort）。
+- **提升连接性能**：JOIN 操作中，被驱动表若有索引可大幅减少匹配次数。
+
+缺点：
+- **占用存储空间**：每个索引都需要额外磁盘空间。
+- **降低写入性能**：
+  INSERT、UPDATE、DELETE 时需同步维护索引结构（B+树的插入/删除/分裂）。
+  索引越多，写操作越慢。
+- **维护成本高**：过多索引增加数据库复杂度，需定期分析和优化。
+
+
+#### 适合使用索引的场景
+
+- 列经常出现在 WHERE、JOIN、ORDER BY、GROUP BY 中；
+- 列的值范围很大，不确定性高（即唯一值多，如邮箱、手机号）；
+- 表数据量大（小表加索引可能反而更慢）。
+- 列更新不频繁（频繁则维护成本高）
+
+### EXPLAIN
 
 EXPLAIN 是 MySQL 中用于 分析 SQL 查询执行计划 的核心工具。
 
@@ -1418,107 +1589,3 @@ Extra: Using filesort  -- ⚠️ 磁盘排序，慢！
 CREATE INDEX idx_age ON users(age);
 ```
 :::
-
-
-
-## 索引
-
-索引（Index） 是一种用于加速数据检索的数据库结构，类似于书籍的目录。它通过**创建额外的数据结构（如 B+ 树、哈希表等），避免全表扫描**，从而显著提升查询性能。
-
-#### 索引意义
-无索引时：数据库执行 SELECT 或 WHERE 查询需逐行扫描整张表（全表扫描），数据量越大越慢。
-
-有索引时：数据库可快速定位到目标数据位置，大幅减少 I/O 操作和比较次数。
-
-
-#### 常见索引类型
-
-:::code-group
-```sql [普通索引（二级索引）]
-CREATE INDEX idx_name ON users(name);
-
--- 最普通的索引，允许重复、允许 NULL。
--- 叶子节点存的是主键值，不是整行数据。所以查非主键字段时，可能要“回表”（先查索引，再用主键查数据）。
--- 适合高频查询的字段（如 WHERE city = '北京'）建普通索引。
--- 避免给低区分度字段建索引（比如“性别”只有男/女，建了也快不了多少）。
-
-
-```
-```sql [联合索引]
-CREATE INDEX idx_name_age ON users(name, age);
-
--- 对多个列组合创建索引，顺序很重要！
--- WHERE name = 'Alice'（索引生效）
--- WHERE name = 'Alice' AND age = 25（索引生效）
--- WHERE age = 25（索引失效！最左前缀原则）
--- 最左前缀原则：查询条件必须从索引的最左列开始，且连续使用。
-```
-```sql [唯一索引]
-CREATE UNIQUE INDEX idx_email ON users(email);
-
-
--- 要求该列的值不允许出现重复，如邮箱、手机号。
--- 一张表可以有多个唯一索引，且可以为 NULL。
-
-
-```
-```sql [主键索引（聚簇索引）]
--- 自动创建，隐式包含 NOT NULL（不能为空） 和 UNIQUE（不能重复） 约束。
--- 一张表只能有一个主键。
--- 主键尽量用整数、自增（如 BIGINT AUTO_INCREMENT），避免用字符串或 UUID（会导致插入慢、页分裂）。
-```
-```sql [全文索引]
--- 对单个字段建全文索引
-CREATE FULLTEXT INDEX idx_content ON articles (content);
-
--- 对多个字段建联合全文索引
-CREATE FULLTEXT INDEX idx_title_content ON articles (title, content);
-
--- 只能对 CHAR、VARCHAR、TEXT 类型的列创建全文索引。
--- 建议只用于大段文本的模糊搜索（如博客、评论）。
--- 不要用 LIKE '%xxx%' 做全文搜索（性能极差），改用全文索引。
--- 中文分词需额外处理（MySQL 默认按空格/标点分词，对中文不友好，可配合 Elasticsearch）。
-```
-```sql [前缀索引]
--- 对 email 的前 15 个字符建索引
-CREATE INDEX idx_email_prefix ON users (email(15));
-
--- 用于长字符串字段（如 URL、长文本 ID）。
--- 例子：email 字段很长，但前 10 位已足够区分，可建 INDEX(email(10))。
--- 不能在前缀上建全文索引。如CREATE FULLTEXT INDEX idx_content ON articles (content(100));  -- 报错
-```
-:::
-
-#### 索引原理
-
-以 MySQL InnoDB（存储引擎） 为例，默认`使用 B+ 树（B+ Tree）`作为索引结构，其特点为：
-
-
-- 所有数据都存储在叶子节点，非叶子节点只存索引键。
-- 叶子节点之间用双向链表连接，便于范围查询
-- 树的高度低（通常 3~4 层），查询快。
-
-#### 索引优缺点
-
-优点：
-
-- 加快查询速度：尤其对 WHERE、JOIN、ORDER BY、GROUP BY 等操作效果显著。
-- 保证数据唯一性：唯一索引（UNIQUE）可防止重复数据插入。
-- 优化排序和分组：避免临时表和文件排序（Using filesort）。
-- 提升连接性能：JOIN 操作中，被驱动表若有索引可大幅减少匹配次数。
-
-缺点：
-- 占用存储空间：每个索引都需要额外磁盘空间。
-- 降低写入性能：
-  INSERT、UPDATE、DELETE 时需同步维护索引结构（B+树的插入/删除/分裂）。
-  索引越多，写操作越慢。
-- 维护成本高：过多索引增加数据库复杂度，需定期分析和优化。
-
-
-#### 适合使用索引的场景
-
-- 列经常出现在 WHERE、JOIN、ORDER BY、GROUP BY 中；
-- 列的值范围很大，不确定性高（即唯一值多，如邮箱、手机号）；
-- 表数据量大（小表加索引可能反而更慢）。
-- 列更新不频繁（频繁则维护成本高）
-
