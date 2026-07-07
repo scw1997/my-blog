@@ -241,9 +241,8 @@ CREATE TABLE order_items (
 | 单表唯一 | 一张表只能有一个主键（但可由多列组成，称“复合主键”） |
 
 :::warning 注意
-- 主键优先使用自增整数（简单高效）或UUID（隐私性好）
+- 主键优先使用自增整数（简单高效）,分布式系统考虑 UUID（全局唯一，适合分库分表）
 - 避免使用自然主键（如用“身份证号”、“邮箱”作主键），因为这些数据长度大且可能会修改。
-- 分布式系统考虑 UUID（全局唯一，适合分库分表）
 - 避免主键进行更新，因为会导致`索引重建和外键级联更新（可能锁表）`。
   :::
 ### 外键Foreign Key
@@ -600,8 +599,8 @@ INSERT INTO sales VALUES
 - `COUNT(*)`：统计所有行数（包括 NULL 和重复值）
 - `COUNT(column)`：统计指定列非 NULL 的行数
 - `SUM(column)`：对数值列求和，忽略 NULL。如果所有值都是 NULL，返回 NULL（不是 0）
-- `AVG(column)`：对数值列求平均值，忽略 NULL。如果所有值都是 NULL，返回 NULL（不是 0）。`AVG(column) = SUM(column) / COUNT(column)`
-
+- `AVG(column)`：对数值列求平均值，忽略 NULL。如果所有值都是 NULL，返回 NULL（不是 0）。AVG(column) = SUM(column) / COUNT(column)
+>注意：如果只是为了统计总记录数，`优先使用 COUNT(*)`。因为它忽略了 NULL，减少了取值判断的步骤，性能更好。
 :::code-group
 ```sql [COUNT]
 SELECT 
@@ -779,55 +778,25 @@ LIMIT 40, 20;
 - 分页计算公式：`LIMIT (当前所需页码-1) * 每页记录数，每页记录数`
 :::
 
-### 视图
+#### 深度分页查询优化
 
-视图（View） 是一个虚拟表，其内容由一条 SELECT 查询语句定义。
+问题场景：查询limit 2000000,10，此时需要MySQL排序前2000010记录，仅仅返回2000000-2000010
+的记录，其他记录丢弃，查询排序的代价非常大。
 
-视图本身不存储数据，而是每次查询时动态执行底层 SQL 生成结果。
-
-
-基本语法：
+解决方案：命中覆盖索引 + 子查询
 
 ```sql
-CREATE [OR REPLACE] VIEW view_name [(column_list)] AS
-SELECT column1, column2, ...
-FROM table_name
-[WHERE ...]
-[GROUP BY ...];
-```
+-- 要求查询tb_sku这个表在limit 2000000,10这个区间的数据
+-- 低端做法：直接查询2000000-2000010的数据
+select * from tb_sku order by id limit 2000000,10;
 
-示例：创建一个“活跃用户”视图
-
-```sql
--- 假设有 users 和 orders 表
-CREATE VIEW active_users AS
-SELECT 
-    u.id,
-    u.name,
-    u.email,
-    COUNT(o.id) AS order_count
-FROM users u
-LEFT JOIN orders o ON u.id = o.user_id
-WHERE u.status = 'active'
-GROUP BY u.id, u.name, u.email;
-
--- 像查普通表一样使用它：
-
-SELECT * FROM active_users WHERE order_count > 5;
+-- 优化做法：通过id的主键索引查询获取指定区间的id列表再查询这些id的数据
+select s.* from tb sku as s,(select id from tb_sku order by id limit 9000000, 10) as a where s.id = a.id;
 
 ```
 
 
-:::tip 最佳实践
 
-- 视图名加前缀，如 v_active_users 或 vw_user_summary
-- 简单查询无需视图
-- 用 COMMENT 说明视图用途
-    ```sql
-    CREATE VIEW active_users COMMENT '近30天有订单的活跃用户' AS ... 
-    ```
-- 视图适合装复杂查询逻辑，兼容旧接口（视图模拟旧表结构）和数据安全控制（创建只暴露部分字段的视图）等场景
-  :::
 
 
 ### 表的加减法
@@ -1446,7 +1415,6 @@ B+树结构：
 id INT PRIMARY KEY AUTO_INCREMENT
 
 
-
 -- 2.二级索引
 -- 二级索引的叶子节点存储的是索引列的值 + 主键值（即所属那行数据的主键ID）。查询时通常需要“回表查询”（拿到主键后再去聚簇索引查完整的行数据），比使用了聚集索引的SQL查询慢。
 -- 适用查询：SELECT * FROM users WHERE email = 'test@example.com';
@@ -1474,17 +1442,19 @@ CREATE UNIQUE INDEX idx_email ON users(email);
 
 -- 3.联合索引
 -- 对多个列组合创建索引，顺序很重要！
+-- 最左前缀原则：查询条件必须从索引的最左列开始，且连续使用。
 -- WHERE name = 'Alice'（索引生效）
 -- WHERE name = 'Alice' AND age = 25（索引生效）
 -- WHERE age = 25（索引失效！最左前缀原则）
--- 最左前缀原则：查询条件必须从索引的最左列开始，且连续使用。
+-- 使用ORDER BY/GROUP BY多字段排序/分组时也尽量使用最左前缀原则。
+
 
 CREATE INDEX idx_name_age ON users(name, age);
 
 
 -- 4.全文索引
 -- 只能对 CHAR、VARCHAR、TEXT 类型的列创建全文索引。
--- 建议只用于大段文本的模糊搜索（如博客、评论）。
+-- 建议只用于大段文本的模糊搜索（如博客、评论），需要搜索特定单词、短语或进行相关性排序的场景。
 -- 不要用 LIKE '%xxx%' 做全文搜索（性能极差），改用全文索引。
 -- 中文分词需额外处理（MySQL 默认按空格/标点分词，对中文不友好，可配合 Elasticsearch）。
 -- 对单个字段建全文索引
@@ -1494,9 +1464,95 @@ CREATE FULLTEXT INDEX idx_content ON articles (content);
 CREATE FULLTEXT INDEX idx_title_content ON articles (title, content);
 
 
+
+
+-- 5.前缀索引
+-- 适用于字段值很长（如 URL、长邮箱），且前几个字符就具有极高区分度（选择性高），主要用于精确匹配或前缀匹配的场景。
+-- 对用户表的 email 字段，只取前 10 个字符建立索引
+CREATE INDEX idx_email_prefix ON users(email(10));
+-- 缺点：无法实现覆盖索引（必然回表）：因为索引树中只存了前缀字符，没有完整的字符串。当你的 SELECT 或 WHERE 需要用到完整字段时，必须拿着主键回聚簇索引校验完整数据。
 ```
 
 :::
+
+
+:::tip 索引操作
+- 创建索引：`CREATE [UNIQUE | FULLTEXT] INDEX index_name ON table_name (column_name);`
+- 删除索引：`DROP INDEX index_name ON table_name;`
+- 查看索引：`SHOW INDEX FROM table_name;`
+:::
+
+#### 索引失效的情况
+
+**1.对索引列进行数学计算或调用函数**
+```sql
+-- 对索引列使用DATE函数，索引失效
+WHERE DATE(create_time) = '2026-06-30'
+
+-- 优化：将函数或计算移到等号的右边，改为范围查询或等值查询。
+WHERE create_time >= '2026-06-30 00:00:00' AND create_time < '2026-07-01 00:00:00'
+```
+
+**2. 使用联合索引违反最左前缀原则** 
+```sql
+-- 假设：创建了联合索引 (a, b, c)：
+
+-- 完全不走索引（跳过了 a）
+WHERE b = 2
+-- 仅 a 走索引，c 无法走索引（跳过了 b）
+WHERE a = 1 AND c = 3
+-- 优化方案：确保查询从最左列开始且不跳过中间列
+WHERE a = 1 AND b = 2 AND c = 3
+```
+
+**3.LIKE 以通配符 % 开头**
+```sql
+-- 索引失效
+WHERE name LIKE '%张%'
+
+-- 优化：通配符%放在尾部
+WHERE name LIKE '张%'
+```
+
+**4.OR 条件中包含非索引字段**
+```sql
+-- 用 OR 连接多个条件时，只要其中任意一个字段没有索引就会整体索引失效
+-- 假设name 字段有索引，age 字段没有索引
+WHERE name = '张三' OR age > 18
+
+-- 优化：为 name 字段补充索引或者将 OR 改为 UNION ALL
+SELECT * FROM users WHERE name = '张三' UNION ALL SELECT * FROM users WHERE age > 18
+```
+
+**5.发生了隐式类型转换**
+```sql
+-- 假设 user_id 字段是 VARCHAR 类型
+SELECT * FROM user WHERE user_id = 123; 
+-- MySQL 内部会将其转为：CAST(user_id AS SIGNED) = 123，导致索引失效
+-- 优化：保持数据类型严格一致
+```
+
+#### 索引控制提示
+
+假设某个字段A既存在于单列索引中，也存在于联合索引中，如果某个查询SQL同时触发了两种索引的条件，那么MySQL会优先使用最合适的索引，也可以人为指定使用哪种索引。
+
+```sql
+-- USE INDEX（建议使用指定索引）
+-- 告诉 MySQL 在查询时建议使用指定的索引，但 MySQL 内部仍会根据成本评估，如果不合适它可能依然不用。
+SELECT * FROM tb_user USE INDEX(idx_user_pro) WHERE profession = '软件工程';
+
+-- FORCE INDEX（强制使用指定索引）
+-- 比 USE INDEX 更强硬，强制 MySQL 必须使用指定的索引（除非该索引根本无法用于此查询）。
+SELECT * FROM tb_user FORCE INDEX(idx_user_pro) WHERE profession = '软件工程';
+
+
+-- IGNORE INDEX（忽略指定索引）
+-- 强制 MySQL 在查询时不要使用某个索引。通常用于某个索引统计信息过期，导致优化器错误地选择了它。
+SELECT * FROM tb_user IGNORE INDEX(idx_user_pro) WHERE profession = '软件工程';
+
+
+
+```
 
 
 #### 索引优缺点
@@ -1516,14 +1572,55 @@ CREATE FULLTEXT INDEX idx_title_content ON articles (title, content);
 - **维护成本高**：过多索引增加数据库复杂度，需定期分析和优化。
 
 
-#### 适合使用索引的场景
+:::tip 适合使用索引的场景
 
 - 列经常出现在 WHERE、JOIN、ORDER BY、GROUP BY 中；
 - 列的值范围很大，不确定性高（即唯一值多，如邮箱、手机号）；
-- 表数据量大（小表加索引可能反而更慢）。
+- 表数据量大（小表加索引可能反而更慢）并且查询较为频繁。
 - 列更新不频繁（频繁则维护成本高）
+:::
 
-### EXPLAIN
+### 性能分析
+
+#### 1. 查看SQL执行频次
+
+```sql
+# 查看全局执行频次（自数据库启动以来的累计数据）
+SHOW GLOBAL STATUS LIKE 'Com_______';
+
+# 查看会话执行频次（当前连接的累计数据）
+SHOW SESSION STATUS LIKE 'Com_______';
+```
+
+- `Com_select`：查询（SELECT）操作的次数。
+- `Com_insert`：插入（INSERT）操作的次数。
+- `Com_update`：更新（UPDATE）操作的次数。
+- `Com_delete`：删除（DELETE）操作的次数。
+
+#### 2. 获取慢查询日志
+
+慢查询日志（slow query log）是 MySQL 数据库的一个功能，用于记录执行时间超过阈值的 SQL 语句。
+
+慢查询日志`默认是关闭`的，可以通过以下命令开启：
+
+
+:::code-group
+```sql [临时开启]
+SET GLOBAL slow_query_log = 'ON';
+SET GLOBAL long_query_time = 1;
+```
+```ini [永久开启]
+# 在配置文件/etc/my.cnf 的 [mysqld] 下添加：
+
+slow_query_log = 1  #开启慢查询日志  #[!code ++]
+slow_query_log_file = /var/log/mysql/mysql-slow.log  #设置慢查询日志文件路径  #[!code ++]
+long_query_time = 1  #设置执行时间阈值（秒）  #[!code ++]
+
+# 保存修改然后重启mysql
+```
+:::
+
+#### 3.EXPLAIN
 
 EXPLAIN 是 MySQL 中用于 分析 SQL 查询执行计划 的核心工具。
 
@@ -1532,21 +1629,39 @@ EXPLAIN 是 MySQL 中用于 分析 SQL 查询执行计划 的核心工具。
 
 输出字段详解：
 
-| 列名 | 说明                                                                                                                                |
-|------|-----------------------------------------------------------------------------------------------------------------------------------|
-| id | 查询序列号。相同表示同一组，越大越先执行（子查询时有用）                                                                                                      |
-| select_type | 查询类型：`SIMPLE`（简单查询）、`PRIMARY`（最外层）、`SUBQUERY`（子查询）、`DERIVED`（派生表）等                                                                |
-| table | 当前行所访问的表名                                                                                                                         |
-| partitions | 匹配的分区（未分区则为 `NULL`）                                                                                                               |
-| type | **访问类型（最重要！）**，性能从好到差：<br>`system` > `const` > `eq_ref` > `ref` > `range` > `index` > `ALL`<br>⚠️ 出现 `ALL` 表示全表扫描，需警惕             |
-| possible_keys | 可能用到的索引                                                                                                                           |
-| key | **实际使用的索引（`NULL` 表示没走索引）**                                                                                                        |
-| key_len | 使用索引的长度（字节），可判断复合索引用了几列                                                                                                           |
-| ref | 与索引比较的列或常量（如 `const` 表示用常量值匹配）                                                                                                    |
-| rows | **预估需要扫描的行数（越小越好）**                                                                                                               |
-| filtered | 按条件过滤后剩余的百分比（估算）                                                                                                                  |
-| Extra | 额外信息，常见值：<br>- `Using index`：覆盖索引（极好）<br>- `Using where`：回表过滤<br>- `Using filesort`：需要额外排序（性能差）<br>- `Using temporary`：用了临时表（性能差） |
+| 列名 | 说明                                                                                                                          |
+|------|-----------------------------------------------------------------------------------------------------------------------------|
+| id | 查询序列号。相同表示同一组，越大越先执行（子查询时有用）                                                                                                |
+| select_type | 查询类型：SIMPLE（简单查询）、PRIMARY（最外层）、SUBQUERY（子查询）、DERIVED（派生表）等                                                                  |
+| table | 当前行所访问的表名                                                                                                                   |
+| partitions | 匹配的分区（未分区则为 NULL）                                                                                                           |
+| `type` | **访问类型（最重要！）**，性能从好到差：<br>`null`>`system` > `const` > `eq_ref` > `ref` > `range` > `index` > `ALL`<br>⚠️ 出现 `ALL` 表示全表扫描，需警惕 |
+| possible_keys | 可能用到的索引                                                                                                                     |
+| `key` | `实际使用的索引（NULL表示没走索引）`                                                                                                       |
+| key_len | 使用索引的长度（字节），可判断复合索引用了几列                                                                                                     |
+| ref | 与索引比较的列或常量（如 `const` 表示用常量值匹配）                                                                                              |
+| `rows` | `预估需要扫描的行数（越小越好`）                                                                                                           |
+| filtered | 按条件过滤后剩余的百分比（估算）                                                                                                            |
+| `Extra` | 额外信息，常见值：<br>- `Using index`：`覆盖索引（极好）`<br>- Using where：回表过滤<br>- Using filesort：需要额外排序（性能差）<br>- Using temporary：用了临时表（性能差）   |
 
+:::tip 覆盖索引
+当你的 SQL 查询所需要的所有字段，都恰好包含在某个索引（通常是联合索引）的 B+ 树中时，MySQL 就可以直接从索引树上返回数据，而不需要再去聚簇索引（主键）中查询完整的行数据。
+
+这就命中了覆盖索引，省去了“回表”操作，极大地提升了查询性能。
+
+要达成覆盖索引，必须同时满足以下条件：
+- SELECT 的字段：`查询返回的所有列，都必须存在于该索引中`。
+- WHERE 的字段：`查询条件中的列，也必须存在于该索引中`。
+- 主键字段（隐式包含）：在 InnoDB 引擎中，所有的二级索引（非聚簇索引）的叶子节点都默认包含了主键值。因此，即使你的 SELECT 或 WHERE 中包含了主键，它也被视为“已覆盖”。
+
+以下情况会命中覆盖索引
+
+创建索引：**CREATE INDEX idx_name_age_pos ON employees(name, age, position)**;
+
+执行SQL：**SELECT name, age, position FROM employees WHERE name = '张三**'
+
+
+:::
 示例：
 
 :::code-group
@@ -1589,3 +1704,256 @@ Extra: Using filesort  -- ⚠️ 磁盘排序，慢！
 CREATE INDEX idx_age ON users(age);
 ```
 :::
+
+
+
+### 视图
+
+视图（View） 是一个虚拟表，其内容由一条 SELECT 查询语句定义。
+
+视图本身不存储数据，而是每次查询时动态执行底层 SQL 生成结果。
+
+
+基本语法：
+
+```sql
+CREATE [OR REPLACE] VIEW view_name [(column_list)] AS
+SELECT column1, column2, ...
+FROM table_name
+[WHERE ...]
+[GROUP BY ...];
+```
+
+示例：创建一个“活跃用户”视图
+
+```sql
+-- 假设有 users 和 orders 表
+CREATE VIEW active_users AS
+SELECT 
+    u.id,
+    u.name,
+    u.email,
+    COUNT(o.id) AS order_count
+FROM users u
+LEFT JOIN orders o ON u.id = o.user_id
+WHERE u.status = 'active'
+GROUP BY u.id, u.name, u.email;
+
+-- 像查普通表一样使用它：
+
+SELECT * FROM active_users WHERE order_count > 5;
+
+```
+
+应用场景：
+
+:::code-group
+```sql [封装复杂查询]
+-- 创建视图，封装复杂的关联逻辑
+CREATE VIEW v_order_details AS
+SELECT 
+    o.order_id, o.order_time, u.username, p.product_name, o.quantity, o.total_amount
+FROM orders o
+JOIN users u ON o.user_id = u.user_id
+JOIN products p ON o.product_id = p.product_id;
+
+-- 业务层只需像查普通表一样查询视图，极大简化了代码
+SELECT * FROM v_order_details WHERE order_time > '2026-01-01';
+```
+```sql [数据安全控制]
+-- 创建视图，隐藏敏感列（salary, id_card），并限制只能看本部门
+CREATE VIEW v_dept_employees AS
+SELECT emp_name, job_title 
+FROM employees 
+WHERE department_id = 'TECH_DEPT';
+
+-- 将视图的查询权限授予部门经理，而非底层基表
+GRANT SELECT ON v_dept_employees TO 'manager'@'%';
+
+```
+```sql [提供稳定的数据接口]
+-- 当底层的表结构发生变更（如字段重命名、表拆分）时，如果业务代码直接依赖基表，修改成本极高。通过视图，可以做到底层改动对上层透明
+-- 场景：原来的 users 表被拆分为 user_base（基本信息）和 user_profiles（扩展信息），但旧版 API 仍需要原来的表结构。
+-- 创建视图，保持旧表结构不变，底层映射到新表
+CREATE VIEW v_users_legacy AS
+SELECT 
+    b.id, b.username, p.phone, p.address
+FROM user_base b
+LEFT JOIN user_profiles p ON b.id = p.user_id;
+```
+:::
+
+
+
+:::tip 最佳实践
+
+- 视图名加前缀，如 v_active_users 或 vw_user_summary
+- 简单查询无需视图
+- 用 COMMENT 说明视图用途
+    ```sql
+    CREATE VIEW active_users COMMENT '近30天有订单的活跃用户' AS ... 
+    ```
+- 如果视图包含了聚合函数（SUM）、GROUP BY、DISTINCT 或多表 JOIN，通常是不可更新的。`建议将视图仅作为只读查询使用`。
+- 尽量不要在一个视图的基础上再创建视图（`视图套视图`），这会导致底层 SQL 极其复杂
+  :::
+
+
+### 存储过程
+
+存储过程（Stored Procedure）是一组预先编译并存储在数据库中的 SQL 语句集合。你可以把它理解为“数据库里的方法”，它可以**接受参数、执行复杂的业务逻辑，并返回结果**。
+
+:::code-group
+```sql [处理员工薪资]
+-- 创建存储过程
+
+CREATE PROCEDURE process_salary(
+    IN emp_id INT,            -- 1. IN参数：传入员工ID，用于查询
+    OUT emp_name VARCHAR(50), -- 2. OUT参数：用于返回该员工的姓名
+    INOUT bonus DECIMAL(10,2) -- 3. INOUT参数：传入基础奖金，内部计算后返回最终奖金
+)
+BEGIN
+    -- 使用 IN 参数进行查询，并将结果赋值给 OUT 参数
+    SELECT name INTO emp_name FROM employees WHERE id = emp_id;
+    
+    -- 读取 INOUT 参数的值，进行业务计算，然后重新赋值
+    -- 假设根据绩效，奖金翻倍
+    SET bonus = bonus * 2; 
+END;
+
+
+-- 调用存储过程
+-- 1. 定义用户变量，用于接收 INOUT 和 OUT 的结果
+SET @my_bonus = 5000.00; 
+
+-- 2. 调用存储过程
+CALL process_salary(1001, @result_name, @my_bonus);
+
+-- 3. 查看返回的输出结果
+SELECT @result_name AS 员工姓名, @my_bonus AS 最终奖金;
+```
+```sql [转账存储]
+-- 创建存储过程
+CREATE PROCEDURE transfer_money(
+    IN from_account INT, 
+    IN to_account INT, 
+    IN amount DECIMAL(10, 2)
+)
+BEGIN
+    -- 1. 定义异常处理：如果发生错误则回滚事务
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Transfer failed due to an error.';
+    END;
+
+    -- 2. 开启事务
+    START TRANSACTION;
+    
+    -- 3. 扣减转出账户余额
+    UPDATE accounts SET balance = balance - amount WHERE id = from_account;
+    
+    -- 4. 增加转入账户余额
+    UPDATE accounts SET balance = balance + amount WHERE id = to_account;
+    
+    -- 5. 提交事务
+    COMMIT;
+END; 
+
+
+-- 调用存储过程
+CALL transfer_money(1001, 1002, 500.00);
+
+```
+:::
+
+:::tip 参数类型
+- `IN（输入参数）`：只进不出<br/>
+  **默认**的参数模式。调用者将数据传递给存储过程，存储过程内部可以读取和修改这个值，但修改后的值不会返回给调用者。<br/>
+  适用场景：用于传入查询条件、配置项或计算所需的初始数据。<br/>
+- `OUT（输出参数）`：只出不进<br/>
+   含义：调用者传入一个变量作为占位符，存储过程内部必须对该参数进行赋值，执行结束后，这个被赋的值会返回给调用者。<br/>
+   适用场景：用于返回查询结果的总数、新插入记录的主键 ID、或者某个复杂计算的最终结果。<br/>
+- `INOUT（输入输出参数）`：有进有出<br/>
+   含义：结合了前两者的特点。调用者传入一个具体的值，存储过程内部可以读取它、对其进行修改，并将修改后的新值返回给调用者。<br/>
+   适用场景：常用于累加计算、计数器、或者对传入的数据进行格式化/转换后再返回。<br/>
+:::
+
+
+
+应用场景：
+
+- **复杂业务逻辑封装与事务处理**：将多步操作（如：扣减库存 -> 生成订单 -> 记录流水）封装在一个过程中，并结合事务（Transaction）保证原子性，要么全部成功，要么全部失败。
+- **批量处理数据**：利用存储过程配合循环（如 WHILE）和游标（Cursor）逐行处理海量数据，减少客户端与数据库的网络交互开销。
+- **权限控制**：只开放存储过程的 EXECUTE 权限，而不给用户底层表的直接访问权限。这样既能实现业务需求，又能隐藏底层表结构，防止 SQL 注入或越权操作。
+
+存储过程的缺陷：
+
+- **版本管理与部署困难**：存储过程代码存储在数据库中，不像应用代码那样容易进行 Git 版本控制
+- **调试困难**：缺乏像现代编程语言那样完善的断点调试工具
+- **跨平台移植性差**：更换数据库，存储过程需要完全重写
+- **性能瓶颈与锁风险**：如果在存储过程中编写了低效的 SQL，或者在长事务中使用了大循环、游标，极易引发严重的表锁或行锁等待，成为高并发环境下的性能瓶颈。
+
+### 存储函数
+
+存储函数是一组预定义的 SQL 逻辑单元，它可以**接收参数，执行计算或查询，并返回一个单一的值**。它的使用方式与 MySQL 内置函数（如 SUM()、LENGTH()）完全一样。
+
+创建存储函数：
+```sql
+-- 根据商品价格和税率计算销售税
+CREATE FUNCTION calculate_sales_tax(price DECIMAL(10, 2), tax_rate DECIMAL(4, 2)) 
+RETURNS DECIMAL(10, 2)
+BEGIN
+    RETURN price * (tax_rate / 100);
+END; 
+```
+调用存储函数：
+```sql
+-- 在 SELECT 中直接调用
+SELECT product_name, price, calculate_sales_tax(price, 13.00) AS tax FROM products;
+
+-- 在 INSERT 中直接调用
+INSERT INTO sales (product_id, total_tax) VALUES (1, calculate_sales_tax(100.00, 13.00));
+```
+
+:::tip 存储函数与存储过程对比
+- 共同点：都需要显式调用并支持参数和返回值
+- 不同点：存储过程支持多种参数类型，并且在`应用层`调用；存储函数只支持`IN`参数类型，需要在`SQL语句`中调用
+- 存储函数：适合封装`可复用的计算逻辑`，例如汇率转换、格式化字符串、计算税费等，提升代码复用率；
+- 存储过程：适合封装`复杂的业务流程`，例如包含事务的转账操作。可以减少网络交互，提高性能。
+:::
+
+
+### 触发器
+
+触发器是一种特殊的存储过程，它与某张表绑定。当对该表执行 INSERT、UPDATE 或 DELETE 操作时，触发器会`自动执行，无需手动调用`。
+
+
+:::code-group
+
+```sql [员工薪资下限校验]
+-- 当向员工表插入新数据时，自动检查薪资是否低于最低标准，如果低于则直接抛出错误阻止插入：
+
+CREATE TRIGGER check_salary
+BEFORE INSERT ON employees
+FOR EACH ROW
+BEGIN
+    IF NEW.salary < 3000 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Salary must be at least 3000.';
+    END IF;
+END;
+
+```
+```sql [薪资变更审计日志]
+-- 当员工薪资被修改后，自动将旧薪资、新薪资和修改时间记录到审计表中
+-- OLD表示修改前的数据，NEW表示修改后的数据
+
+CREATE TRIGGER after_employee_update
+AFTER UPDATE ON employees
+FOR EACH ROW
+BEGIN
+    INSERT INTO audit_log (employee_id, old_salary, new_salary, update_time)
+    VALUES (OLD.id, OLD.salary, NEW.salary, NOW());
+END;
+
+```
+>适用场景：用于数据完整性约束、审计日志、数据校验等自动化操作
