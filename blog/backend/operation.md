@@ -180,13 +180,43 @@ Nginx 是目前互联网领域使用最广泛的高性能**反向代理服务器
 ```
 
 ### 配置文件解析
-```nginx
+
+:::code-group
+```nginx [基本示例]
 # conf/nginx.conf 
 
-server { 
-    # 监听80端口(默认)
+# 定义跨域请求的白名单映射
+# 根据请求的来源动态设置$cors_origin的值
+map $http_origin $cors_origin {
+    default "";
+    "http://localhost:3000" $http_origin;
+    "https://www.yourdomain.com" $http_origin;
+}
+http {
+    # 当前是主配置文件，可以通过include引入其他配置文件
+    include /etc/nginx/conf.d/*.conf;
+
+    #gzip配置
+    gzip on;                          # 1. 开启 Gzip 压缩
+    gzip_comp_level 5;                # 2. 压缩级别（推荐 4-6，平衡 CPU 与压缩率）
+    gzip_min_length 1024;             # 3. 最小压缩阈值（小于 1KB 不压缩，避免越压越大）
+    gzip_vary on;                     # 4. 添加 Vary 头，防止 CDN 缓存错乱
+    gzip_proxied any;                 # 5. 对经过代理的请求也启用压缩
+    gzip_types                        # 6. 指定需要压缩的 MIME 类型
+        text/plain 
+        text/css 
+        application/json 
+        application/javascript 
+        text/xml 
+        application/xml;
+        
+    # http模块中可以添加多个server模块配置 
+    # 每个server对应一个域名   
+    server { 
+      # 监听80端口(默认)
      listen 80;
-     server_name localhost; #生产环境请修改为实际域名
+     # 服务名，生产环境请修改为实际域名方便各个域名独立配置
+     server_name localhost; 
      # 下面设置路径匹配规则
      
      # 当浏览器访问/时
@@ -210,11 +240,63 @@ server {
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
           proxy_set_header X-Forwarded-Proto $scheme;
           
+          
+          # 超时设置，避免慢请求拖垮Nginx
+          proxy_connect_timeout 5s;
+          proxy_read_timeout 60s;
+          proxy_send_timeout 30s;
+          
+           # 处理预检请求（OPTIONS）
+          if ($request_method = 'OPTIONS') {
+              return 204;
+          }
+     }
+     
+       # 当浏览器访问/api-test时（如果是跨域请求，例如在A域名的网站访问当前域名的接口）
+       location ^~ /api-test {
+          # 代理转发接口请求，这里为当前Linux服务器启动的8083端口服务（例如springboot服务端口）
+          proxy_pass http://127.0.0.1:8083;
+          #⭐ 必加的代理头，否则后端拿不到真实IP和协议
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+ 
+          # 配置允许调用当前域名的网站域名（无限制则用'*'）
+          # 允许多个域名，可以使用变量：add_header 'Access-Control-Allow-Origin' $http_origin always;
+          add_header 'Access-Control-Allow-Origin' 'http://aaaa.com' always;
+          # 2. 允许携带 Cookie 或 Authorization 认证信息
+          add_header 'Access-Control-Allow-Credentials' 'true' always;
+          # 3. 允许的请求方法（建议加上 PUT, DELETE 等常用方法）
+          add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS' always;
+          # 4. 允许前端携带的自定义请求头
+          add_header 'Access-Control-Allow-Headers' 'Content-Type, Authorization, X-Requested-With' always;
+          
           # 超时设置，避免慢请求拖垮Nginx
           proxy_connect_timeout 5s;
           proxy_read_timeout 60s;
           proxy_send_timeout 30s;
      }
+     # 处理websocket
+     location ^~ /api/ws { 
+        # 设置代理地址
+         proxy_pass http://0.0.0.0:8083; 
+         
+         # 设置代理使用的 HTTP 版本为 1.1，这是 WebSocket 所必需的。
+         proxy_http_version 1.1; 
+         
+         # 传递 Upgrade 头信息给后端服务器，这告诉服务器客户端希望升级到 WebSocket 协议。
+         proxy_set_header Upgrade $http_upgrade;
+         
+         # 传递 Connection 头信息，用于控制或指定当前连接或消息体的性质。
+         proxy_set_header Connection "upgrade";
+         
+         # 传递原始的请求头主机信息
+         proxy_set_header Host $host;
+      
+         # 关键：移除或重写 Origin 头，让后端认为是同源请求
+         proxy_set_header Origin ""; 
+	}
+     
+     # 处理静态文件
      location ~* \.(js|css)$ {
           expires 1y;
           add_header Cache-Control "public, immutable";
@@ -228,21 +310,58 @@ server {
      
      
 }
-http {
-    gzip on;                          # 1. 开启 Gzip 压缩
-    gzip_comp_level 5;                # 2. 压缩级别（推荐 4-6，平衡 CPU 与压缩率）
-    gzip_min_length 1024;             # 3. 最小压缩阈值（小于 1KB 不压缩，避免越压越大）
-    gzip_vary on;                     # 4. 添加 Vary 头，防止 CDN 缓存错乱
-    gzip_proxied any;                 # 5. 对经过代理的请求也启用压缩
-    gzip_types                        # 6. 指定需要压缩的 MIME 类型
-        text/plain 
-        text/css 
-        application/json 
-        application/javascript 
-        text/xml 
-        application/xml;
 }
 ```
+```nginx [https配置]
+# 1. 80 端口：捕获所有 HTTP 请求并强制 301 重定向到 HTTPS
+server {
+    listen 80;
+    server_name agentdesk.peaksscrm.com;
+    return 301 https://$host$request_uri;
+}
+
+# 2. 443 端口：提供安全的 HTTPS 服务
+server {
+    listen 443 ssl http2;  # 开启 443 端口、ssl 和 HTTP/2 协议
+    server_name agentdesk.peaksscrm.com;
+
+    # --- SSL 证书配置 ---
+    ssl_certificate     /etc/nginx/ssl/agentdesk.peaksscrm.com.pem;
+    ssl_certificate_key /etc/nginx/ssl/agentdesk.peaksscrm.com.key;
+    ssl_trusted_certificate /etc/nginx/ssl/ca-bundle.crt; # 中间链证书
+
+    # --- SSL 安全与性能优化（推荐配置） ---
+    ssl_protocols TLSv1.2 TLSv1.3;  # 禁用老旧协议，仅使用安全版本
+    ssl_ciphers HIGH:!aNULL:!MD5;   # 启用强加密算法
+    ssl_prefer_server_ciphers on;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+
+    # --- 业务逻辑配置（如反向代理或静态文件） ---
+    location / {
+        proxy_pass http://127.0.0.1:8083;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme; # 告诉后端当前是 HTTPS
+    }
+}
+```
+:::tip nginx配置常用内置变量
+Nginx 提供了大量内置变量，用于获取当前请求或服务器的各类信息，可以直接在配置中引用：
+- `$remote_addr`：客户端 IP 地址。
+- `$request_uri`：包含请求参数的原始 URI。
+- `$http_x_forwarded_for`：当前端有正向代理服务器时，此参数用于获取客户端真实的 IP 地址。
+- `$http_user_agent`：当前请求的客户端浏览器信息。
+- `$http_origin`：当前请求的 Origin 头，用于 CORS 请求。
+- `$request_uri`：包含请求参数的原始 URI，不包含主机名（例如 /foo/bar.php?arg=baz）。此变量不可被修改。
+- `$uri`：当前请求的 URI，不带请求参数。在请求处理过程中，它可能会因内部重定向或使用 index 指令而发生改变。
+- `$request_method`：客户端发起的请求动作，通常为 GET、POST、PUT 或 DELETE 等。
+- `$scheme`：请求使用的协议，如 http 或 https。
+- `$host`：请求的主机名。其优先级为：HTTP 请求行中的主机名 > Host 请求头字段 > 匹配的 server_name。
+:::
+
+
 常用命令：
 - `nginx`：启动
 - `nginx -s quit`：停止（待所有请求处理完毕后，工作进程再正常退出。适用于生产环境中的常规维护、版本升级）
@@ -262,34 +381,34 @@ http {
 ```nginx 
 server {
     listen 80;
-    server_name localhost;
+    server_name sss.aaa.com;
     
-     # 规则 A：精确匹配
+     # 规则 A（普通前缀匹配）
     location /api {
-        return 200 "命中了/api 规则";
+        # ...
     }
 
-    # 规则 B：带有 ^~ 的前缀匹配
+    # 规则 B （带^~的前缀匹配）
     location ^~ /api {
-        return 200 "命中了 ^~ /api 规则";
+       # ...
     }
 
-    # 规则 C：正则匹配（匹配所有以 .json 结尾的请求）
-    location ~ \.json$ {
-        return 200 "命中了正则 .json 规则";
+    # 规则 C （正则匹配）
+    location ~ /api {
+         # ...
     }
 }
 ```
-基于上述nginx配置，如果我们发起一个请求：GET `/api/user/info.json`，则匹配步骤为：
-1. Nginx 进行精确匹配，发现 /api/user/info.json 以 /api 开头，暂时记录规则A。然后往下寻找是否还有前缀匹配。
-2. 接着发现规则B为最长前缀匹配，一旦匹配到 ^~ /api，立即应用规则 B，并直接跳过后续所有的正则表达式检查。。
-3. 最终结果：返回 "命中了 ^~ /api 规则"。规则C 的正则表达式 \.json$ 根本没有机会被执行。
+基于上述nginx配置，如果我们发起一个请求：GET `/api/user/detail`，则匹配步骤为：
+1. 首先会扫描所有非正则的 location（即规则 A 和规则 B）。
+2. 发现规则 A（/api）和规则 B（^~ /api）都能匹配/api/user/detail，选出最长的的那个即规则B并标记为最长前缀匹配。
+3. 因为规则 B 带有 `^~`，Nginx 会立即触发“急刹车”机制，直接采用规则 B 并终止整个匹配流程
+4. 如果不存在规则B（即没有^~进行拦截），则标记规则A为最长前缀匹配，然后继续发现存在正则匹配规则C也可匹配/api/user/detail，则最终应用规则C。
 
-:::tip location匹配规则总结
-1. 先检查精确匹配（=）。
-2. 寻找最长前缀匹配，如果该前缀带有 `^~`，立即命中并结束匹配流程。
-3. 如果前缀没有 ^~，则继续按顺序检查正则匹配（`~` 或 `~*`）。
-4. 如果正则也没有命中，才回退使用之前记录的最长普通前缀匹配。
+:::tip 存在多个匹配规则都可匹配当前请求时的规则采用优先级
+
+`含^~的前缀匹配 > 正则匹配 > 普通前缀匹配`
+
 :::
 
 ### location与alias/root

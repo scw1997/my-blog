@@ -103,9 +103,9 @@ export default defineConfig({
 ```
 - 生产环境
 
-  使用`Nginx配置反向代理`来解决跨域。
+  在Nginx配置文件中`设置反向代理（将对当前域名的请求转发给其他域名）`或者`添加CORS 响应头（当前域名的资源允许其他域名访问）`来解决跨域。
 
-> 关于反向代理详见：[反向代理](/frontend/advanced/http#反向代理)
+> 详见：[反向代理](/frontend/advanced/http#反向代理)和[Nginx配置解析](/backend/operation.html#配置文件解析)
 
 
 ### CORS
