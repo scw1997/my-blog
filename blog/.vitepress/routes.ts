@@ -218,8 +218,12 @@ const routes =  [
                 collapsed: true,
                 items:[
                     {
-                        text:'MySql',
-                        link: '/backend/database/mysql'
+                        text:'MySql（上）',
+                        link: '/backend/database/mysql-1'
+                    },
+                    {
+                        text:'MySql（下）',
+                        link: '/backend/database/mysql-2'
                     },
                     {
                         text:'PostgreSql',
