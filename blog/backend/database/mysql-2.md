@@ -918,7 +918,7 @@ sudo tail -f /var/log/mysql/general.log
 ```
 :::
 
-> 慢查询日志详见：[慢查询日志](/backend/database/mysql.html#_2-获取慢查询日志)
+> 慢查询日志详见：[慢查询日志](/backend/database/mysql-2.html#_2-获取慢查询日志)
 
 
 ## 主从复制

@@ -373,7 +373,7 @@ CREATE TABLE user_profiles (
 
 实现方式：`在从表（如员工）中添加主表（如部门）的主键作为外键`。
 
-示例见：[外键Foreign Key](/backend/database/mysql.html#外键foreign-key)
+示例见：[外键Foreign Key](/backend/database/mysql-1.html#外键foreign-key)
 
 #### 3. 多对多关系
 
