@@ -1699,7 +1699,7 @@ public class UserController {
 }
 ```
 
-启动项目后，访问 http://localhost:8080/swagger-ui.html   或类似路径，即可看到自动生成的交互式 API 文档。
+启动项目后，访问 `localhost:8080/swagger-ui.html`或类似路径，即可看到自动生成的交互式 API 文档。
 
 :::
 

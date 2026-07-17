@@ -228,6 +228,14 @@ const routes =  [
                     {
                         text:'PostgreSql',
                         link: '/backend/database/postgre-sql'
+                    },
+                    {
+                        text:'MongoDB',
+                        link: '/backend/database/mongodb'
+                    },
+                    {
+                        text:'Redis',
+                        link: '/backend/database/redis'
                     }
                 ]
             },
