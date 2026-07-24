@@ -1,8 +1,12 @@
 # MySQL（上）
 
-关系型数据库。强一致性（ACID事务），严格的表结构，支持复杂关联查询。`适合涉及金钱交易，账务订单等对数据一致性要求极高的核心场景`。
+关系型数据库。强一致性（ACID事务），严格的表结构，支持复杂关联查询。
+
+`适合涉及金钱交易，账务订单等对数据一致性要求极高的核心场景`。
 
 ## 下载安装
+
+### Windows
 
 - 社区v8.0版（免费）下载地址：[https://dev.mysql.com/downloads/mysql/](https://dev.mysql.com/downloads/mysql/)
 - 添加环境变量： 在系统变量中添加：`MYSQL_HOME`（mysql安装目录），然后在环境变量：`Path`中新建地址：`%MYSQL_HOME%\bin`
@@ -21,6 +25,61 @@
 - 登录mysql时，`-h`和`-P`为可选项，不填则默认连接本地的`3306`端口
 :::
 
+
+### Linux
+
+以Centos 7.0版本为例：
+
+- 卸载系统中自带的mysql，mariadb（另一种数据库）安装包，否则会安装失败
+  ```shell
+  # 卸载mysql
+  #查找系统安装的mysql包
+  rpm -qa | grep mysql 
+  #卸载该包（如有）
+  rpm -e --nodeps [查找到的包名] 
+  
+  # 卸载mariadb
+  rpm -qa | grep mariadb
+  rpm -e --nodeps [查找到的包名]
+  ```
+- 下载Linux系统对应版本的Mysql`.tar.gz` 压缩包并上传至系统。
+- 解压并移动到指定目录（如 /usr/local/mysql），例如：`tar -zxvf mysql-8.0.31-linux-glibc2.12-x86_64.tar.gz -C /usr/local/mysql`。
+- 配置环境变量：编辑 `/etc/profile`文件，在末尾添加：
+  ```shell
+  export MYSQL_HOME=/usr/local/mysql
+  export PATH=$MYSQL_HOME/bin:$PATH
+  ```
+- 注册MySql为系统服务
+  ```shell
+  cp /usr/local/mysql/support-files/mysql.server /etc/init.d/mysql
+  checkconfig --add mysql
+  ```
+- 初始化数据库
+  ```shell
+  groupadd mysql
+  useradd -r -g mysql -s /bin/false mysql
+  # 初始化完成后，日志会输出mysql root用户的临时密码，需记录下来
+  ```
+- 启动并登录MySql
+  ```shell
+  systemctl start mysql
+  mysql -uroot -p # 然后输入密码
+  ```
+- 配置Mysql用户密码并授权远程访问
+  ```shell
+  # 修改密码
+  ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '[新密码]';
+  # 创建远程访问用户
+  CREATE USER 'root'@'%' IDENTIFIED BY '[新密码]';
+  GRANT ALL PRIVILEGES ON *.* TO 'root'@'%';
+  FLUSH PRIVILEGES;
+  ```
+  - 测试远程访问
+  ```shell
+  #例如在win平台下连接
+  mysql -h[ip] -P[端口] -u[用户名] -p[密码]
+  # 如果发现链接不上，可能是防火墙问题，请检查防火墙
+  ```
 ## SQL语句分类
 
 

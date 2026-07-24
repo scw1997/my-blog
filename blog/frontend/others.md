@@ -442,3 +442,24 @@ onBlur={() => document.body.removeEventListener("touchmove", stopMove)
 
 
 [Cookie]:/frontend/advanced/cookie-session#cookie
+
+
+## CI/CD
+### 持续集成 
+开发者会频繁地（每天多次）将代码提交到共享仓库（如 Git）。每次提交都会自动触发一系列操作，包括拉取代码、编译构建、运行测试（单元测试、集成测试）和代码质量检查。
+
+CI 的核心目标是尽早发现代码集成时的冲突和缺陷，保证主干代码的质量。
+### 持续交付/部署
+这是流水线的后半段。
+- 持续交付 (Continuous Delivery)：
+
+  将通过 CI 的代码自动打包成可部署的制品（如 JAR 包、Docker 镜像），并部署到类生产环境的测试服务器上，随时准备好进行人工审批后的生产发布。
+- 持续部署 (Continuous Deployment)：
+
+  在持续交付的基础上更进一步，将通过所有自动化测试的代码自动发布到生产环境，无需人工干预。
+
+### 搭建工具
+
+- **Jenkins**：老牌、功能极其强大的开源工具，插件生态丰富，几乎可以集成任何工具。适合需要高度定制化流程的企业级项目。
+- **GitHub Actions / GitLab CI**：与代码托管平台（GitHub/GitLab）深度集成，配置简单（通常通过 YAML 文件），开箱即用，是目前非常主流的选择。
+- **云厂商服务**：如阿里云云效、华为云 CodeArts、Azure DevOps 等，提供一站式的 DevOps 解决方案，免去了维护 CI/CD 服务器的成本。

@@ -826,6 +826,7 @@ public class OrderService {
 
 :::warning 注意
 - 声明Bean类的四大注解要想生效必须要被组件扫描注解`@ComponentScan`注解，不过SpringBoot的启动类注解`@SpringBootApplication`已包含了该注解。所以启动类文件不可被移动到其他路径，必须和service，controller，mapper架构属于同一层级。
+- `推荐使用@Resource代替@Autowired`，它属于 Java 标准规范，减少了代码与 Spring 框架的强耦合。
 - 如果一个接口有多个实现类，Spring 不知道该注入哪一个时会报错。此时可以配合以下注解：
 
   `@Qualifier("beanName")`：指定具体的 Bean 名称进行精确注入。
@@ -1163,7 +1164,10 @@ public class WebConfig implements WebMvcConfigurer {
   @Override
   public void addInterceptors(InterceptorRegistry registry) {
     //注册拦截器并设置拦截/不拦截哪些请求
-    registry.addInterceptor(myInterceptor).addPathPatterns("/**").excludePathPatterns("login");
+    //注册多个拦截器可通过order来控制拦截顺序,数字越小顺序越在前。
+    registry.addInterceptor(myInterceptor).addPathPatterns("/**").excludePathPatterns("login").order(0);
+    registry.addInterceptor(xxx).addPathPatterns("/**").order(1);
+  
   }
 }
 

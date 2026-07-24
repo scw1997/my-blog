@@ -79,17 +79,17 @@ session 是另一种记录服务器和客户端会话状态的机制，并且`se
 
 ### 特点
 
-- Session 是`基于 cookie` 实现，cookie失效或删除则session也无法获取。
+- session 是`基于 cookie` 实现，cookie失效或删除则session也无法获取（即服务端获取到session时已经知道当前用户是谁）。
 
-- Session 是存储在`服务器端`，所以安全性比cookie高。
+- session 是存储在`服务器端`，所以安全性比cookie高。
 
-- Session 可以存`任意数据类型`。
+- session 可以存`任意数据类型`。
 
-- Session的默认生效时间是30分钟。只要在生效时间内，即使该session值已被修改，依然可通过旧有Cookie访问到旧有Session值。
+- session的默认生效时间是30分钟。只要在生效时间内，即使该session值已被修改，依然可通过旧有Cookie访问到旧有Session值。
 
-- Session 可存储数据的容量远高于 Cookie，但是当访问量过多，会占用过多的服务器资源。
+- session 可存储数据的容量远高于 Cookie，但是当访问量过多，会占用过多的服务器资源。
 
-- 在`集群服务器`场景下，Session无法使用。因为`Session无法在集群服务器之间共享`。
+- 在`集群服务器`场景下，Session无法使用。因为`Session无法在集群服务器之间共享`（推荐使用Redis实现集群会话共享）。
 
 ## Token
 

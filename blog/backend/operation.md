@@ -75,10 +75,7 @@
 
 大多数场景，推荐使用系统自带的包管理器（如`apt` 或 `yum/dnf`）进行安装，这种方式**速度快、依赖自动处理且便于后续升级**。如果有特定版本需求，也可以上传软件二进制压缩包到Linux系统中`手动安装`。
 
-以下是常用软件安装步骤:
-
-#### Java安装
-
+以java安装为例：
 - 从 Oracle 官网下载Linux系统对应版本的`.tar.gz` 压缩包。
 - 解压并移动到指定目录（如 /usr/local/java），例如：`tar -zxvf jdk-17.0.19_linux-x64_bin.tar.gz -C /usr/local/java`。
 - 配置环境变量：编辑 `/etc/profile`文件，在末尾添加：
@@ -89,59 +86,12 @@
 - 使配置生效：`source /etc/profile`
 - 验证安装：`java -version`,若输出版本号则说明安装成功。
 
-#### MySql安装
-- 卸载系统中自带的mysql，mariadb（另一种数据库）安装包，否则会安装失败
-  ```shell
-  # 卸载mysql
-  #查找系统安装的mysql包
-  rpm -qa | grep mysql 
-  #卸载该包（如有）
-  rpm -e --nodeps [查找到的包名] 
-  
-  # 卸载mariadb
-  rpm -qa | grep mariadb
-  rpm -e --nodeps [查找到的包名]
-  ```
-- 下载Linux系统对应版本的Mysql`.tar.gz` 压缩包并上传至系统。
-- 解压并移动到指定目录（如 /usr/local/mysql），例如：`tar -zxvf mysql-8.0.31-linux-glibc2.12-x86_64.tar.gz -C /usr/local/mysql`。
-- 配置环境变量：编辑 `/etc/profile`文件，在末尾添加：
-  ```shell
-  export MYSQL_HOME=/usr/local/mysql
-  export PATH=$MYSQL_HOME/bin:$PATH
-  ```
-- 注册MySql为系统服务
-  ```shell
-  cp /usr/local/mysql/support-files/mysql.server /etc/init.d/mysql
-  checkconfig --add mysql
-  ```
-- 初始化数据库
-  ```shell
-  groupadd mysql
-  useradd -r -g mysql -s /bin/false mysql
-  # 初始化完成后，日志会输出mysql root用户的临时密码，需记录下来
-  ```
-- 启动并登录MySql
-  ```shell
-  systemctl start mysql
-  mysql -uroot -p # 然后输入密码
-  ```
-- 配置Mysql用户密码并授权远程访问
-  ```shell
-  # 修改密码
-  ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '[新密码]';
-  # 创建远程访问用户
-  CREATE USER 'root'@'%' IDENTIFIED BY '[新密码]';
-  GRANT ALL PRIVILEGES ON *.* TO 'root'@'%';
-  FLUSH PRIVILEGES;
-  ```
-  - 测试远程访问
-  ```shell
-  #例如在win平台下连接
-  mysql -h[ip] -P[端口] -u[用户名] -p[密码]
-  # 如果发现链接不上，可能是防火墙问题，请检查防火墙
-  ```
 
-#### Nginx安装
+## Nginx
+
+Nginx 是目前互联网领域使用最广泛的高性能**反向代理服务器、负载均衡器，电子邮件代理服务器以及 Web服务器**。它以事件驱动的非阻塞 I/O 架构著称，能够以极低的内存消耗处理数万级并发连接
+
+### 安装启动
 
 - 安装nginx运行时所需依赖
   ```shell
@@ -158,12 +108,6 @@
   ```
 - 使环境变量配置生效：`source /etc/profile`
 - 进入安装目录&启动nginx：`cd /usr/local/nginx/sbin` 和`sbin /nginx`
-
-#### Node安装
-
-## Nginx
-
-Nginx 是目前互联网领域使用最广泛的高性能**反向代理服务器、负载均衡器，电子邮件代理服务器以及 Web服务器**。它以事件驱动的非阻塞 I/O 架构著称，能够以极低的内存消耗处理数万级并发连接
 
 ### 核心路径结构
 
