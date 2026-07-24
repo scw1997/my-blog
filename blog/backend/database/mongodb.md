@@ -273,3 +273,29 @@ try {
 
 
 :::
+
+## 日志
+
+### 运行日志
+
+MongoDB 默认会将运行日志以 JSON 格式记录在磁盘上，默认位置为 `/var/log/mongodb/mongod.log`。
+
+```bash
+# 实时查看最新的日志
+tail -f /var/log/mongodb/mongod.log
+
+# 搜索包含 "ERROR" 或 "WriteConflict" 的日志
+grep -E "ERROR|WriteConflict" /var/log/mongodb/mongod.log
+```
+
+### mongosh 查询
+
+如果你已经连接到了 MongoDB 实例，可以查看启动警告或最近的日志，但**只能查看最近的 1024 条记录**。
+
+```js
+// 查看所有最近日志
+db.adminCommand({ getLog: "global" })
+
+// 查看启动警告
+db.adminCommand({ getLog: "startupWarnings" })
+```
