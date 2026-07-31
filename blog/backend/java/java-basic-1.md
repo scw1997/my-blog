@@ -20,13 +20,6 @@
 - 通过调用`javac java文件名`来使用**编译器**编译java文件为class文件，再通过`java class文件名（不含后缀）`启动**虚拟机**来运行class文件被编译后的字节码。
   > 注意：java文件名需要跟文件内部的public class名一致，否则运行会报错。
 
-- JDK/JRE/JVM关系
-  |名词|介绍|
-  |--|--|
-  |JDK|JDK是java开发工具包，包含了JVM虚拟机，核心类库和开发工具（java,javac等）。用于编写代码+运行程序。|
-  |JRE|JRE是java运行环境。包含了JVM虚拟机，核心类库和运行工具。如果只需要运行class文件，则只需要JRE即可。|
-  |JVM|JVM是虚拟机，为java程序真正运行的地方。|
-
 ## 数据类型
 
 #### 基本类型
