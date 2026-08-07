@@ -1368,6 +1368,190 @@ try (ZipInputStream zis = new ZipInputStream(new FileInputStream("archive.zip"))
 
 :::
 
+## 异步
+
+`CompletableFuture` 是 Java 8 引入的异步编程核心类，它同时实现了 Future 和 CompletionStage 接口。相比传统的 Future，它解决了无法回调、无法组合、阻塞获取结果三大痛点。
+
+Java的异步与JS的异步模型非常相似，但存在一些差异：
+
+| JS (Promise / async) | Java (CompletableFuture) | 语义说明 |
+| :--- | :--- | :--- |
+| `new Promise(resolve => resolve(val))` | `CompletableFuture.completedFuture(val)` | 创建一个已完成的异步结果 |
+| `Promise.reject(err)` | `CompletableFuture.failedFuture(ex)` | 创建一个已失败的异步结果 |
+| `async () => { return val; }` | `supplyAsync(() -> val, executor)` | 启动一个有返回值的异步任务 |
+| `async () => { doWork(); }` | `runAsync(() -> doWork(), executor)` | 启动一个无返回值的异步任务 |
+| `.then(val => transform(val))` | `.thenApply(val -> transform(val))` | 同步转换结果（map） |
+| `.then(async val => await fetch())` | `.thenCompose(val -> fetchAsync())` | 异步转换并展平（flatMap） |
+| `.catch(err => fallback)` | `.exceptionally(ex -> fallback)` | 异常兜底 |
+| `.finally(() => cleanup())` | `.whenComplete((res, ex) -> cleanup())` | 无论成功失败都执行副作用 |
+| `Promise.all([p1, p2])` | `allOf(cf1, cf2)` | 等待全部完成 |
+| `Promise.race([p1, p2])` | `anyOf(cf1, cf2)` | 任一完成即返回 |
+| `await promise` | `future.join()` / `future.get()` | 阻塞当前线程获取结果 |
+
+
+基本示例：
+```java
+// ✅ 生产环境务必指定自定义线程池
+ExecutorService pool = Executors.newFixedThreadPool(10);
+
+// 启动一个有返回值的异步任务，并指定线程池
+CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> {
+    return queryUserFromDB(userId);
+}, pool);
+```
+
+#### 创建异步任务
+:::code-group
+```java
+// 有返回值 → supplyAsync
+CompletableFuture<User> userFuture = CompletableFuture.supplyAsync(() -> {
+          Thread.sleep(1000);
+          return new User("Alice");
+        }, executor);
+
+// 无返回值 → runAsync
+CompletableFuture<Void> logFuture = CompletableFuture.runAsync(() -> {
+  try { Thread.sleep(500); } catch (InterruptedException e) {}
+  System.out.println("done");
+}, executor);
+```
+```js
+// 有返回值
+const userPromise = new Promise((resolve) => {
+    setTimeout(() => resolve({ name: "Alice" }), 1000);
+});
+
+// 无返回值
+const logPromise = new Promise((resolve) => {
+    setTimeout(() => { console.log("done"); resolve(); }, 500);
+});
+```
+:::
+
+#### 异步转换
+
+:::code-group
+```java
+
+// thenApply = .then(返回普通值)
+userFuture.thenApply(user -> user.getName());  
+// → CompletableFuture<String>
+
+// ❌ thenApply 返回 CF → 会嵌套！
+userFuture.thenApply(user -> getOrdersAsync(user.getId()));
+// → CompletableFuture<CompletableFuture<List<Order>>> 😱
+
+// ✅ thenCompose = .then(返回Promise) → 手动展平
+userFuture.thenCompose(user -> getOrdersAsync(user.getId()));
+// → CompletableFuture<List<Order>>
+```
+```js
+// .then 返回普通值 → 自动包装为 Promise<B>
+promiseA.then(a => a.getName());           // Promise<string>
+
+// .then 返回新 Promise → 自动展平（不会嵌套）
+promiseA.then(a => fetchOrders(a.id));     // Promise<Order[]> ✅ 自动展平
+```
+:::
+
+#### 异常处理
+:::code-group
+```java
+fetchUserAsync(id)
+    .thenApply(user -> process(user))
+        .exceptionally(ex -> {        // ≈ .catch
+        log.error("Failed:", ex);
+        return defaultUser;
+    })
+            .whenComplete((result, ex) -> { // ≈ .finally
+hideLoading();              // 注意：不改变结果，仅做副作用
+    });
+```
+
+```js
+fetchUser(id)
+    .then(user => process(user))
+    .catch(err => {
+        console.error("Failed:", err);
+        return defaultUser;       // 兜底值
+    })
+    .finally(() => {
+        hideLoading();            // 清理副作用
+    });
+```
+:::
+
+
+### 多任务组合
+
+:::code-group
+```java
+// allOf 返回 Void，需要手动收集结果
+CompletableFuture<User> userF = fetchUserAsync(id);
+CompletableFuture<List<Order>> ordersF = fetchOrdersAsync(id);
+
+CompletableFuture.allOf(userF, ordersF)
+    .thenApply(v -> {
+        // allOf 保证此时两个 future 都已完成，join() 不会阻塞
+        User user = userF.join();
+        List<Order> orders = ordersF.join();
+        return new UserVO(user, orders);
+    });
+
+// anyOf ≈ Promise.race
+CompletableFuture.anyOf(fetchA(), fetchB())
+    .thenAccept(result -> System.out.println("Fastest: " + result));
+```
+
+```js
+// 并行等待全部
+const [user, orders] = await Promise.all([
+    fetchUser(id),
+    fetchOrders(id)
+]);
+
+// 取最快的
+const fastest = await Promise.race([fetchA(), fetchB()]);
+```
+:::
+
+#### 阻塞获取结果
+:::code-group
+```java
+// join() 会真正阻塞当前线程！
+User user = fetchUserAsync(id).join();
+
+// 带超时的 get()（推荐）
+User user = fetchUserAsync(id).get(3, TimeUnit.SECONDS);
+```
+```js
+// await 只能在 async 函数内使用，不阻塞事件循环
+const user = await fetchUser(id);
+```
+:::
+
+:::warning 注意
+JS 的 await 是语法糖，底层仍是回调，**不阻塞线程**；
+
+Java 的 join()/get() 是真正的**线程阻塞**。
+
+在 Web 请求处理线程中滥用会导致线程池耗尽。**尽量全程使用回调链，仅在最终入口点才阻塞**。
+:::
+
+:::tip java和js异步思维对比
+```text
+JS 开发者 → Java CompletableFuture 心智模型：
+
+1. Promise<T>          → CompletableFuture<T>
+2. .then(map)          → .thenApply()
+3. .then(flatMap)      → .thenCompose()     ← 最容易踩坑
+4. .catch()            → .exceptionally()
+5. .finally()          → .whenComplete()
+6. Promise.all()       → allOf() + join()   ← 写法更繁琐
+7. await               → join()             ← 但它是真阻塞！
+8. 不需要关心线程      → 必须传自定义线程池   ← 生产必做
+```
+:::
 
 ## 进程
 

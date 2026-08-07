@@ -945,7 +945,85 @@ public class AliyunOSSUtils {
 }
 ```
 
+### 处理跨域
 
+在 Spring Boot 中处理跨域（CORS）主要有三种方式：
+
+:::code-group
+```java [全局配置类]
+// 添加一个配置bean类
+// 通过实现 WebMvcConfigurer 接口统一配置，对所有接口生效
+
+@Configuration
+public class CorsConfig implements WebMvcConfigurer {
+
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/**")
+                //生产环境务必指定具体域名，不要用 *
+                //当 allowCredentials(true) 时，allowedOrigins 不能设置为 "*"，否则浏览器会直接拒绝。必须显式列出允许的前端域名。
+                // 如果需要动态匹配多个子域名，请使用 allowedOriginPatterns("https://*.your-domain.com") 代替 allowedOrigins。
+                .allowedOrigins("https://your-frontend.com", "http://localhost:5173")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedHeaders("*")
+                // 如果前端需要携带 Cookie/Token，必须开启
+                .allowCredentials(true)
+                // 预检请求缓存时间（秒），减少 OPTIONS 请求次数
+                .maxAge(3600);
+    }
+}
+
+```
+```java [CorsFilter 过滤器]
+//你的项目中同时存在 JWT 拦截器、安全过滤器等组件时，CORS 配置（上面第一种方案）可能被拦截器“抢先”执行导致失效。
+// 此时应使用 CorsFilter，确保跨域头在所有业务逻辑之前写入响应。
+
+@Configuration
+public class CorsFilterConfig {
+
+    @Bean
+    public FilterRegistrationBean<CorsFilter> corsFilter() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOriginPatterns(List.of("https://*.your-domain.com", "http://localhost:*"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+
+        FilterRegistrationBean<CorsFilter> bean = new FilterRegistrationBean<>(new CorsFilter(source));
+        // 🔑 设置最高优先级，确保在 JWT/Security 过滤器之前执行
+        bean.setOrder(Ordered.HIGHEST_PRECEDENCE);
+        return bean;
+    }
+}
+```
+
+```java [@CrossOrigin 注解] 
+//仅对特定 Controller 或方法生效，适合只有少数接口需要跨域的场景。
+
+@RestController
+@RequestMapping("/api/public")
+@CrossOrigin(
+        origins = "https://your-frontend.com",
+        methods = {RequestMethod.GET, RequestMethod.POST},
+        allowCredentials = "true",
+        maxAge = 3600
+)
+public class PublicController {
+
+    @GetMapping("/health")
+    public String health() {
+        return "OK";
+    }
+}
+```
+:::
+:::warning 注意
+如果后端已配置 CORS，Nginx 层又加了一遍 Access-Control-Allow-Origin，浏览器收到两个同名响应头会直接报错。原则是：CORS 只在网关层或后端二选一配置，不要两边都加。
+:::
 ### 文件上传
 
 :::code-group
@@ -990,7 +1068,7 @@ servlet:
       max-request-size: 100MB
 
 ```
-
+:::
 ### 过滤器 Filter
 
 过滤器是`Servlet`规范中的一种组件，用于拦截请求，在请求处理之前执行。
@@ -1568,9 +1646,9 @@ import org.slf4j.LoggerFactory;
 
 public class UserService {
   //声明 Logger
-  // ✅ 推荐：使用当前类作为 logger 名称
+  // 推荐：使用当前类作为 logger 名称
   private static final Logger log = LoggerFactory.getLogger(UserService.class);
-  //Lombok 用户可直接用 @Slf4j 注解替代上面两行
+  //Lombok 用户可直接用 @Slf4j 注解替代上面这行代码
   
   //日志级别与输出
   //用{}表示占位符
@@ -1655,13 +1733,41 @@ Spring Boot 推荐使用`logback-spring.xml`（而非 logback.xml），以支持
   </springProfile>
 </configuration>
 ```
-配置日志模板后还需在application.yml中`激活profile环境`
-```yaml 
+配置日志模板后还需`激活profile环境`来触发配置中`<springProfile>`标签所对应环境的配置，共有三种激活方式：
+:::code-group
+```yaml [1.application.yml（开发环境）]
+# 用于配置开发环境默认值
 # src/main/resources/application.yml
 spring :
   profiles:
     active: dev
 ```
+```bash [2.命令行参数（生产环境）]
+# 在启动命令中指定，优先级最高，无需修改任何配置文件或代码。
+
+# 方式一：--spring.profiles.active
+java -jar my-service.jar --spring.profiles.active=prod
+
+# 方式二：-D JVM 系统属性
+java -Dspring.profiles.active=prod -jar my-service.jar
+
+# 同时激活多个 Profile（逗号分隔）
+java -jar my-service.jar --spring.profiles.active=prod,monitoring
+```
+```bash [3.环境变量（容器化部署）]
+# Linux/Mac 环境变量（注意：点号替换为下划线并大写）
+export SPRING_PROFILES_ACTIVE=prod
+java -jar my-service.jar
+
+# Docker
+docker run -e SPRING_PROFILES_ACTIVE=prod my-service:latest
+
+# K8s Deployment
+env:
+  - name: SPRING_PROFILES_ACTIVE
+    value: "prod"
+```
+:::
 :::warning 日志使用注意
 - **禁止字符串拼接（应使用占位符代替）**，如：`log.info("用户创建成功: userId={}", userId);`）：使用了字符串则无论当前日志级别是否开启都会执行字符串拼接，导致性能下降
 - **异常日志不要使用toString()**：此举会丢失堆栈信息，并且 异常对象必须作为最后一个独立参数（如：`log.error("订单支付失败: orderId={}", orderId, e);`）
@@ -2769,7 +2875,7 @@ MyBatis-Plus **完全兼容 MyBatis 的所有特性和配置**，你可以把它
 
 ```
 
-2. 修改Mapper里接口写法改为继承BaseMapper（mybatis plus提供），无需编写SQL
+2. 修改**Mapper**里接口写法改为继承BaseMapper（mybatis plus提供），无需编写SQL
 
 :::code-group
 ```java [mybatis plus写法]
