@@ -748,6 +748,7 @@ services:
     container_name: mysql
     ports:
       - "3307:3306"
+   
     environment:
       TZ: Asia/Shanghai
       MYSQL_ROOT_PASSWORD: 123
@@ -771,6 +772,10 @@ services:
     # 配置依赖关系，确保mysql容器配置运行成功后再运行java-app容器
     depends_on:
       - mysql
+     # 环境变量（如sping项目中application.yml中引用的环境变量）  
+    environment:
+      - QQ_MAIL_AUTH_CODE=${QQ_MAIL_AUTH_CODE}   # 从宿主机.env文件读取
+      - ALIBABA_CLOUD_ACCESS_KEY_ID=xxxxxxx
   # nginx镜像的容器配置    
   nginx:
     image: nginx:1.20.2

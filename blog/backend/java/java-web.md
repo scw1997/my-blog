@@ -891,6 +891,71 @@ app.upload.max-sizes[2]=100MB
 ```
 :::
 
+
+#### 环境变量
+
+日常开发中，推荐使用`${}`来为application.yml文件中的一些重要敏感参数配置变量。 Spring Boot 启动时会自动去运行环境中查找同名变量并替换。
+
+示例：
+
+```yaml
+# application.yml
+
+spring :
+  application:
+      name: mybatis-test
+  profiles:
+    active: dev
+  # 配置数据库
+  datasource:
+    url: jdbc:mysql://localhost:3306/sys
+    username: root
+    # 这里不写死，配置文件会从环境变量中获取
+    password: ${MYSQL_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+```
+
+如何配置环境变量：
+
+:::code-group
+```text [本地开发(IntelliJ IDEA) ]
+1.点击 IDEA 顶部工具栏的 运行配置下拉框 → Edit Configurations...
+2.选中你的 Spring Boot 启动类
+3.找到 Environment variables 输入框（如果没有显示，点击 "Modify options" → 勾选 "Environment variables"）
+4. 点击右侧的 📄 图标打开编辑器，添加键值对：
+    MYSQL_PASSWORD=xxx
+
+```
+```bash [测试环境]
+# 当你把项目打成 jar 包运行时，通过命令行传入：
+
+# Linux / Mac平台
+# 临时生效（仅当前终端会话）
+export MYSQL_PASSWORD=xxx
+java -jar myapp.jar
+# 或者写成一行（更简洁）
+MYSQL_PASSWORD=xxx java -jar myapp.jar
+
+# Windows PowerShell平台
+$env:MYSQL_PASSWORD="xxx"
+java -jar myapp.jar
+
+
+# Windows CMD平台
+set MYSQL_PASSWORD=xxx
+java -jar myapp.jar
+```
+```bash [Docker部署(生产环境)]
+# docker-compose.yml
+services:
+  app:
+    image: myapp:latest
+    environment:
+      - MYSQL_PASSWORD=${QQ_MAIL_AUTH_CODE}   # 从宿主机.env文件读取 或者写成具体值
+      - ALIBABA_CLOUD_ACCESS_KEY_ID=xxxx
+```
+:::
+
 :::warning 注意
 
 - 新项目推荐使用`yml（yaml）格式`，yml格式比properties格式更简洁
