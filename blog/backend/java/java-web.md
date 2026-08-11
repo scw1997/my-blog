@@ -1017,7 +1017,7 @@ public class AliyunOSSUtils {
 :::code-group
 ```java [全局配置类]
 // 添加一个配置bean类
-// 通过实现 WebMvcConfigurer 接口统一配置，对所有接口生效
+// 通过实现 WebMvcConfigurer 接口统一配置，自动对所有接口生效
 
 @Configuration
 public class CorsConfig implements WebMvcConfigurer {
@@ -1046,6 +1046,8 @@ public class CorsConfig implements WebMvcConfigurer {
 @Configuration
 public class CorsFilterConfig {
 
+   //Spring Boot 的 FilterRegistrationBean 机制会在应用启动时自动将该过滤器注册到 Servlet 容器中。
+   //此后，每一个进入后端的 HTTP 请求都会自动经过这个过滤器
     @Bean
     public FilterRegistrationBean<CorsFilter> corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
