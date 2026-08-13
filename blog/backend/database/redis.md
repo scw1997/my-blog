@@ -64,6 +64,17 @@ redis-cli -h <服务器IP地址> -p 6379 -a <你设置的密码>
 ```
 :::
 
+:::warning 注意
+- 如果连不上redis，还需考虑**是否服务器开启了防火墙**：
+  - `telnet [ip] [port]`：测试是否能连通某远程连接
+  - `systemctl status firewalld`：查看防火墙状态；
+  - `systemctl stop firewalld`:关闭防火墙；
+  - `systemctl start firewalld`：开启防火墙
+  - `systemctl enable firewalld`：设置防火墙开机自启
+  - `firewall-cmd --permanent --add-port=6379/tcp`：添加防火墙端口白名单
+
+:::
+
 ## 单线程架构
 
 Redis 的单线程指的是：**它所有的核心命令（如 GET、SET、INCR 等）都是由一个主线程串行执行的**。 就像银行只有一个服务窗口，所有客户（客户端请求）都必须排队，一个一个地接受服务。

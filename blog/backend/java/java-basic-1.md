@@ -451,7 +451,7 @@ ArrayList<String> list = new ArrayList<String>();
 - 选项配置（如日志级别：INFO, WARN, ERROR）
 - 替代魔法字符串或整数常量
 
-### 枚举的自我校验
+#### 枚举的自我校验
 
 
 场景：枚举类Gender中定义了多个值，如果传递输入的值（如接口请求时未进入Controller的JSON 反序列化阶段）不在枚举类中定义，则返回错误信息。
