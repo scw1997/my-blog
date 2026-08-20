@@ -777,7 +777,7 @@ public class OrderService {
 ```
 ```java [写法2]
 @Service
-@RequiredArgsConstructor //自动创建必须的构造函数（来自lombok）
+@RequiredArgsConstructor //自动创建必须（带final或@NotNull）的构造函数（来自lombok）
 public class OrderService {
     // 使用 final 关键字，保证依赖一旦注入就不可被修改
     private final UserService userService;
