@@ -2363,9 +2363,9 @@ MyBatis 是一款优秀的`持久层（DAO层）`框架，它避免了几乎所�
 # mysql配置
 spring:
     datasource:
-      url: jdbc:mysql://192.168.100.128:3306/codeyell
-      username: root
-      password: 1234
+      url: jdbc:mysql://[ip]:[端口]/[数据库名称]
+      username: [用户名] #通常为root
+      password: [密码]
 
 # 配置 MyBatis 的日志输出（可选）
 mybatis:
