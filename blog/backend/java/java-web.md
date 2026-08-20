@@ -2357,16 +2357,20 @@ MyBatis 是一款优秀的`持久层（DAO层）`框架，它避免了几乎所�
 ### 准备工作
 
 1. 使用Idea创建SpringBoot项目，并勾选`Mybatis FrameWork`和`Mysql Driver`等依赖
-2. 配置src/main/resources/application.properties文件,添加如下数据库配置内容：
-```properties
+2. 配置`src/main/resources/application.yml`,添加如下数据库配置内容：
+```yml
 # 配置数据库链接信息
-spring.datasource.url=jdbc:mysql://localhost:3306/[数据库名称]
-spring.datasource.username=root
-spring.datasource.password=[密码]
-spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+# mysql配置
+spring:
+    datasource:
+      url: jdbc:mysql://192.168.100.128:3306/codeyell
+      username: root
+      password: 1234
 
 # 配置 MyBatis 的日志输出（可选）
-mybatis.configuration.log-impl=org.apache.ibatis.logging.stdout.StdOutImpl
+mybatis:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 ```
 
 ### 基本使用
@@ -2930,7 +2934,8 @@ MyBatis-Plus **完全兼容 MyBatis 的所有特性和配置**，你可以把它
 <!--使用mybatis-plus-boot-starter代替mybatis-spring-boot-starter-->
 <dependency>
     <groupId>com.baomidou</groupId>
-    <artifactId>mybatis-plus-boot-starter</artifactId>
+    <!-- spring boot 4.x    -->
+    <artifactId>mybatis-plus-boot4-starter</artifactId>
     <version>3.5.3</version>
 </dependency>
 
@@ -2941,6 +2946,9 @@ MyBatis-Plus **完全兼容 MyBatis 的所有特性和配置**，你可以把它
 <!--        </dependency>-->
 
 ```
+:::warning 注意
+- spring boot 4.x版本需要使用**mybatis-plus-spring-boot4-starter**，3.x则需要**mybatis-plus-spring-boot3-starter**。2.x及以下则使用**mybatis-plus-boot-starter**。`版本不兼容项目启动可能报错`
+:::
 
 2. 修改**Mapper**里接口写法改为继承BaseMapper（mybatis plus提供），无需编写SQL
 
