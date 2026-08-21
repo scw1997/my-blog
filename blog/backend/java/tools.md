@@ -3,6 +3,7 @@
 
 ## jwt的生成和解析
 
+
 :::code-group
 
 ```java [java工具类]
@@ -132,3 +133,99 @@ public final class JwtUtils {
     <scope>runtime</scope>
 </dependency>
 ```
+
+
+## 全局接口参数校验异常捕获
+
+:::code-group
+
+```java 实体类
+package com.scw.codeyellservice.mojo;
+
+import jakarta.validation.constraints.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+
+
+@Data
+@AllArgsConstructor
+public class AuthParams {
+    @NotBlank(message = "用户名不能为空")
+    @Size(min = 2, max = 20, message = "用户名长度不能小于2或大于20")
+    private String name;
+    @NotBlank(message = "邮箱不能为空")
+    @Email(message = "邮箱格式不正确")
+    private String email;
+    @NotBlank(message = "验证码不能为空")
+    private String code;
+    @NotBlank(message = "密码不能为空")
+    private String password;
+}
+
+```
+```java [controller层]
+ public Response register(@RequestBody @Valid AuthParams authParams ) {
+    //走到这里说明@Valid校验通过
+    log.info("校验通过");
+}
+```
+
+```java [全局异常捕获类]
+package com.scw.codeyellservice.bean;
+
+import com.scw.codeyellservice.mojo.Response;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@RestControllerAdvice
+@Slf4j
+public class GlobalExceptionHandler {
+    @Data
+    @AllArgsConstructor
+    public static class FieldError {
+        private String field;
+        private String message;
+        private Object rejectedValue;
+    }
+
+    /**
+     * 处理 @Valid 校验失败
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+
+    //依然设置返回200状态码
+    @ResponseStatus(HttpStatus.OK)
+    public Response handleValidation(
+            MethodArgumentNotValidException ex) {
+
+        List<FieldError> errors = ex.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(e -> new FieldError(
+                        e.getField(),           // 字段名: "address.city"
+                        e.getDefaultMessage(),  // 校验消息
+                        e.getRejectedValue()    // 非法值（可选）
+                ))
+                .collect(Collectors.toList());
+
+        log.warn("参数校验失败: {}", errors);
+        //设置报错时返回数据格式
+        return Response.error(errors.toString());
+    }
+
+
+
+
+}
+```
+
+:::

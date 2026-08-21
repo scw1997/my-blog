@@ -647,6 +647,32 @@ public List<User> listUsers(UserQuery query) {}
 public User createUser(@RequestBody User user ) {
   // user.name = 张三, user.age = 25
 }
+
+
+//通过添加注解@Valid实现对应字段的校验
+//假如User实体类定义如下：
+@Data
+public class RegisterDTO {
+    @NotBlank(message = "用户名不能为空")
+    @Size(min = 3, max = 20, message = "用户名长度3-20")
+    private String username;
+
+    @NotNull(message = "年龄必填")
+    @Min(value = 18, message = "必须成年")
+    private Integer age;
+
+    @Email(message = "邮箱格式错误")
+    private String email;
+
+    @NotEmpty(message = "角色不能为空")
+    private List<String> roles;
+}
+//则在Controller中添加@Valid进行校验，校验失败自动返回 400（可通过定义全局异常捕获类GlobalExceptionHandler来统一响应格式）
+public Response  createUser(@RequestBody @Valid User user ) {
+    // 走到这里说明所有字段已校验通过
+    return Response.success();
+}
+
 ```
 :::
 
@@ -1260,32 +1286,38 @@ import org.springframework.web.servlet.ModelAndView;
 //实现HandlerInterceptor接口
 public class MyInterceptor implements HandlerInterceptor {
 
-    //目标资源方法执行前执行，返回值表示是否放行
+  /**
+     * 在请求处理之前进行调用（Controller方法调用之前）
+     * 返回值表示是否继续处理请求
+     * true：继续处理请求
+     * false：中断请求处理
+     */
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        log.info("preHandle");
         String reqUrl = request.getRequestURI();
-        if(reqUrl.contains("/login")){
-            return true;
-        }
-        //无token则返回401
         String token = request.getHeader("token");
-        if(token==null || token.isEmpty()){
+        if(token == null|| token.isEmpty()){
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return false;
         }
-        //校验token通过则返回正常数据
-        return true;
+        return  true;
+
     }
-    //目标资源方法执行后执行
+
+    /**
+     * 在请求处理之后进行调用，但是在视图被渲染之前（Controller方法调用之后）
+     */
     @Override
-    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView){
-        log.info("postHandle");
+    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, org.springframework.web.servlet.ModelAndView modelAndView) throws Exception {
+        // TODO Auto-generated method stub
     }
+
+
+
     //视图渲染完毕后执行，最后执行（前后端分离项目则忽略此方法）
     @Override
-    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex){
-        log.info("afterCompletion");
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+        // TODO Auto-generated method stub
     }
 }
 
@@ -1300,11 +1332,11 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 //此注解表示配置类
 @Configuration
+@RequiredArgsConstructor
 public class WebConfig implements WebMvcConfigurer {
   //依赖注入
   //注入多个则表示可定义多个拦截器
-  @Autowired
-  private MyInterceptor myInterceptor;
+  private final MyInterceptor myInterceptor;
 
   @Override
   public void addInterceptors(InterceptorRegistry registry) {
