@@ -22,7 +22,7 @@ import java.util.Map;
 public final class JwtUtils {
 
     // 生产环境建议从配置文件或环境变量中读取复杂密钥，严禁硬编码弱密码
-    private static final String SECRET_KEY = "MySuperSecureSecretKeyForJWTSigning2024"; 
+    private static final String SECRET_KEY = Encoders.BASE64.encode(Keys.secretKeyFor(SignatureAlgorithm.HS256).getEncoded());
     
     // 默认过期时间：30分钟（毫秒）
     private static final long EXPIRATION_MS = 30 * 60 * 1000L; 

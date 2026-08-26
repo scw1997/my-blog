@@ -874,6 +874,9 @@ public class OrderService {
 # ✅ YAML：层级清晰，一目了然
 # 场景：嵌套层级
 spring:
+  jackson:
+    # 让controller接口返回的实体类中驼峰命名的字段转为下划线命名格式
+    property-naming-strategy: SNAKE_CASE
   datasource:
     url: jdbc:mysql://localhost:3306/mydb
     username: root
@@ -1342,7 +1345,7 @@ public class WebConfig implements WebMvcConfigurer {
   public void addInterceptors(InterceptorRegistry registry) {
     //注册拦截器并设置拦截/不拦截哪些请求
     //注册多个拦截器可通过order来控制拦截顺序,数字越小顺序越在前。
-    registry.addInterceptor(myInterceptor).addPathPatterns("/**").excludePathPatterns("login").order(0);
+    registry.addInterceptor(myInterceptor).addPathPatterns("/**").excludePathPatterns("/error,","login").order(0);
     registry.addInterceptor(xxx).addPathPatterns("/**").order(1);
   
   }
@@ -1353,7 +1356,7 @@ public class WebConfig implements WebMvcConfigurer {
 
 :::tip 扩展
 - @Configuration作用：告诉 Spring IoC 容器“这个类是一个配置源”，容器会解析该类中`@Bean`方法，并将返回值注册为受管理的 Bean（即交给IOC容器管理）。
-
+- 上述例子中`excludePathPatterns("/error)`表示 Spring Boot内部错误（如接口请求没找到404或者controller抛出异常）会内部转发到 /error（由 BasicErrorController 处理）：
 :::
 
 #### 拦截器 vs 过滤器
