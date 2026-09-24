@@ -205,7 +205,7 @@ http {
           proxy_set_header X-Real-IP $remote_addr;
  
           # 配置允许调用当前域名的网站域名（无限制则用'*'）
-          # 允许多个域名，可以使用变量：add_header 'Access-Control-Allow-Origin' $http_origin always;
+          # 允许多个域名，可以使用变量：add_header 'Access-Control-Allow-Origin' $cors_origin always;
           add_header 'Access-Control-Allow-Origin' 'http://aaaa.com' always;
           # 2. 允许携带 Cookie 或 Authorization 认证信息
           add_header 'Access-Control-Allow-Credentials' 'true' always;

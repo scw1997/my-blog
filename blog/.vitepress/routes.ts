@@ -204,8 +204,12 @@ const routes =  [
                         link: '/backend/java/java-basic-2'
                     },
                     {
-                        text:'Java Web',
-                        link: '/backend/java/java-web'
+                        text:'Java Web（上）',
+                        link: '/backend/java/java-web-1'
+                    },
+                    {
+                        text:'Java Web（下）',
+                        link: '/backend/java/java-web-2'
                     },
                     {
                         text:'常用工具类',

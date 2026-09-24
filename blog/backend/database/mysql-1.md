@@ -189,10 +189,7 @@ CREATE TABLE users (
 | `TIMESTAMP` | YYYY-MM-DD HH:MM:SS | `1970-01-01 00:00:01 UTC ～ 2038-01-19 03:14:07 UTC` | 秒（支持微秒） | 自动转时区，受系统时区影响） |
 
 :::warning 注意
-- `系统审计字段首选 TIMESTAMP`
-  created_at、updated_at、login_time 等记录"事件发生时刻"的字段，几乎总是应该用 TIMESTAMP。它们天然需要时区感知，且不会超出2038年。
-- `业务日期字段首选 DATETIME`
-  生日、纪念日、节假日、每日统计快照日期等"日历概念"，与时区无关，用 DATETIME（或纯 DATE）。
+绝大部分场景日期时间首选`DATETIME`，通常只有一些国际化社交应用才会考虑选择`TIMESTAMP`
 :::
 
 常见约束字段：
