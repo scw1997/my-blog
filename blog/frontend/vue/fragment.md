@@ -497,10 +497,165 @@ export default {
 ## 组件通信方式
 
 - props
-- emit自定义事件（子组件调用父组件方法并传递参数）
+- emit自定义事件（子触发事件，父监听接收数据）
+  :::code-group
+  ```vue [子组件]
+  <template>
+    <button @click="sendToFather">传给父组件</button>
+  </template>
+  
+  <script setup>
+  const emit = defineEmits(['send'])
+  
+  const sendToFather = () => {
+    emit('send', '子组件的数据', 123) // 第二个参数开始是传递的值
+  }
+  </script>
+  
+  ```
+  ```vue [父组件]
+  <template>
+    <Son @send="handleReceive" />
+    <div>子传过来：{{ childData }}</div>
+  </template>
+  
+  <script setup>
+  import { ref } from 'vue'
+  import Son from './Son.vue'
+  const childData = ref('')
+  const handleReceive = (val, num) => {
+    childData.value = val
+    console.log(num)
+  }
+  </script>
+  
+  ```
+  :::
+- v-model 双向绑定（语法糖，本质 props + emit)
+  :::code-group
+  ```vue [父组件]
+  <template>
+    <Son v-model:name="name" v-model:age="age"/>
+    <div>{{ name }} - {{ age }}</div>
+  </template>
+  <script setup>
+  import { ref } from 'vue'
+  import Son from './Son.vue'
+  const name = ref('张三')
+  const age = ref(18)
+  </script>
+
+
+  
+  ```
+  ```vue [子组件]
+  <template>
+    <input v-model="innerName" />
+    <input v-model.number="innerAge" />
+  </template>
+  <script setup>
+  const props = defineProps(['name','age'])
+  const emit = defineEmits(['update:name','update:age'])
+  // 计算属性写法，方便双向修改
+  const innerName = computed({
+    get(){ return props.name },
+    set(val){ emit('update:name', val) }
+  })
+  const innerAge = computed({
+    get(){ return props.age },
+    set(val){ emit('update:age', val) }
+  })
+  </script>
+
+
+
+  ```
+  :::
 - useAttrs（获取除props定义以外的传递的方法和属性）
+  ```vue
+  <!-- 子组件 -->
+  <template>
+    <input v-bind="$attrs" />
+  </template>
+  <script setup>
+    import { useAttrs } from 'vue'
+    const attrs = useAttrs()
+    console.log(attrs) // 拿到父传过来所有没被props接收的属性
+  </script> 
+  ```
 - provide/inject（跨多层组件通信）
+  :::code-group
+  ```vue [祖先组件]
+  <template>
+    <Father />
+  </template>
+  <script setup>
+  import { ref, provide } from 'vue'
+  import Father from './Father.vue'
+  const theme = ref('red')
+  // 提供数据，key，值
+  provide('theme', theme)
+  // 提供修改方法（推荐，不要让后代直接改响应式变量）
+  provide('changeTheme', (val) => {
+    theme.value = val
+  })
+  </script>
+
+  
+  ```
+  ```vue [深层子组件]
+   <template>
+    <div>主题：{{ theme }}</div>
+    <button @click="changeTheme('blue')">改颜色</button>
+  </template>
+  <script setup>
+  import { inject } from 'vue'
+  const theme = inject('theme')
+  const changeTheme = inject('changeTheme')
+  // 可以给默认值 inject('theme','default')
+  </script>
+
+
+  ```
+  :::
 - ref配合defineExpose（父组件获取子组件方法/状态）
+  :::code-group
+  ```vue [子组件]
+  <template>
+    <div>子组件</div>
+  </template>
+  <script setup>
+  const sonFn = () => {
+    alert('子组件方法')
+  }
+  const sonVal = ref(100)
+  // 暴露出去
+  defineExpose({
+    sonFn,
+    sonVal
+  })
+  </script>
+
+  
+  ```
+  ```vue [父组件]
+  <template>
+    <Son ref="sonRef"/>
+    <button @click="getSon">调用子方法</button>
+  </template>
+  <script setup>
+  import { ref } from 'vue'
+  import Son from './Son.vue'
+  const sonRef = ref(null)
+  const getSon = () => {
+    sonRef.value.sonFn()
+    console.log(sonRef.value.sonVal)
+  }
+  </script>
+
+  
+  ```
+  :::
 - slot中的作用域插槽
 - 第三方状态管理工具（vuex，pina等）
 - 全局事件总线（非Vue标准api，只是一种解决方案思想）
@@ -663,8 +818,7 @@ const inputValue = ref();
 :::code-group
 ```vue [表单组件]
 <script setup>
-// 默认情况下，v-model 使用的 prop 是 'modelValue'
-// Vue 会自动处理 update:modelValue 事件
+// 多个v-model则需要指定model名称
 const props = defineProps({
     model1: String,
     model2: String
