@@ -171,6 +171,40 @@ export default () => {
 :::tip 总结
 cloneElement和createElement都返回jsx对象，最主要区别在于**第一个参数的类型**。
 :::
+
+## StrickMode组件
+
+从React 18开始，StrictMode组件被引入。本质上是一个用于在`开发阶段`提前暴露代码隐患的辅助工具。它**不会在生产环境中产生任何影响**。
+
+#### 使用示例
+```tsx
+// 项目入口文件
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import App from './App'
+createRoot(document.getElementById('root')!).render(
+        <React.StrictMode>
+          <App />
+        </React.StrictMode>
+)
+
+
+
+```
+#### 效果
+
+- **检测非纯渲染**：在开发模式下，组件函数体会被额外调用一次。React 假设组件必须是纯函数，如果两次调用结果不一致（例如，在渲染过程中直接修改了外部变量），就说明存在副作用
+- **检测缺失的 Effect 清理**:StrictMode 会模拟完整的“挂载 → 卸载 → 重新挂载”流程（React 18中会触发两次）。如果你的 useEffect 在卸载时没有正确清理（如未取消订阅、未清除定时器），问题会立即暴露。
+- **检测 Ref 清理函数的缺失**：它会额外运行一次 refs 回调，以检查你是否在 Ref 回调中返回了正确的清理函数。
+- **警告已弃用的 API 和不安全的生命周期**
+:::warning 如何应对“重复执行”
+接口被请求了两次、console.log 打印了两次，都是 StrictMode 正常工作的表现。正确的做法不是关闭它，而是优化代码。
+- 针对数据请求：推荐使用数据请求库（如 TanStack Query、SWR）或 React 19 的 Server Components。这些方案内部会自动处理去重和缓存，多次挂载不会导致重复的网络请求。
+
+- 手动管理请求：如果必须手动在 useEffect 中请求，应使用 AbortController 在清理函数中取消上一次的请求。这不仅能消除 StrictMode 下的重复请求“假象”，更能防止真实场景中的网络竞态条件（Race Condition）。
+
+- 针对非纯函数：如果是因为在渲染中修改了外部变量导致的问题，应使用 useState 或 useRef 等 React 状态管理工具来替代直接修改。
+:::
 ## 其他
 
 - 不考虑memo缓存的情况下，父组件执行了render，子组件`除了children渲染部分`，其他部分也一定会重新render。
@@ -201,3 +235,5 @@ cloneElement和createElement都返回jsx对象，最主要区别在于**第一�
     } 
     //输出顺序：1 5 2 1 2 3 3 4 4
     ```
+
+
