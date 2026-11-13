@@ -774,7 +774,7 @@ const name = toRef(obj, 'name');
 <!--CustomInput.vue-->
 
 <script setup>
-  // 默认情况下，v-model 使用的 prop 是 'modelValue'
+  // 默认情况下，v-model 使用的 参数名 是 'modelValue'
   // Vue 会自动处理 update:modelValue 事件
   const props = defineProps({
     modelValue: String
@@ -1077,9 +1077,12 @@ watchEffect(()=>{
     :::code-group 
     ```vue [基本用法]
     <script setup lang="ts">
+    //引入的自定义组件
+    import CustomComponent from './CustomComponent.vue';
     import { h } from 'vue';
     
-    const MyDiv = h('div', {class:'xxx',style:{color:'red'}}, [h('h1', null, '第一个子节点')]);
+    //对于标准原生元素标签需要适用字符串形式，而对于自定义组件则需要使用组件的引用
+    const MyDiv = h('div', {class:'xxx',style:{color:'red'}}, [h(CustomComponent, null, '第一个子节点')]);
     </script>
     
     <template>

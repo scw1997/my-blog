@@ -45,8 +45,9 @@ Maven是一个**Java项目构建工具**，可以自动管理依赖关系，统�
     <!-- 2. 项目坐标（GAV：唯一标识一个项目） -->
     <groupId>com.example</groupId>          <!-- 当前maven项目隶属组织/公司域名倒写（如com.scw） -->
     <artifactId>my-springboot-app</artifactId> <!-- 当前maven项目名称(maven项目的模块名) -->
-    <version>1.0.0</version>                <!-- 当前maven项目版本号 -->
-<!--<version>1.0.0-SNAPSHOT</version>-->    <!-- SNAPSHOT表示开发版本，功能不稳定；RELEASE表示用于发布的版本，功能稳定 -->
+    <version>1.0.0</version>                <!-- 当前maven项目版本号，没有SNAPSHOT则表示默认稳定版本 -->
+    <!-- SNAPSHOT表示开发版本，功能不稳定；RELEASE表示用于发布的版本，功能稳定 -->
+    <!--<version>1.0.0-SNAPSHOT</version>-->  
     <!-- 3. 打包方式 -->
     <packaging>jar</packaging>              <!-- jar（默认）、war、pom（多模块） -->
 
@@ -535,8 +536,8 @@ public class HelloController {
 ### 三层架构
 
 - **Controller**：控制层。用于接收请求，调用Service处理业务逻辑，并返回响应数据。
-- **Service**：业务逻辑层。用于处理业务逻辑，调用DAO层获取数据
-- **DAO**：数据访问层，也叫持久层。用于访问数据库（增删改查），获取数据
+- **Service**：业务逻辑层。用于处理业务逻辑，调用Mapper（也叫DAO）层获取数据
+- **Mapper**：数据访问层，也叫持久层。用于访问数据库（增删改查），获取数据
 
 示例：根据用户ID获取用户信息
 
@@ -563,7 +564,7 @@ public class UserController {
 @Service
 public class UserService {
 
-    // 注入数据访问层（DAO层）对象实例
+    // 注入数据访问层（Mapper层）对象实例
     @Autowired
     private UserMapper userMapper;
 
@@ -573,12 +574,12 @@ public class UserService {
         if (id <= 0) {
             throw new IllegalArgumentException("用户ID不合法");
         }
-        // 数据库的相关操作交给DAO层
+        // 数据库的相关操作交给Mapper层
         return userMapper.findById(id);
     }
 }
 ```
-```java [DAO层]
+```java [Mapper层]
 @Mapper // 如果是 MyBatis 框架
 public interface UserMapper {
     //具体的 SQL 可以在 XML 中写，或者用注解
@@ -594,18 +595,6 @@ public interface UserMapper {
 根据场景不同，共有以下几种方式可供选择
 
 :::code-group
-```java [@PathVariable]
-//此种方式适合用于获取 RESTful 风格 URL 中 {} 占位符的值。
-// GET /users/1001/orders/2024
-@GetMapping("/users/{userId}/orders/{orderId}")
-public Order getOrder(
-        @PathVariable Long userId,
-       // 属性名和接收参数名不一样时
-       // @PathVariable("orderId") String orderid)
-        @PathVariable String orderId) {
-    // userId = 1001, orderId = "2024"
-}
-```
 ```java [@RequestParam]
 //此种方式适合用于获取 GET 请求的 query 参数（?key=value）。
 // GET /users?page=1&size=10&keyword=张三
@@ -650,13 +639,20 @@ public User createUser(@RequestBody User user ) {
 
 
 //通过添加注解@Valid实现对应字段的校验
+// 首先需添加依赖：
+//  <dependency>
+//      <groupId>org.springframework.boot</groupId>
+//       <artifactId>spring-boot-starter-validation</artifactId>
+// </dependency>
 //假如User实体类定义如下：
 @Data
 public class RegisterDTO {
+    //@NotBlank只能用在字符串类型上，校验字段值不为 null 且 trim() 后长度 > 0
     @NotBlank(message = "用户名不能为空")
     @Size(min = 3, max = 20, message = "用户名长度3-20")
     private String username;
 
+    //@NotNull用于任意类型，校验字段值不为 null
     @NotNull(message = "年龄必填")
     @Min(value = 18, message = "必须成年")
     private Integer age;
@@ -664,6 +660,7 @@ public class RegisterDTO {
     @Email(message = "邮箱格式错误")
     private String email;
 
+    //@NotEmpty用于字符串，集合，数组，Map,校验字段值不为 null 且长度 > 0
     @NotEmpty(message = "角色不能为空")
     private List<String> roles;
 }
@@ -674,6 +671,19 @@ public Response  createUser(@RequestBody @Valid User user ) {
 }
 
 ```
+```java [@PathVariable]
+//此种方式适合用于获取 RESTful 风格 URL 中 {} 占位符的值。
+// GET /users/1001/orders/2024
+@GetMapping("/users/{userId}/orders/{orderId}")
+public Order getOrder(
+        @PathVariable Long userId,
+       // 属性名和接收参数名不一样时
+       // @PathVariable("orderId") String orderid)
+        @PathVariable String orderId) {
+    // userId = 1001, orderId = "2024"
+}
+```
+
 :::
 
 ### 控制反转和依赖注入
@@ -733,12 +743,12 @@ public class UserController {
 }
 ```
 :::
-SpringBoot中声明Bean类（即`表示交给IOC容器管理`）的注解：
+SpringBoot中用于声明Bean类（即`Spring Bean`，表示交给IOC容器管理）的注解：
 
 - `@Controller`：只能用于Controller层
 - `@Service`：只能用于Service层
-- `@Repository`：只能用于DAO层
-- `@Component`：可用于Service，Dao以及非三层架构的类，不可用于Controller层
+- `@Repository`：只能用于Mapper层
+- `@Component`：可用于Service，Mapper以及非三层架构的类，不可用于Controller层
 
 > 给bean类设置名字，可通过`@Service("userService")`这样格式。没设置则默认为类名首字母小写
 
@@ -871,31 +881,71 @@ public class OrderService {
 ```yaml
 # 配置文件路径：src/main/resources/application.yml
 
-# ✅ YAML：层级清晰，一目了然
-# 场景：嵌套层级
-spring:
+spring :
+  application:
+    # 应用名称
+    name: scrow-life-backend
+  profiles:
+    # 激活指定环境的profile，可选值有：dev、test、prod
+    active: dev
   jackson:
     # 让controller接口返回的实体类中驼峰命名的字段转为下划线命名格式
     property-naming-strategy: SNAKE_CASE
+  mail:
+    # 邮箱相关服务配置
+    host: smtp.qq.com
+    port: 587          # TLS端口，推荐；SSL用465
+    username: 1091479495@qq.com
+    password: itfoqxdvpsoxfede   # ← 从环境变量注入授权码，不要明文！
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      mail.smtp.connectiontimeout: 15000
+      mail.smtp.timeout: 15000
+      mail.smtp.writetimeout: 15000
+  data: # Spring Boot 2.x+ 推荐写法
+    # redis配置
+    redis:
+      host: 192.168.100.128
+      port: 6379
+      password: 1234
+      database: 0
+  # mysql配置
   datasource:
-    url: jdbc:mysql://localhost:3306/mydb
+    url: jdbc:mysql://192.168.100.128:3306/codeyell
     username: root
-    hikari:
-      maximum-pool-size: 20 # 注意：数值前面必须添加空格
-      minimum-idle: 5 # 注意：数值前面必须添加空格
+    password: 1234
+
+# 邮箱验证码配置
+verify-code:
+  # 验证码有效期分钟
+  expire-minutes: 5
+  # 验证码长度
+  length: 6
 
 
-# 场景：列表/数组配置
-app:
-  upload:
-    allowed-extensions:
-      - jpg
-      - png
-      - pdf
-    max-sizes:
-      - 10MB
-      - 50MB
-      - 100MB
+mybatis-plus:
+  # 指定 Mapper XML 文件的位置
+  mapper-locations: classpath:mapper/**/*.xml
+
+  # 全局配置（定义全局的默认行为）
+  global-config:
+    db-config:
+      # 全局主键策略：AUTO(数据库自增), ASSIGN_ID(雪花算法), INPUT(手动输入)
+      id-type: auto
+      # 逻辑删除配置（此配置是全局配置，而使用@TableLogic来定义逻辑删除是局部配置）
+      logic-delete-field: deleted  # 逻辑删除的字段名
+      logic-delete-value: 1        #  逻辑已删除时的值（默认为 1）
+      logic-not-delete-value: 0    # 逻辑未删除的值（默认为 0）
+      # 更新策略：not_null（默认值）只更新接口传参的非空字段
+      update-strategy: not_null
+
+  # 原生 MyBatis 配置
+  configuration:
+    # 开启驼峰命名自动映射（数据库 user_name 自动映射到实体 userName）
+    map-underscore-to-camel-case: true
+    # 开发环境打印完整 SQL 日志（生产环境建议关闭，影响性能）
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 ```
 ```properties
 # 配置文件路径：src/main/resources/application.properties
@@ -1924,7 +1974,7 @@ public class UserController {
 
 #### 场景1：Web 请求链路中的用户上下文传递
 
-问题：在一个 HTTP 请求中，Controller、Service、DAO 等多个层级都需要用到当前登录用户的 ID。如果通过方法参数层层传递，代码会非常臃肿且耦合度高。
+问题：在一个 HTTP 请求中，Controller、Service、Mapper 等多个层级都需要用到当前登录用户的 ID。如果通过方法参数层层传递，代码会非常臃肿且耦合度高。
 
 解决：利用 ThreadLocal 作为“全局变量”，在同一线程内任意位置直接获取。
 
@@ -1991,7 +2041,7 @@ public class TransactionManager {
         map.put(ds, conn); // 将连接缓存起来
     }
 
-    // 执行 DAO 操作时：优先从 ThreadLocal 获取连接，而不是重新去连接池拿
+    // 执行 Mapper 操作时：优先从 ThreadLocal 获取连接，而不是重新去连接池拿
     public static Connection getConnection(DataSource ds) {
         Map<Object, Object> map = resources.get();
         return (Connection) map.get(ds); 
@@ -2387,7 +2437,7 @@ public class JdbcDemo {
 
 ## MyBatis
 
-MyBatis 是一款优秀的`持久层（DAO层）`框架，它避免了几乎所有的 JDBC 代码和设置参数、获取结果集的过程。用于`简化JDBC`的开发
+MyBatis 是一款优秀的`持久层（Mapper/Dao层）`框架，它避免了几乎所有的 JDBC 代码和设置参数、获取结果集的过程。用于`简化JDBC`的开发
 
 ### 准备工作
 
@@ -2664,7 +2714,6 @@ class MybatisTestApplicationTests {
 
 
 :::warning 注意
-- MyBatis中DAO层文件夹名称建议使用`mapper`
 - MyBatis中关于实体类Enum（如MALE/FEMALE）与数据库数据类型（0|1）的映射转换问题解决：
   ```properties
   # src/main/resources/application.properties
@@ -2969,9 +3018,8 @@ MyBatis-Plus **完全兼容 MyBatis 的所有特性和配置**，你可以把它
 <!--使用mybatis-plus-boot-starter代替mybatis-spring-boot-starter-->
 <dependency>
     <groupId>com.baomidou</groupId>
-    <!-- spring boot 4.x    -->
-    <artifactId>mybatis-plus-boot4-starter</artifactId>
-    <version>3.5.3</version>
+    <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
+    <version>3.5.17</version> <!-- 或 3.5.16 -->
 </dependency>
 
 <!--        <dependency>-->

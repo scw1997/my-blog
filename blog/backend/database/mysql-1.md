@@ -114,7 +114,7 @@
 
 ```sql
 CREATE TABLE users (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, --UNSIGNED无符号（不可为负数）
     username VARCHAR(50) NOT NULL UNIQUE,
     email VARCHAR(255) NOT NULL,
     password_hash CHAR(60) NOT NULL,        -- bcrypt 输出固定 60 字符
@@ -263,11 +263,67 @@ CREATE TABLE order_items (
 | 非空性（NOT NULL） | 主键列不允许为 `NULL`（自动隐含 `NOT NULL` 约束） |
 | 单表唯一 | 一张表只能有一个主键（但可由多列组成，称“复合主键”） |
 
+:::tip UUID
+UUID是一个 128 位的值，设计目标是跨空间和时间实现唯一性，无需中心化服务协调就能高效生成。 标准格式是 32 个十六进制字符，通常写作 xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+
+**优点**：
+- **全局唯一，分布式友好**：不同节点独立生成，不会冲突
+- **不暴露业务信息**：随机性强，不像自增 ID 那样容易被遍历或猜测出业务量，对安全性有一定帮助。
+- **应用层生成，减少数据库往返**：可在客户端直接生成 ID，无需等待数据库返回。
+
+**缺点**：
+- **随机 UUID（v4）写入性能极差**：无序插入导致 B+ 树索引频繁页分裂，产生大量随机 I/O 和空间碎片。
+- **存储空间大**：128 位比 64 位的自增 ID 大
+- **可读性差**：调试、日志排查和人工比对都很不方便。
+
+`UUID v7 的核心改进`：它将 48 位的 Unix 毫秒时间戳放在最高位，其余位用于随机值。这使得生成的 UUID 天然按时间有序，`从根本上解决了UUIDv4 随机插入导致的索引页分裂问题`。
+:::
+
 :::warning 注意
-- 主键优先使用自增整数（简单高效）,分布式系统考虑 UUID（全局唯一，适合分库分表）
+- 主键优先使用自增整数（简单高效）,`分布式系统`考虑 UUID（随机生成，全局唯一，适合分库分表）
 - 避免使用自然主键（如用“身份证号”、“邮箱”作主键），因为这些数据长度大且可能会修改。
 - 避免主键进行更新，因为会导致`索引重建和外键级联更新（可能锁表）`。
-  :::
+:::
+
+### 唯一键 Unique Key
+
+Unique Key和主键都能保证字段值的唯一性，但核心区别在于：
+
+**UNIQUE KEY 允许存在多个 NULL 值，而主键不允许任何 NULL 值**。这个特性使它成为主键之外，保障业务数据唯一性的关键补充。
+
+
+```sql 
+--1. 建表时，在列级别定义（单列唯一）
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE, -- 方式一：直接使用 UNIQUE
+    email VARCHAR(100) UNIQUE KEY -- 方式二：使用 UNIQUE KEY，语义更明确
+);
+
+--2. 建表时，在表级别定义（可命名、可复合）
+CREATE TABLE user_roles (
+    user_id INT NOT NULL,
+    role VARCHAR(20) NOT NULL,
+    -- 命名唯一键，确保 (user_id, role) 组合唯一
+    -- 如果不指定 uk_user_role 这样的名字，MySQL 会默认使用第一个字段名作为索引名
+    UNIQUE KEY uk_user_role (user_id, role)
+);
+--3. 修改现有表时添加
+ALTER TABLE users ADD UNIQUE (username);
+ALTER TABLE users ADD UNIQUE KEY uk_email (email); -- 同时命名
+-- 或创建唯一索引（效果相同）
+CREATE UNIQUE INDEX uk_username ON users(username);
+```
+唯一键适用场景：
+- **保障业务实体的唯一标识**：这是最典型的场景。例如用户的邮箱、手机号，或商品的 SKU 编码。这些字段虽然不是物理主键，但在业务上必须唯一。
+- **作为并发场景下的最后防线**：在应用层做唯一性校验（如“先查后插”）在并发下可能失效。UNIQUE KEY 在数据库层面提供了最终的、原子性的兜底保障，能可靠地拦截并发导致的重复写入（例如用户多次重复点击下单购买）。
+- **在可空列上实施唯一性**：这正是 UNIQUE KEY 区别于主键的关键场景。例如，一个“员工”表，email 字段可以允许为空（表示未登记），但一旦非空，就必须全局唯一。UNIQUE KEY 可以完美满足这个需求。
+
+:::warning 注意事项
+- 在复合唯一键中，只要任意一列为 NULL，该行的唯一性检查通常就会被放宽（因为 NULL 不参与判等）。这意味着，如果 (A, B) 是复合唯一键，那么 (1, NULL) 和 (1, NULL) 可以同时存在。设计时需要明确业务是否允许这种“部分未知”的重复。
+- UNIQUE KEY 意味着在每次 INSERT 或 UPDATE 相关列时，数据库都必须执行一次唯一性检查。这会带来额外的开销。对于写入极其频繁、且唯一性由应用层严格保证的场景（如某些日志表），盲目添加唯一键可能会成为性能瓶颈。
+:::
+
 ### 外键Foreign Key
 
 外键（Foreign Key）又称`物理外键`。 是一种用于维护**表与表之间引用完整性**的约束机制。它通过建立两个表之间的“父子关系（`一对多`）”，确保子表中的数据必须引用父表中已存在的有效数据，从而防止孤立记录和数据不一致,**保证数据一致性与完整性**。
