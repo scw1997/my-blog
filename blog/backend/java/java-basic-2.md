@@ -85,7 +85,66 @@ linkedList.addLast("Tail");  // 添加到尾部
 ```
 :::
 
-#### 迭代器
+#### （1） Arrays.asList(array)
+
+Arrays.asList(array)接收可变参数，可以`传多个元素，也可以直接传一个数组`。
+
+ 返回的是一个`固定大小的 List 视图（java.util.Arrays$ArrayList）`,而不是预期中的`java.util.ArrayList`
+
+虽然也支持List的get()，set()和size()方法
+
+关键特性：
+
+- **操作限制**：不支持add()添加、remove()删除和clear()清空操作
+- **视图共享**：对原数组的修改会反映在 List 中，反之对List的修改也会反映在原数组中
+- **长度bug**：基本类型数组会得到“长度为 1 的 List”
+
+
+
+踩坑示例：
+:::code-group
+
+```java [操作限制]
+List<String> list = Arrays.asList("a", "b", "c");
+
+list.add("d");      // ❌ UnsupportedOperationException
+list.remove(0);     // ❌ UnsupportedOperationException
+list.clear();       // ❌ UnsupportedOperationException
+
+//原因：返回的是 Arrays$ArrayList，它继承 AbstractList，但没有覆写 add/remove，AbstractList 的默认实现就是抛 UnsupportedOperationException。
+//解决：需要可变 List 时，包一层真正的 ArrayList：
+
+List<String> mutable = new ArrayList<>(Arrays.asList("a", "b", "c"));
+mutable.add("d");   // ✅ 正常
+```
+```java [视图共享]
+String[] arr = {"a", "b", "c"};
+List<String> list = Arrays.asList(arr);
+
+list.set(0, "X");
+System.out.println(Arrays.toString(arr));  // [X, b, c]  👈 原数组被改了
+
+arr[1] = "Y";
+System.out.println(list);                   // [X, Y, c]  👈 List 也变了
+```
+```java [长度bug]
+int[] intArr = {1, 2, 3};
+List<int[]> list = Arrays.asList(intArr);
+System.out.println(list.size());      // 1  ❌ 不是 3
+        System.out.println(list.get(0));      // [I@xxxx  👈 整个 int[] 被当成一个元素
+
+// 正确做法：用包装类型数组（Integer[]、Long[]）
+Integer[] integerArr = {1, 2, 3};
+List<Integer> list2 = Arrays.asList(integerArr);
+System.out.println(list2.size());     // 3  ✅
+```
+```java [对null的支持情况]
+Arrays.asList(null);            // ⚠️ 编译警告，运行时 NPE（可变参数整体为 null）
+Arrays.asList((String) null);   // ✅ 得到 [null]，size = 1
+Arrays.asList("a", null, "b");  // ✅ 允许元素为 null，size = 3
+```
+:::
+#### （2）迭代器
 
 ```java
 List<String> list = new ArrayList<>(Arrays.asList("A", "B", "C"));
@@ -537,7 +596,15 @@ public class Java9ImmutableCollections {
 - 不可变集合的元素必须唯一（Set 和 Map 的 key 不能重复）。不支持 null 元素。
 - Map.of() 最多支持 10 个键值对（超过需用 Map.ofEntries()）。
 - 返回的是 java.util.ImmutableCollections 内部类，非 ArrayList/HashMap。
-- 与List.of() 不同,`Arrays.asList()` 同样不允许添加和删除元素，但可以修改元素。并且允许有空值null
+:::
+
+:::tip 创建集合的三种方式适合场景
+
+- **Arrays.asList()**：用 List API 读/改数组，不添加删除并数据共享。（允许null元素）
+- **List.of()**：常量列表、只读配置（不允许null元素）
+- **new ArrayList<>()**：需要真正可变的 List（允许null元素）
+
+
 :::
 ### Stream流
 
@@ -3142,3 +3209,11 @@ IP地址是设备在网络中的唯一标识，用于定位网络中的主机。
 | WebSocket | 套接字协议 | 全双工通信 | 实时聊天、推送 |
 
 详情查看：[进阶 > HTTP协议](/frontend/advanced/http.html)
+
+## 零碎
+
+- 关于`isEmpty()`方法：
+  - isEmpty()用于判断“容器”中是否没有元素。String类型是判断是否长度为0（相当于`length() == 0`）；集合/Map类型是判断是否元素为空/不存在任意键值对（相当于`size() == 0`）。
+  - isEmpty()**不考虑trim()**，如果需要判断trim()后是否为空，则使用`isBlank()`。
+  - isEmpty()**不考虑null**，如果需要考虑，则需要事先通过`==null`判断。
+  

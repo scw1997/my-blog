@@ -646,7 +646,7 @@ public User createUser(@RequestBody User user ) {
 // </dependency>
 //假如User实体类定义如下：
 @Data
-public class RegisterDTO {
+public class User {
     //@NotBlank只能用在字符串类型上，校验字段值不为 null 且 trim() 后长度 > 0
     @NotBlank(message = "用户名不能为空")
     @Size(min = 3, max = 20, message = "用户名长度3-20")
@@ -743,54 +743,8 @@ public class UserController {
 }
 ```
 :::
-SpringBoot中用于声明Bean类（即`Spring Bean`，表示交给IOC容器管理）的注解：
 
-- `@Controller`：只能用于Controller层
-- `@Service`：只能用于Service层
-- `@Repository`：只能用于Mapper层
-- `@Component`：可用于Service，Mapper以及非三层架构的类，不可用于Controller层
-
-> 给bean类设置名字，可通过`@Service("userService")`这样格式。没设置则默认为类名首字母小写
-
-
-:::tip 扩展
-- Spring中的bean类`默认都是单例`的，并在项目启动时创建会将创建其实例然后保存在IOC容器中。可通过在配置类中添加`@Scope("prototype")`注解来修改为多例模式。
- 
-  单例模式的Bean通常是**无状态**的即线程安全的（如Controller，Service层），需要存储状态或信息的Bean（非线程安全）需要使用多例模式。
-
-- 第三方Bean类默认是无法使用`@Component`注解来交给IOC容器管理的，需要在`启动类`中添加`@Bean`注解
-```java
-//启动类
-package com.scw;
-
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.web.servlet.ServletComponentScan;
-
-    @SpringBootApplication
-    public class MybatisTestApplication {
-
-      public static void main(String[] args) {
-        SpringApplication.run(MybatisTestApplication.class, args);
-      }
-
-      // 方法名默认作为 Bean 的名称
-      //Spring 会将该方法的返回值注册为 Bean。
-      @Bean
-      public DruidDataSource dataSource() {
-        DruidDataSource ds = new DruidDataSource();
-        ds.setUrl("jdbc:mysql://localhost:3306/test");
-        ds.setUsername("root");
-        ds.setPassword("123456");
-        // 可以灵活调用任意 setter/构造器进行初始化
-        return ds;
-
-    }
-
-```
-:::
-
-### 依赖注入的方式
+#### 依赖注入的方式
 
 #### 1. 构造器注入（推荐）
 
@@ -811,7 +765,7 @@ public class OrderService {
     }
 }
 ```
-```java [写法2]
+```java [写法2（推荐）]
 @Service
 @RequiredArgsConstructor //自动创建必须（带final或@NotNull）的构造函数（来自lombok）
 public class OrderService {
@@ -870,7 +824,221 @@ public class OrderService {
   `@Primary`：在某个实现类上标注，将其设为默认首选。
 
   `@Resource(name=beanName)`：指定具体的 Bean 名称进行精确注入。
+  :::
+### Spring Bean
+
+`Spring Bean`，SpringBoot中表示交给IOC容器管理的Bean类。
+
+用于声明Spring Bean类的注解分类总结：
+
+#### 1. 组件扫描类
+```java
+//这些注解的共同点是：标在类上，由 @ComponentScan 扫描到，直接实例化类本身。
+//它们都是 @Component 的派生注解（元注解链上都有 @Component），扫描逻辑完全一致
+
+@Component  // 通用组件（可用于Service，Mapper以及非三层架构的类，不可用于Controller层）
+public class MyComponent {}
+
+@Controller // Web 层：配合 @RequestMapping 注册处理器
+public class UserController {}
+
+@RestController // = @Controller + @ResponseBody，REST 接口
+public class UserApiController {}
+
+@Service    // 业务层（Service层）：纯语义标记，无额外技术行为
+public class UserService {}
+
+@Repository // 持久层（Mapper层）：启用持久化异常转换
+public class UserRepository {}
+```
+
+:::warning 注意
+- @Mapper 不是 @Component 派生：@ComponentScan 不处理它，必须靠 MyBatis 扫描器。给接口加 @Component 也无效。
 :::
+#### 2.配置类
+
+- `@Configuration`：告诉 Spring IoC 容器“这个类是一个配置源”，类本身也会被注册为容器中的 Bean（被 Spring 容器实例化并管理）
+- `@Bean`：通常和@Configuration配合使用，@Configuration类中被 @Bean 标记的方法返回值会被注册为容器中的 Bean。
+
+:::code-group
+```java [示例1：注册数据源]
+@Configuration  // 配置类，本身是 Bean，且默认被 CGLIB 代理
+public class DataSourceConfig {
+
+    @Bean // 方法返回值注册为 Bean，方法名默认即 Bean 名
+    @ConfigurationProperties(prefix = "spring.datasource")
+    public DataSource dataSource() {
+        // HikariDataSource 是第三方类，无法加 @Component
+        return new HikariDataSource();
+    }
+}
+```
+```java [示例2：注册 Redis 客户端]
+@Configuration
+public class RedisConfig {
+
+    @Bean // 方法返回值注册为 Bean，方法名默认即 Bean 名
+    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
+        // factory 由 Spring Boot 自动配置提供，这里作为方法参数注入
+        RedisTemplate<String, Object> template = new RedisTemplate<>();
+        template.setConnectionFactory(factory);
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+        return template; // 典型场景：注册第三方类
+    }
+}
+```
+:::
+
+配置类使用原则：
+- 自己的类能用 @Component 扫描就优先用 @Component，别滥用 @Bean。
+- 只有第三方类、需要复杂构建逻辑、需要条件化注册时，才用 @Bean。
+- 配置类内 @Bean 方法互不调用时，用 @Configuration(proxyBeanMethods = false) 提升启动性能。
+- @Bean 方法间调用的单例语义依赖 @Configuration 代理：@Configuration(proxyBeanMethods = false) 或把 @Bean 写在 @Component 类上，方法间调用会 new 出新实例（游离对象），破坏依赖注入一致性。
+
+
+#### 重点：@Configuration vs @Component
+
+:::code-group
+```java [配置类]
+//Spring 5.2 起，@Configuration 提供了 proxyBeanMethods 属性，默认为 true：
+
+//@Configuration(proxyBeanMethods = true)  // 默认值true，走 CGLIB 代理；设为false则类似@Component
+
+@Configuration  // 默认 proxyBeanMethods = true
+public class OrderConfig {
+
+    @Bean
+    public OrderRepository orderRepository() {
+        return new JpaOrderRepository();
+    }
+
+    @Bean
+    public OrderService orderService() {
+        // 这里调用的 orderRepository() 会被 CGLIB 拦截，
+        // 返回容器中已有的单例，而不是新 new 一个
+        return new OrderService(orderRepository());
+    }
+
+    // 验证：从容器拿到的和直接调用得到的是同一个实例
+    @Bean
+    public String demo(OrderRepository repo) {
+        boolean same = repo == orderRepository();
+        System.out.println("是否同一实例: " + same); // true
+        return "ok";
+    }
+}
+```
+```java [被配置的类]
+// ---- 被配置的类 ----
+public class OrderService {
+    private final OrderRepository repository;
+    public OrderService(OrderRepository repository) {
+        this.repository = repository;
+    }
+    public String placeOrder() {
+        return "订单已创建，仓库：" + repository.name();
+    }
+}
+
+public interface OrderRepository {
+    String name();
+}
+
+public class JpaOrderRepository implements OrderRepository {
+    @Override
+    public String name() { return "JPA Repository"; }
+}
+```
+
+:::info 解析
+@Configuration 和 @Component 都能让类被容器管理，也都能让类中的 @Bean 方法被注册为 Bean。但 `@Configuration 的类在运行时会被 CGLIB 动态代理增强`，这是两者最本质的区别。
+
+没有代理（@Component）时，配置类中 orderService() 方法里直接调用 orderRepository() 就是一次普通 Java 方法调用，会 new 出一个新的 JpaOrderRepository 实例。这个新实例不会被注册到容器，但它被 OrderService 持有——于是同一类型出现了两个对象：一个是容器管理的单例 Bean（即第一个@Bean方法orderRepository()被spring调用后返回的），另一个是脱离容器的游离实例（第二个@Bean方法中调用 orderRepository()返回的），两者都返回一个新的JpaOrderRepository实例，但 == 为 false，依赖注入拿到的并不是容器里那个，`破坏了“单例 + 依赖注入一致”的语义`。
+
+有了 CGLIB 代理后，orderRepository() 的调用会被 BeanMethodInterceptor 拦截：先检查容器中是否已有该 Bean，有就直接返回容器里那个；没有才真正执行方法并注册。所以 orderService() 内部拿到的，和 demo() 参数注入的 repo，是同一个容器实例，== 为 true，单例语义得以保持。
+
+`推荐用 @Configuration 而非 @Component 来写配置类`
+:::
+
+
+
+#### 3. 特殊组件类
+```java
+//这些注解都标注在类上，都靠组件扫描注册
+
+@ControllerAdvice   // 全局异常处理 / 数据绑定 / 模型属性，作用于所有 Controller
+public class GlobalExceptionHandler {}
+
+@Aspect             // AOP 切面类（需配合 @EnableAspectJAutoProxy）
+public class LoggingAspect {}
+
+@ConfigurationProperties(prefix = "app.mail")  // 属性绑定类（application.yml中定义的属性映射到对应类的字段）
+public class MailProperties {}
+```
+
+:::warning 注意
+ - @ConfigurationProperties 不等于 Bean：它只负责属性绑定，不加 @Component 或不配合 @EnableConfigurationProperties，它不会成为 Bean。
+:::
+
+:::info 声明Bean的注解选择总结
+
+|你的类是什么|	用什么注解|
+|---|---|
+|自己写的普通组件（工具类、处理器）|	@Component|
+|Web 控制器|	@Controller / @RestController|
+|业务服务|	@Service|
+|数据访问实现类|	@Repository|
+|全局异常处理 / 全局绑定|	@ControllerAdvice / @RestControllerAdvice|
+|AOP 切面|	@Aspect + @Component|
+|配置属性绑定类|	@ConfigurationProperties + @Component|
+|第三方类要注册为 Bean|	@Configuration + @Bean|
+|需要复杂构建逻辑的 Bean|	@Configuration + @Bean|
+|条件化注册的 Bean|	@Bean + @ConditionalOnXxx|
+|MyBatis 接口|	@Mapper + @MapperScan|
+:::
+
+
+:::tip 补充说明
+- Spring中的bean类`默认都是单例`的，并在`项目启动时创建其实例`然后保存在IOC容器中。可通过在配置类中添加`@Scope("prototype")`注解来修改为多例模式。
+ 
+  单例模式的Bean通常是**无状态**的即线程安全的（如Controller，Service层），需要存储状态或信息的Bean（非线程安全）需要使用多例模式。
+- 给bean类设置名字，可通过`@Service("userService")或者@Bean("userService")`这样格式。没设置则默认为类名或方法名首字母小写
+- 第三方Bean类（可以调用api但无法修改源码比如大多数的maven第三方依赖jar包）默认是无法使用`@Component`注解来交给IOC容器管理的，需要在`启动类`中添加`@Bean`注解
+    ```java
+    //启动类
+    package com.scw;
+    
+    import org.springframework.boot.SpringApplication;
+    import org.springframework.boot.autoconfigure.SpringBootApplication;
+    import org.springframework.boot.web.servlet.ServletComponentScan;
+    
+        @SpringBootApplication
+        public class MybatisTestApplication {
+    
+          public static void main(String[] args) {
+            SpringApplication.run(MybatisTestApplication.class, args);
+          }
+    
+          // 方法名默认作为 Bean 的名称
+          //Spring 会将该方法的返回值注册为 Bean。
+          @Bean
+          public DruidDataSource dataSource() {
+            DruidDataSource ds = new DruidDataSource();
+            ds.setUrl("jdbc:mysql://localhost:3306/test");
+            ds.setUsername("root");
+            ds.setPassword("123456");
+            // 可以灵活调用任意 setter/构造器进行初始化
+            return ds;
+    
+        }
+    
+    ```
+:::
+
+
+
+
 
 ### application配置文件
 
@@ -1395,6 +1563,8 @@ public class WebConfig implements WebMvcConfigurer {
   public void addInterceptors(InterceptorRegistry registry) {
     //注册拦截器并设置拦截/不拦截哪些请求
     //注册多个拦截器可通过order来控制拦截顺序,数字越小顺序越在前。
+      
+    //excludePathPatterns("/error)`表示 Spring Boot内部错误（如接口请求没找到404或者controller抛出异常）会内部转发到 /error（由 BasicErrorController 处理）  
     registry.addInterceptor(myInterceptor).addPathPatterns("/**").excludePathPatterns("/error,","login").order(0);
     registry.addInterceptor(xxx).addPathPatterns("/**").order(1);
   
@@ -1404,10 +1574,7 @@ public class WebConfig implements WebMvcConfigurer {
 ```
 :::
 
-:::tip 扩展
-- @Configuration作用：告诉 Spring IoC 容器“这个类是一个配置源”，容器会解析该类中`@Bean`方法，并将返回值注册为受管理的 Bean（即交给IOC容器管理）。
-- 上述例子中`excludePathPatterns("/error)`表示 Spring Boot内部错误（如接口请求没找到404或者controller抛出异常）会内部转发到 /error（由 BasicErrorController 处理）：
-:::
+
 
 #### 拦截器 vs 过滤器
 ![过滤器vs 拦截器.png](/java_web_filters_vs_interceptor.png)

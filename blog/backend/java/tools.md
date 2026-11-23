@@ -135,6 +135,46 @@ public final class JwtUtils {
 ```
 :::
 
+## 跨域解决
+
+```java
+package com.scw.scrowlifebackend.bean;
+
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
+
+import java.util.List;
+
+// 跨域过滤器设置
+// 自动生效
+@Configuration
+public class CorsFilterConfig {
+
+    @Bean
+    public FilterRegistrationBean<CorsFilter> corsFilter() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOriginPatterns(List.of( "http://localhost:*"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+
+        FilterRegistrationBean<CorsFilter> bean = new FilterRegistrationBean<>(new CorsFilter(source));
+        // 🔑 设置最高优先级，确保在 JWT/Security 过滤器之前执行
+        bean.setOrder(Ordered.HIGHEST_PRECEDENCE);
+        return bean;
+    }
+}
+
+```
 
 ## 接口统一拦截校验
 
@@ -233,37 +273,6 @@ public class MyInterceptor implements HandlerInterceptor {
 
 :::code-group
 
-```java 实体类
-package com.scw.codeyellservice.mojo;
-
-import jakarta.validation.constraints.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-
-
-@Data
-@AllArgsConstructor
-public class AuthParams {
-    @NotBlank(message = "用户名不能为空")
-    @Size(min = 2, max = 20, message = "用户名长度不能小于2或大于20")
-    private String name;
-    @NotBlank(message = "邮箱不能为空")
-    @Email(message = "邮箱格式不正确")
-    private String email;
-    @NotBlank(message = "验证码不能为空")
-    private String code;
-    @NotBlank(message = "密码不能为空")
-    private String password;
-}
-
-```
-```java [controller层]
- public Response register(@RequestBody @Valid AuthParams authParams ) {
-    //走到这里说明@Valid校验通过
-    log.info("校验通过");
-}
-```
-
 ```java [全局异常捕获类]
 package com.scw.codeyellservice.bean;
 
@@ -280,6 +289,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.List;
 import java.util.stream.Collectors;
 
+//自动生效
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
@@ -291,12 +301,11 @@ public class GlobalExceptionHandler {
         private Object rejectedValue;
     }
 
-    /**
-     * 处理 @Valid 校验失败
-     */
+
+    // 处理 @Valid接口字段参数校验失败,通常默认情况下自动返回400
     @ExceptionHandler(MethodArgumentNotValidException.class)
 
-    //依然设置返回200状态码
+    //这里覆盖默认设置，依然设置返回200状态码
     @ResponseStatus(HttpStatus.OK)
     public Response handleValidation(
             MethodArgumentNotValidException ex) {
@@ -321,5 +330,50 @@ public class GlobalExceptionHandler {
 
 }
 ```
+```java [实体类]
+package com.scw.codeyellservice.mojo;
+
+import jakarta.validation.constraints.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+
+
+@Data
+@AllArgsConstructor
+public class User {
+    //@NotBlank只能用在字符串类型上，校验字段值不为 null 且 trim() 后长度 > 0
+    @NotBlank(message = "用户名不能为空")
+    @Size(min = 3, max = 20, message = "用户名长度3-20")
+    private String username;
+
+    //@NotNull用于任意类型，校验字段值不为 null
+    @NotNull(message = "年龄必填")
+    @Min(value = 18, message = "必须成年")
+    private Integer age;
+
+    @Email(message = "邮箱格式错误")
+    private String email;
+
+    //@NotEmpty用于字符串，集合，数组，Map,校验字段值不为 null 且长度 > 0
+    @NotEmpty(message = "角色不能为空")
+    private List<String> roles;
+}
+```
+```java [controller层]
+
+//在Controller中添加@Valid进行校验，校验失败自动返回 400（可通过定义全局异常捕获类GlobalExceptionHandler来统一响应格式）
+ public Response register(@RequestBody @Valid User user ) {
+    //走到这里说明@Valid校验通过
+    log.info("校验通过");
+}
+```
+```xml [所需依赖]
+<!--pom.xml-->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-validation</artifactId>
+</dependency>
+```
+
 
 :::
