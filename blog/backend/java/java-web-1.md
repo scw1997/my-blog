@@ -590,6 +590,148 @@ public interface UserMapper {
 ```
 :::
 
+:::tip 技巧
+- 异常处理：controller不写try catch，service层失败就抛异常；抛的异常统一在全局异常处理类GlobalExceptionHandler中处理
+- 实体类中的数据表字段与接口入参不完全一致的处理示例
+    :::code-group
+    ```java [定义校验分组]
+    // 公共分组：创建和更新都适用的约束
+    public interface BaseGroup {}
+    
+    // 创建分组：继承 BaseGroup，校验时会连带校验 BaseGroup 的约束
+    public interface CreateGroup extends BaseGroup {}
+    
+    // 更新分组：同上
+    public interface UpdateGroup extends BaseGroup {}
+    ```
+    ```java [ 聚合 DTO]
+    public class UserSaveDTO {
+    
+        // ===== 公共字段：创建、更新都必填 =====
+        // 如果不写Groups，则它默认属于Default组，Default组的约束不会在其他分组中生效，除非显式指定{BaseGroup.class, Default.class}。所以建议所有注解显式写。
+        
+        @NotBlank(message = "用户名不能为空", groups = BaseGroup.class)
+        @Size(min = 3, max = 20, message = "用户名长度需在 3~20 之间", groups = BaseGroup.class)
+        private String username;
+    
+        @NotBlank(message = "邮箱不能为空", groups = BaseGroup.class)
+        @Email(message = "邮箱格式不正确", groups = BaseGroup.class)
+        private String email;
+    
+        // ===== 仅创建必填：更新时密码可选（不传表示不改密码） =====
+        @NotBlank(message = "密码不能为空", groups = CreateGroup.class)
+        @Size(min = 8, max = 32, message = "密码长度需在 8~32 之间", groups = BaseGroup.class)
+        private String password;
+    
+        // ===== 仅创建需要：邮箱验证码，更新时不存在这个字段 =====
+        @NotBlank(message = "邮箱验证码不能为空", groups = CreateGroup.class)
+        @Pattern(regexp = "\\d{6}", message = "验证码为 6 位数字", groups = CreateGroup.class)
+        private String emailCode;
+    
+        // ===== 可选字段：创建、更新都可传 =====
+        @Size(max = 50, message = "昵称不能超过 50 字", groups = BaseGroup.class)
+        private String nickname;
+    
+        // getters / setters 省略
+    }
+    ```
+    ```java [controller层]
+    @RestController
+    @RequestMapping("/api/users")
+    public class UserController {
+    
+        @Autowired
+        private UserService userService;
+    
+        // 创建：触发 CreateGroup（连带 BaseGroup）校验
+        @PostMapping
+        public ApiResponse<Long> create(
+        //必须用 @Validated（Spring 的） 而不是 @Valid，@Valid 不支持指定分组
+                @Validated(CreateGroup.class) @RequestBody UserSaveDTO dto) {
+            Long id = userService.create(dto);
+            return ApiResponse.success(id);
+        }
+    
+        // 更新：触发 UpdateGroup（连带 BaseGroup）校验
+        @PutMapping("/{id}")
+        public ApiResponse<Void> update(
+                @PathVariable Long id,
+                @Validated(UpdateGroup.class) @RequestBody UserSaveDTO dto) {
+            userService.update(id, dto);
+            return ApiResponse.success();
+        }
+    }
+    ```
+    ```java [service层]
+    @Service
+    public class UserService {
+    
+        @Autowired private UserMapper userMapper;
+        @Autowired private EmailCodeService emailCodeService;
+        @Autowired private PasswordEncoder passwordEncoder;
+    
+        // ===== 创建 =====
+        @Transactional
+        public Long create(UserSaveDTO dto) {
+            // 1. 校验邮箱验证码（只有创建时才有这个字段）
+            emailCodeService.verify(dto.getEmail(), dto.getEmailCode());
+    
+            // 2. 唯一性校验
+            if (userMapper.existsByUsername(dto.getUsername())) {
+                throw new BizException("USERNAME_EXISTS", "用户名已存在", 409);
+            }
+            if (userMapper.existsByEmail(dto.getEmail())) {
+                throw new BizException("EMAIL_EXISTS", "邮箱已被注册", 409);
+            }
+    
+            // 3. DTO → Entity，敏感字段由 Service 决定
+            User user = new User();
+            user.setUsername(dto.getUsername());
+            user.setEmail(dto.getEmail());
+            user.setPasswordHash(passwordEncoder.encode(dto.getPassword()));
+            user.setNickname(dto.getNickname());
+            user.setStatus(0);            // 不接受前端传
+            user.setRole("USER");         // 不接受前端传
+            user.setCreatedAt(LocalDateTime.now());
+            userMapper.insert(user);
+            return user.getId();
+        }
+    
+        // ===== 更新 =====
+        @Transactional
+        public void update(Long id, UserSaveDTO dto) {
+            // 1. 检查存在
+            User existing = userMapper.selectById(id);
+            if (existing == null) {
+                throw new BizException("USER_NOT_FOUND", "用户不存在", 404);
+            }
+    
+            // 2. 唯一性校验（排除自己）
+            if (userMapper.existsByUsernameExcludeId(dto.getUsername(), id)) {
+                throw new BizException("USERNAME_EXISTS", "用户名已存在", 409);
+            }
+            if (userMapper.existsByEmailExcludeId(dto.getEmail(), id)) {
+                throw new BizException("EMAIL_EXISTS", "邮箱已被注册", 409);
+            }
+    
+            // 3. 组装更新对象（只更新允许的字段）
+            User update = new User();
+            update.setId(id);
+            update.setUsername(dto.getUsername());
+            update.setEmail(dto.getEmail());
+            update.setNickname(dto.getNickname());
+            update.setUpdatedAt(LocalDateTime.now());
+    
+            // 4. 密码：只有传了才更新
+            if (StringUtils.hasText(dto.getPassword())) {
+                update.setPasswordHash(passwordEncoder.encode(dto.getPassword()));
+            }
+    
+            userMapper.updateById(update);
+        }
+    }
+    ```
+    :::
 ### Controller获取请求参数
 
 根据场景不同，共有以下几种方式可供选择
@@ -1080,7 +1222,7 @@ spring :
       database: 0
   # mysql配置
   datasource:
-    url: jdbc:mysql://192.168.100.128:3306/codeyell
+    url: jdbc:mysql://192.168.100.128:3306/scrow-life-backend
     username: root
     password: 1234
 
@@ -1102,7 +1244,7 @@ mybatis-plus:
       # 全局主键策略：AUTO(数据库自增), ASSIGN_ID(雪花算法), INPUT(手动输入)
       id-type: auto
       # 逻辑删除配置（此配置是全局配置，而使用@TableLogic来定义逻辑删除是局部配置）
-      logic-delete-field: deleted  # 逻辑删除的字段名
+      logic-delete-field: is_delete  # 逻辑删除的字段名
       logic-delete-value: 1        #  逻辑已删除时的值（默认为 1）
       logic-not-delete-value: 0    # 逻辑未删除的值（默认为 0）
       # 更新策略：not_null（默认值）只更新接口传参的非空字段
@@ -1114,6 +1256,12 @@ mybatis-plus:
     map-underscore-to-camel-case: true
     # 开发环境打印完整 SQL 日志（生产环境建议关闭，影响性能）
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+
+# 开启事务管理的底层日志
+logging:
+  level:
+    org.springframework.jdbc.support.JdbcTransactionManager: debug
 ```
 ```properties
 # 配置文件路径：src/main/resources/application.properties
@@ -2504,7 +2652,7 @@ Spring Boot 并不是 Spring MVC 的替代品，而是：
 | 开发效率 | 配置繁琐，启动慢 | 快速启动，约定优于配置 |
 | 适用场景 | 老项目维护、需要精细控制配置 | 新项目开发、微服务、快速原型 |
 
-
+> Tomcat 是一个开源的 Java Web 服务器和Servlet 容器，其核心职责是接收 HTTP 请求
 
 
 

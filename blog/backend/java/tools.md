@@ -269,68 +269,71 @@ public class MyInterceptor implements HandlerInterceptor {
 
 :::
 
-## 全局接口参数校验异常捕获
+## 全局异常捕获
 
 :::code-group
 
 ```java [全局异常捕获类]
-package com.scw.codeyellservice.bean;
+package com.scw.scrowlifebackend.bean;
 
-import com.scw.codeyellservice.mojo.Response;
-import lombok.AllArgsConstructor;
-import lombok.Data;
+
+import com.scw.scrowlifebackend.mojo.MyException;
+import com.scw.scrowlifebackend.mojo.Response;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
-import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
-//自动生效
+
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
-    @Data
-    @AllArgsConstructor
-    public static class FieldError {
-        private String field;
-        private String message;
-        private Object rejectedValue;
-    }
-
 
     // 处理 @Valid接口字段参数校验失败,通常默认情况下自动返回400
     @ExceptionHandler(MethodArgumentNotValidException.class)
-
-    //这里覆盖默认设置，依然设置返回200状态码
+    //这里覆盖设置依然返回200状态码
     @ResponseStatus(HttpStatus.OK)
     public Response handleValidation(
             MethodArgumentNotValidException ex) {
-
-        List<FieldError> errors = ex.getBindingResult()
+        String errors = ex.getBindingResult()
                 .getFieldErrors()
                 .stream()
-                .map(e -> new FieldError(
-                        e.getField(),           // 字段名: "address.city"
-                        e.getDefaultMessage(),  // 校验消息
-                        e.getRejectedValue()    // 非法值（可选）
-                ))
-                .collect(Collectors.toList());
+                .map(e ->
+                        e.getField() + " " +
+                                e.getDefaultMessage() // 校验消息
+                )
+                //map后通过collect将stream转换成集合后再通过join连接成字符串
+                .collect(Collectors.joining(", "));
 
         log.warn("参数校验失败: {}", errors);
         //设置报错时返回数据格式
         return Response.error(errors.toString());
     }
 
+    // service层逻辑判断后自主抛出的异常
+    @ExceptionHandler(MyException.class)
+    public Response handleMyException(MyException e) {
+        log.error("service层抛出异常", e);  // 完整日志进服务端
+        return  Response.error(e.getCode(),e.getMessage());
+    }
+
+
+    // 兜底：未预期异常 → 500，不暴露堆栈
+    @ExceptionHandler(Exception.class)
+    public Response handleUnknown(Exception e) {
+        log.error("未预期异常", e);  // 完整日志进服务端
+        return  Response.error(500,e.getMessage());
+    }
 
 
 
 }
 ```
-```java [实体类]
+```java [@Valid校验实体类]
 package com.scw.codeyellservice.mojo;
 
 import jakarta.validation.constraints.*;
@@ -358,6 +361,20 @@ public class User {
     @NotEmpty(message = "角色不能为空")
     private List<String> roles;
 }
+```
+```java [service手动抛出异常实体类]
+package com.scw.scrowlifebackend.mojo;
+
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
+
+@Data
+@RequiredArgsConstructor
+public class MyException extends RuntimeException {
+    private final Integer code;      // 业务码
+    private final String message;
+}
+
 ```
 ```java [controller层]
 

@@ -62,8 +62,12 @@
   ```
 - 启动并登录MySql
   ```shell
-  systemctl start mysql
+  systemctl start mysql  # 启动
   mysql -uroot -p # 然后输入密码
+  
+  systemctl enable mysql  # 设置开机自动启动
+  systemctl stop mysql  # 停止
+  systemctl status mysql  # 查看状态
   ```
 - 配置Mysql用户密码并授权远程访问
   ```shell

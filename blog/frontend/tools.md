@@ -518,19 +518,15 @@ const createHttpMethod = (method: 'get' | 'post' | 'put' | 'delete', ...rest) =>
     });
 };
 
-const httpMethods: Record<Parameters<typeof createHttpMethod>[0], HttpMethod> = (
+type HttpMethodsType = Record<Parameters<typeof createHttpMethod>[0], HttpMethod>;
+const httpMethods: HttpMethodsType = (
     ['get', 'post', 'put', 'delete'] as const
 ).reduce(
     (pre, cur, array) => {
         pre[cur] = (...params: any[]) => createHttpMethod(cur, ...params);
         return pre;
     },
-    {
-        get: undefined,
-        post: undefined,
-        delete: undefined,
-        put: undefined
-    }
+    {} as HttpMethodsType
 );
 export default httpMethods;
 

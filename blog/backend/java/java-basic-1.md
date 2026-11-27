@@ -1811,6 +1811,79 @@ record Point(int x, int y) {}
 - 不可变、final、简洁、安全
 :::
 
+## Optional
+
+Optional 是 Java 8 引入的一个容器类，用来显式表达"**一个值可能存在，也可能不存在**"。
+
+它的核心目的不是"消除 null"，而是把"可能为空"这件事从隐式的运行时风险，变成显式的、编译期可见的类型契约——让调用方在拿到返回值时，被迫思考"如果没有值该怎么办"。
+
+对比示例：
+:::code-group
+```java [使用了 Optional]
+Optional<User> findUser(Long id);  // 类型签名直接告诉你：结果可能为空
+```
+
+```java [传统方式]
+// 方式一：返回 null
+User findUser(Long id);   // 调用方不知道会不会返回 null，忘了判空就 NPE
+
+// 方式二：抛异常
+User findUser(Long id) throws NotFoundException;  // "没有值"是正常业务分支，不该用异常表达
+```
+:::
+#### 创建 Optional
+
+```java
+// 1. of(T value)：值确定非 null 时用。传 null 会立即抛 NPE
+Optional<String> opt1 = Optional.of("hello");
+
+// 2. ofNullable(T value)：值可能为 null 时用。null → 空 Optional
+Optional<String> opt2 = Optional.ofNullable(getName());  // getName() 可能返回 null
+
+// 3. empty()：明确创建一个空 Optional
+Optional<String> opt3 = Optional.empty();
+```
+
+#### 适用场景
+
+:::code-group
+```java [多层判断空]
+//传统写法
+public String getCityByUsername(String username) {
+  User user = findUserByName(username);
+  if (user != null) {
+    Address address = user.getAddress();
+    if (address != null) {
+      String city = address.getCity();
+      if (city != null) {
+        return city.toUpperCase();
+      }
+    }
+  }
+  return "UNKNOWN";
+}
+//optional写法
+public String getCityByUsername(String username) {
+    return Optional.ofNullable(findUserByName(username))
+        .map(User::getAddress)          // User → Address（可能为 null）
+        .map(Address::getCity)          // Address → String（可能为 null）
+        .map(String::toUpperCase)       // 有值时转换
+        .orElse("UNKNOWN");             // 任何一环为空，最终返回默认值
+}
+```
+```java [Service层捕获异常]
+public interface UserRepository extends JpaRepository<User, Long> {
+  Optional<User> findByUsername(String username);  // Spring Data JPA 原生支持
+}
+
+// Service 层使用
+public UserVO getUser(String username) {
+    User user = userRepository.findByUsername(username)
+        .orElseThrow(() -> new BizException("USER_NOT_FOUND", "用户不存在", 404));
+    return toVO(user);
+}
+```
+:::
 ## Object
 
 **Java 中的所有类（包括数组）都是 Object 类的直接或间接子类。**
